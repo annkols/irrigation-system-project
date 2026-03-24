@@ -1,7 +1,7 @@
 :root {
   --primary: #9ABA55 ;
   --primary-dark: #4C5C2D;
-
+  --primary-light: #edffef;
   --text-main:  black;
   --text-light: gray;
   --text-on-dark: white;
@@ -9,7 +9,6 @@
   --bg-main: white;
   --bg-image: linear-gradient(white, gray);
   --bg-stat: #FBF6F6;
-  --hover-act: #edffef;
 
   --action-bg: #FBF6F6 ;
 
@@ -30,11 +29,12 @@ body {
 .header {
   background: linear-gradient(90deg, var(--primary-dark), var(--primary));
   color: var(--text-on-dark);
-  padding: 15px 25px;
-
+  padding: 5px 25px;
+  height: 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow);
 }
 
 .icons span {
@@ -172,11 +172,11 @@ body {
 }
 
 .action:hover {
-  background-color: var(--hover-act);
+  background-color: var(--primary-light);
 }
 
 .action-big:hover {
-  background-color: var(--hover-act);
+  background-color: var(--primary-light);
 }
 
 .events:active {

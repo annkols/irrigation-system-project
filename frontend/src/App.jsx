@@ -1,6 +1,7 @@
 import './App.css'
 
 function App() {
+  
   const data = {
     name: "SOY EXPERIMENT",
     date: "22.03.2026",
@@ -51,7 +52,7 @@ function App() {
         {/* right */}
         <div className="dashboard">
           <div className="welcome">
-            <h2>Hello Ania!</h2>
+            <h2>Hello User!</h2>
             <p>Manage all your experiments and reports below:</p>
           </div>
 
