@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, include
 from django.views.decorators.csrf import csrf_exempt
 import json
 
@@ -52,6 +52,6 @@ def add_measurement(request):
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/measurements/", add_measurement),
+    path('admin/', admin.site.urls),
+    path('api/', include('measurements.urls')),
 ]
