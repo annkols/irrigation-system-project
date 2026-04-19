@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import "../App.css"; 
 
@@ -15,6 +15,29 @@ function App() {
     airHumidity: "50",
     light: "90"
   }
+
+
+  // state for getting measurements from backend
+  const [measurements, setMeasurements] = useState([]);
+
+  useEffect(() => {
+      const fetchData = () => {
+        fetch("http://localhost:8000/api/measurements/")
+          .then(res => res.json())
+          .then(data => setMeasurements(data))
+          .catch(err => console.error(err));
+      };
+
+      fetchData();
+
+      const interval = setInterval(fetchData, 10000);
+
+      return () => clearInterval(interval);
+    }, []);
+
+    const latest = measurements.length > 0 
+      ? measurements[measurements.length - 1] 
+      : null;
 
   return (
     
@@ -50,6 +73,7 @@ function App() {
             <p>Moisture content: <span>{data.soilMoisture} %</span></p>
             <p>Air humidity: <span>{data.airHumidity} %</span></p>
             <p>Light intensity: <span>{data.light} lx</span></p>
+            <p>Soil moisture: <span>{latest?.moisture_percent ?? "-"} %</span></p> {/* shows latest soil moisture from backend, or "-" if no data*/ }
           </div>
         </div>
 
@@ -85,6 +109,17 @@ function App() {
           </div>
         </div>
 
+      </div>
+
+      {/* raw measurements z backendu */}
+      <div className="log">
+        <h3>Raw measurements</h3>
+
+        {measurements.map((m, index) => (
+          <div key={index}>
+            [{m.device_name}] raw: {m.raw_value}, moisture: {m.moisture_percent}%
+          </div>
+        ))}
       </div>
     </>
   )
