@@ -1,0 +1,76 @@
+# =========================
+# ENV / SECRETS
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# virtualenv
+venv/
+env/
+ENV/
+.venv/
+
+# =========================
+# DJANGO
+# =========================
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# =========================
+# PYTHON CACHE / TESTY
+# =========================
+.pytest_cache/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+
+# =========================
+# IDE / EDYTORY
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# SYSTEM
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# DOCKER
+# =========================
+*.pid
+*.sock
+docker-compose.override.yml
+
+# =========================
+# BUILD / TEMP
+# =========================
+dist/
+build/
+*.egg-info/
+
+# =========================
+# JUPYTER (jak używasz)
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# LOGI
+# =========================
+logs/
+*.log
