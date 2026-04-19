@@ -243,3 +243,11 @@ Plik data.json zawiera przykładowe odczyty z czujnika.
 Aby wczytać przykładowe dane pomiarowe (będąc w folderze backend), wykonaj:
 
 docker compose exec web python manage.py loaddata data.json
+
+# Frontend
+
+Żeby uruchomić frontend, przejdź do folderu frontend i wykonaj:
+
+```npm run dev```
+
+frontend uruchomi się pod adresem ```http://localhost:5173```
