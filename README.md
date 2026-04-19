@@ -232,3 +232,14 @@ reszta OFF
 mały przełącznik: TXD3 / RXD3
 
 Wykonaj RESET na płytce
+
+
+## WCZYTANIE DANYCH Z CZUJNIKA - JSON
+
+Po uruchomieniu projektu baza danych jest pusta.
+
+Plik data.json zawiera przykładowe odczyty z czujnika.
+
+Aby wczytać przykładowe dane pomiarowe (będąc w folderze backend), wykonaj:
+
+docker compose exec web python manage.py loaddata data.json
