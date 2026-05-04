@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../App.css"; 
+import "../App.css";
+import bgImage from "./images/back.jpg";
+import logo from "./images/logo_cultiva.svg";
 
 function App() {
   
   const navigate = useNavigate();
   const [filter, setFilter] = React.useState("all");
   const experiments = [
-    { id: 1, name: "SOY EXPERIMENT", status: "in-progress" },
-    { id: 2, name: "WHEAT TEST", status: "soon" }
+    { id: 1, name: "SOY EXPERIMENT", status: "in-progress", endDate: "31.03.2026" },
+    { id: 2, name: "WHEAT TEST", status: "soon", endDate: "15.05.2026" }
   ];
   
   const now = new Date();
@@ -65,10 +67,13 @@ function App() {
     
     <>
       <header className="header">
-        <h1>CULTIVA</h1>
+        <div className="logo">
+          <img src={logo} alt="Cultiva logo" className="logo-img" />
+          <h1>CULTIVA</h1>
+        </div>
         <div className="icons">
-          <span className="material-symbols-outlined">account_circle</span>
           <span className="material-symbols-outlined">settings</span>
+          <span className="material-symbols-outlined">account_circle</span>
           <span className="material-symbols-outlined">more_vert</span>
         </div>
       </header>
@@ -77,7 +82,7 @@ function App() {
 
         {/* left */}
         <div className="card">
-          <div className="image-placeholder">
+          <div className="image-placeholder" style={{ backgroundImage: `url(${bgImage})` }}>
             <div className="card-header">
               <div>
                 <h2>{mainexp.name}</h2>
@@ -110,23 +115,24 @@ function App() {
         {/* right */}
         <div className="dashboard">
           <div className="welcome">
-            <h2>Hello User!</h2>
-            <p>You have currently {experiments.length} experiments</p>
+            <h2>HELLO USER!</h2>
+            <p>YOU HAVE CURRENTLY {experiments.length} EXPERIMENTS</p>
           </div>
 
           <button className='add-btn'>
-            <span>Add a new experiment</span>
-            <span className="material-symbols-outlined">potted_plant</span>
-            </button>
-
-          <button className='action'>
-            ALL YOUR EXPERIMENTS
+            <span>ADD A NEW EXPERIMENT</span>
+            <span className="material-symbols-outlined">add</span>
           </button>
+
+          <div className='section-header'>
+            <span>ALL YOUR EXPERIMENTS</span>
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </div>
 
           <div className='filters'>
             {Object.keys(statusMap).map((key) => (
-              <button key={key} onClick={() => setFilter(key)} 
-              className={`filter-btn $ {filter === key ? "active":""}`}>
+              <button key={key} onClick={() => setFilter(key)}
+              className={`filter-btn filter-${key} ${filter === key ? "active":""}`}>
               {statusMap[key]}
               </button>
             ))}
@@ -134,23 +140,24 @@ function App() {
 
           <div className="list">
             {filtered.map((exp) => (
-              <div key ={exp.id} className="item" onClick={() => selectedId(exp.id)}>
+              <div key={exp.id} className="item" onClick={() => setSelectedId(exp.id)}>
                 <p>{exp.name}</p>
-                <div className="item-detail">
-                  <span className={`badge ${exp.status}`}>
-                    {statusMap[exp.status]}
-                  </span>
-                </div>
+                <span className={`badge ${exp.status}`}>
+                  {statusMap[exp.status]}
+                </span>
+                <span className="item-date">{exp.endDate}</span>
               </div>
             ))}
           </div>
 
           <button className='action'>
-            SEARCH FOR EXPERIMENTS
+            <span>SEARCH FOR EXPERIMENTS</span>
+            <span className="material-symbols-outlined">arrow_forward</span>
           </button>
 
           <button className='action'>
-            BROWSE REPORTS
+            <span>BROWSE REPORTS</span>
+            <span className="material-symbols-outlined">arrow_forward</span>
           </button>
         </div>
 
