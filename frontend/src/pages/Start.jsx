@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import arrow from './images/arrow.png';
 import back_img from './images/back.jpg';
+import logo from './images/logo_cultiva.svg';
 
 function Start() {
   const navigate = useNavigate();
@@ -11,57 +12,83 @@ function Start() {
 
   return (
     <>
-        {/* część na tle zdjęcia roślin */}
-        <div
-          style={{
-              position: 'relative',
-              width: '100%',
-              height: '100vh',
-              overflow: 'hidden',
-              backgroundImage: `url(${back_img})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-        >
+      {/* hero section */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        height: '100vh',
+        overflow: 'hidden',
+        backgroundImage: `url(${back_img})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* nakładka przyciemniająca */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        }} />
 
-          {/* napis */}
-          <h1
-            style={{
-              position: 'absolute',
-              top: '25%',
-              left: '10%',
-              fontSize: '60px',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              color: 'white',
-              maxWidth: '30%',
-            }}
-          >
+        {/* header z logo */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '20px 40px',
+        }}>
+          <img src={logo} alt="Cultiva logo" style={{ height: '40px', width: 'auto' }} />
+          <span style={{
+            fontSize: '22px',
+            fontWeight: 700,
+            fontFamily: 'Inter, sans-serif',
+            color: 'white',
+            letterSpacing: '1px',
+          }}>CULTIVA</span>
+        </div>
+
+        {/* środkowy blok: tytuł + przyciski */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: '32px',
+          paddingBottom: '80px',
+        }}>
+          <h1 style={{
+            fontSize: '42px',
+            fontWeight: 900,
+            fontFamily: 'Inter, sans-serif',
+            color: 'white',
+            maxWidth: '520px',
+            margin: 0,
+            lineHeight: 1.2,
+          }}>
             Intelligent management of greenhouse experiments
           </h1>
 
-          {/* przycisk sign in */}
+          <div style={{ display: 'flex', gap: '16px' }}>
             <button
               style={{
-                position: 'absolute',
-                top: '45%',
-                left: '70%',
-                width: '15%',
-                height: '10%',
-                fontSize: '30px',
+                width: '160px',
+                padding: '14px 0',
+                fontSize: '16px',
                 fontWeight: 600,
                 fontFamily: 'Inter, sans-serif',
-                backgroundColor: hoverSignIn
-                  ? 'rgba(255, 255, 255, 0.4)'
-                  : 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: hoverSignIn ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
                 color: 'white',
                 border: '2px solid white',
                 borderRadius: '50px',
                 cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
                 transition: 'background-color 0.2s',
               }}
               onMouseEnter={() => setHoverSignIn(true)}
@@ -71,138 +98,102 @@ function Start() {
               Sign in
             </button>
 
-            {/* przycisk sign up */}
             <button
-            style={{
-              position: 'absolute',
-              top: '60%',
-              left: '70%',
-              width: '15%',
-              height: '10%',
-              fontSize: '30px',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              backgroundColor: hoverSignUp
-                ? 'rgba(0, 191, 99, 0.4)'
-                : 'rgba(0, 191, 99, 0.2)',
-              color: 'white',
-              border: '2px solid #00BF63',
-              borderRadius: '50px',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={() => setHoverSignUp(true)}
-            onMouseLeave={() => setHoverSignUp(false)}
-          >
-            Sign up
-          </button>
-
-          {/* napis MORE i strzałka */ }
-          <div
               style={{
-                position: 'absolute',
-                top: '80%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                textAlign: 'center',
+                width: '160px',
+                padding: '14px 0',
+                fontSize: '16px',
+                fontWeight: 600,
+                fontFamily: 'Inter, sans-serif',
+                backgroundColor: hoverSignUp ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
+                color: 'white',
+                border: '2px solid white',
+                borderRadius: '50px',
                 cursor: 'pointer',
-                transition: 'transform 0.2s',
+                transition: 'background-color 0.2s',
               }}
-
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1)')}
-
-              onClick={() => {
-                  document.getElementById('about us')?.scrollIntoView({ behavior: 'smooth' });
-                }}
+              onMouseEnter={() => setHoverSignUp(true)}
+              onMouseLeave={() => setHoverSignUp(false)}
             >
-              {/* napis MORE */}
-              <h1
-                style={{
-                  fontSize: '40px',
-                  fontWeight: 600,
-                  fontFamily: 'Inter, sans-serif',
-                  color: 'white',
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                MORE
-              </h1>
+              Sign up
+            </button>
+          </div>
 
-              {/* strzałka pod napisem */}
-              <img
-                src={arrow}
-                alt="strzałka w dół"
-                style={{
-                  marginTop: '10px',
-                  width: '80px',
-                  height: 'auto',
-                }}
-              />
-            </div>
+          <p style={{
+            fontSize: '12px',
+            fontFamily: 'Inter, sans-serif',
+            color: 'rgba(255,255,255,0.7)',
+            margin: 0,
+          }}>
+            © Katedra Agronomii · Uniwersytet Przyrodniczy w Poznaniu
+          </p>
         </div>
 
-
-        {/* część na białym tle o nas */}
+        {/* MORE + strzałka na dole */}
         <div
-          id="about us"
           style={{
-            width: '100%',
-            height: '75vh',
-            backgroundColor: 'white',
+            position: 'relative',
+            zIndex: 1,
             display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            paddingBottom: '32px',
+            cursor: 'pointer',
+            opacity: 0.8,
+            transition: 'opacity 0.2s',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
+          onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
         >
-        
-        {/* napis */}
-          <h1
-            style={{
-              position: 'relative',
-              top: '40%',
-              left: '10%',
-              fontSize: '60px',
-              fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
-              color: 'black',
-              maxWidth: '20%',
-            }}
-          >
-            Our system’s features
-          </h1>
-          
-          {/* o nas, o systemie */}
-          <div
-              style={{
-                width: '60%',
-                display: 'flex',
-                alignItems: 'center',
-                height: '100%',
-                paddingTop: '5%',
-                paddingRight: '10%',
-                paddingLeft: '15%',
-              }}
-            >
-              <p
-                style={{
-                  fontSize: '30px',
-                  fontFamily: 'Inter, sans-serif',
-                  color: 'black',
-                  lineHeight: '1.6',
-                }}
-              >
-                <strong> Kiedyś napiszemy coś o nas i o systemie, a na razie placeholder. </strong>
-
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ullamcorper consectetur elit, vel dapibus augue consequat id. Aenean posuere ante consectetur bibendum blandit. Donec erat urna, volutpat in scelerisque eu, ultricies at ligula. Fusce faucibus dui eu lorem bibendum volutpat. Nulla facilisi. Aliquam volutpat purus nec mi mollis, in ultricies dui auctor. Quisque id aliquet lorem.
-
-                Vivamus condimentum accumsan est eget blandit. Proin laoreet dui ac dignissim porttitor. Ut mattis et velit sed rutrum. Etiam auctor odio ac scelerisque iaculis. Nullam sed lectus et augue mollis consequat. In ullamcorper a quam nec aliquam. Aenean eget velit in diam euismod pretium. Sed ac diam eu odio tincidunt faucibus. Aliquam sit amet ultricies purus. Etiam malesuada orci quis neque accumsan, at rutrum ligula vestibulum. Nulla vel massa varius, tincidunt justo sed, interdum metus. Curabitur vel luctus mi.
-
-              </p>
-            </div>
+          <span style={{
+            fontSize: '13px',
+            fontWeight: 600,
+            fontFamily: 'Inter, sans-serif',
+            color: 'white',
+            letterSpacing: '2px',
+          }}>MORE</span>
+          <img src={arrow} alt="scroll down" style={{ width: '32px', height: 'auto', marginTop: '6px' }} />
         </div>
+      </div>
+
+      {/* sekcja o nas */}
+      <div
+        id="about"
+        style={{
+          width: '100%',
+          minHeight: '75vh',
+          backgroundColor: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '80px 10%',
+          boxSizing: 'border-box',
+          gap: '80px',
+        }}
+      >
+        <h2 style={{
+          fontSize: '36px',
+          fontWeight: 700,
+          fontFamily: 'Inter, sans-serif',
+          color: 'black',
+          minWidth: '220px',
+          margin: 0,
+          lineHeight: 1.2,
+        }}>
+          Our system features
+        </h2>
+
+        <p style={{
+          fontSize: '18px',
+          fontFamily: 'Inter, sans-serif',
+          color: '#444',
+          lineHeight: '1.7',
+          margin: 0,
+        }}>
+          <strong>Tutaj napiszemy o systemie — na razie placeholder.</strong>
+          {' '}Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ullamcorper consectetur elit, vel dapibus augue consequat id. Aenean posuere ante consectetur bibendum blandit. Donec erat urna, volutpat in scelerisque eu, ultricies at ligula. Fusce faucibus dui eu lorem bibendum volutpat. Nulla facilisi. Aliquam volutpat purus nec mi mollis, in ultricies dui auctor. Quisque id aliquet lorem.
+        </p>
+      </div>
     </>
   );
 }
