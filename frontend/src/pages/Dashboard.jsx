@@ -119,9 +119,11 @@ function App() {
             <p>YOU HAVE CURRENTLY {experiments.length} EXPERIMENTS</p>
           </div>
 
-          <button className='add-btn'>
-            <span>ADD A NEW EXPERIMENT</span>
-            <span className="material-symbols-outlined">add</span>
+          <button className='add-btn' 
+              onClick={() => navigate('/new-experiment')}
+          >
+              <span>ADD A NEW EXPERIMENT</span>
+              <span className="material-symbols-outlined">add</span>
           </button>
 
           <div className='section-header'>
