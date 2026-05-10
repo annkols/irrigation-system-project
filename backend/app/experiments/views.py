@@ -18,3 +18,33 @@ class ExperimentDetailView(generics.RetrieveAPIView):
     serializer_class = ExperimentSerializer
     permission_classes = [AllowAny]
     authentication_classes = []
+
+
+class ExperimentStatusListView(generics.ListAPIView):
+    serializer_class = ExperimentSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get_queryset(self):
+        status = self.kwargs['status']
+
+        if status == 'not-started':
+            return Experiment.objects.filter(
+                started_at__isnull=True,
+                finished_at__isnull=True
+            ).order_by('-created_at')
+
+        if status == 'in-progress':
+            return Experiment.objects.filter(
+                started_at__isnull=False,
+                finished_at__isnull=True
+            ).order_by('-created_at')
+
+        if status == 'completed':
+            return Experiment.objects.filter(
+                finished_at__isnull=False
+            ).order_by('-created_at')
+
+        raise ValidationError({
+            "status": "Invalid status. Use: not-started, in-progress, completed."
+        })

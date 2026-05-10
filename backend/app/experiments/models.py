@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 class Experiment(models.Model):
@@ -11,6 +12,20 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     plant_name = models.CharField(max_length=100, blank=True)
 
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_experiments",
+        null=True,
+        blank=True
+    )
+
+    collaborators = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="collaborated_experiments",
+        blank=True
+    )
+
     sensor_set_id = models.PositiveSmallIntegerField(
         choices=SensorSet.choices
     )
@@ -19,5 +34,15 @@ class Experiment(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def status(self):
+        if self.finished_at is not None:
+            return "completed"
+
+        if self.started_at is not None:
+            return "in progress"
+
+        return "not started"
+
     def __str__(self):
-        return f"{self.name} | {self.plant_name} | {self.sensor_set_id}"
+        return f"{self.name} | {self.plant_name} | {self.owner} | {self.sensor_set_id} | {self.status}"

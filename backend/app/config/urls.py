@@ -54,4 +54,5 @@ def add_measurement(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('measurements.urls')),
+    path('api/', include('experiments.urls')),
 ]
