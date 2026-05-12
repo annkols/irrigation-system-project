@@ -6,14 +6,54 @@ import logo from "./images/logo_cultiva.svg";
 
 function New_experiment() {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [plantName, setPlantName] = useState("");
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
 
   //for choosing sensor setup, mocked data
   const sensorSetups = [
-    { id: 'basic', title: 'BASIC', desc: 'temperature humidity' },
-    { id: 'pro', title: 'EXTENDED', desc: 'temperature humidity light' },
-    { id: 'hydro', title: 'FULL', desc: 'temperature humidity light pH' }
+    { id: 1, title: 'BASIC', desc: 'temperature humidity' },
+    { id: 2, title: 'EXTENDED', desc: 'temperature humidity light' },
+    { id: 3, title: 'FULL', desc: 'temperature humidity light pH' }
   ];
+
+  const handleCreate = () => {
+    const newExperiment = {
+      name: name,
+      description: description,
+      plant_name: plantName,
+      sensor_set_id: selectedSetup,
+      started_at: startDate || null,
+      finished_at: endDate || null,
+      owner: null, // na sztywno bo nie ma logowania
+      collaborators: []
+    };
+
+    console.log("Wysy³ane dane:", newExperiment);
+
+    fetch("http://localhost:8000/api/experiments/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newExperiment),
+    })
+      .then((res) => {
+        if (res.ok) {
+          alert("Experiment created!");
+          navigate('/dashboard');
+        } else {
+          return res.json().then(err => { throw err; });
+        }
+      })
+      .catch((err) => {
+        console.error("Error creating experiment:", err);
+        alert("Coœ posz³o nie tak.");
+      });
+  };
 
   return (
     <>
@@ -37,21 +77,24 @@ function New_experiment() {
         <input 
             type="text" 
             placeholder="Name your experiment" 
-            //className=""
+            value={name}
+            onChange={(e) => setName(e.target.value)}
         />
 
         <p>Plant type:</p>
         <input 
             type="text" 
             placeholder="Type in type of plant" 
-            //className=""
+            value={plantName}
+            onChange={(e) => setPlantName(e.target.value)}
         />
 
         <p>Experiment description:</p>
         <input 
             type="text" 
             placeholder="Describe your experiment (optional)" 
-            //className=""
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
         />
 
         <p>Tags:</p>
@@ -62,6 +105,8 @@ function New_experiment() {
             type="date" 
             id="start_date" 
             name="start_date" 
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
           />
         </p>
 
@@ -71,6 +116,8 @@ function New_experiment() {
             type="date" 
             id="end_date" 
             name="end_date" 
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
           />
         </p>
 
@@ -92,7 +139,7 @@ function New_experiment() {
         <p>Collabolators:</p>
 
         <p>
-            <label for="experiment_public">
+            <label htmlFor="experiment_public">
                <input type="checkbox" id="experiment_public" name="experiment_public" value="true" />
                Make my experiment public and let other users see the data.
             </label>
@@ -105,9 +152,7 @@ function New_experiment() {
               <span>BACK</span>
           </button>
 
-          <button 
-              onClick={() => navigate('/dashboard')}
-          >
+          <button onClick={handleCreate}>
               <span>CREATE EXPERIMENT</span>
           </button>
 
