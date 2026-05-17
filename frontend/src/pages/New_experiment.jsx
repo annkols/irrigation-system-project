@@ -13,6 +13,9 @@ function New_experiment() {
   const [endDate, setEndDate] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
 
+  //for error handling
+  const [errors, setErrors] = useState({});
+
   //for choosing sensor setup, mocked data
   const sensorSetups = [
     { id: 1, title: 'BASIC', desc: 'temperature humidity' },
@@ -21,6 +24,36 @@ function New_experiment() {
   ];
 
   const handleCreate = () => {
+    setErrors({});
+    let localErrors = {};
+    
+    if (!name.trim()) {
+        localErrors.name = ["This field is required."];
+    } else if (name.length > 100) {
+        localErrors.name = ["Ensure the name has no more than 100 characters."];
+    }
+
+    if (plantName.length > 100) {
+        localErrors.plant_name = ["Ensure the plant type has no more than 100 characters."];
+    }
+
+    if (description.length > 2000) {
+        localErrors.description = ["Ensure the description has no more than 1000 characters."];
+    }
+
+    if (!selectedSetup) {
+        localErrors.sensor_set_id = ["Please select a sensor setup."];
+    }
+
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+        localErrors.finished_at = ["End date cannot be earlier than start date."];
+    }
+
+    if (Object.keys(localErrors).length > 0) {
+        setErrors(localErrors);
+        return; // nie wysylaj fetch, jeœli s¹ b³êdy
+    }
+
     const newExperiment = {
       name: name,
       description: description,
@@ -32,7 +65,7 @@ function New_experiment() {
       collaborators: []
     };
 
-    console.log("Wysyï¿½ane dane:", newExperiment);
+    console.log("Wysylane dane:", newExperiment);
 
     fetch("http://localhost:8000/api/experiments/", {
       method: "POST",
@@ -41,17 +74,18 @@ function New_experiment() {
       },
       body: JSON.stringify(newExperiment),
     })
-      .then((res) => {
+      .then(async (res) => {
+        const data = await res.json();
         if (res.ok) {
           alert("Experiment created!");
           navigate('/dashboard');
         } else {
-          return res.json().then(err => { throw err; });
+          setErrors(data);
         }
       })
       .catch((err) => {
         console.error("Error creating experiment:", err);
-        alert("Coï¿½ poszï¿½o nie tak.");
+        alert("Server connection error.");
       });
   };
 
@@ -78,11 +112,13 @@ function New_experiment() {
         <div className="form-section">
           <p>Experiment name:</p>
           <input 
+              className={errors.name ? "input-error" : ""}
               type="text" 
               placeholder="Name your experiment" 
               value={name}
               onChange={(e) => setName(e.target.value)}
           />
+          {errors.name && <span className="error-text">{errors.name[0]}</span>}
         </div>
 
         <div className="form-section">
@@ -93,6 +129,7 @@ function New_experiment() {
               value={plantName}
               onChange={(e) => setPlantName(e.target.value)}
           />
+          {errors.plant_name && <span className="error-text">{errors.plant_name[0]}</span>}
         </div>
         
         <div className="form-section">
@@ -103,6 +140,7 @@ function New_experiment() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
           />
+          {errors.description && <span className="error-text">{errors.description[0]}</span>}
         </div>
         <div className="form-section">
           <p>Tags:</p>
@@ -130,6 +168,7 @@ function New_experiment() {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
+            {errors.finished_at && <span className="error-text">{errors.finished_at[0]}</span>}
           </div>
         </div>
 
@@ -148,6 +187,7 @@ function New_experiment() {
               </div>
             ))}
           </div>
+          {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
         </div>
         
         <div className="add-collab">
