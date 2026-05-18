@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - "backend/**"
+      - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
       - "backend/**"
+      - ".github/workflows/backend-tests.yml"
 
 jobs:
   test:
@@ -16,8 +18,23 @@ jobs:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
 
+      - name: Przygotuj zmienne srodowiskowe
+        run: |
+          cat > backend/.env <<'EOF'
+          DJANGO_SECRET_KEY=test-secret-key
+          DEBUG=true
+          POSTGRES_DB=greenhouse_test
+          POSTGRES_USER=greenhouse
+          POSTGRES_PASSWORD=greenhouse
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+          EOF
+
       - name: Uruchom testy backendu
         run: |
           cd backend
-          docker compose up -d
-          docker compose exec -T web python manage.py test
+          docker compose up -d db
+          until docker compose exec -T db pg_isready -U greenhouse -d greenhouse_test; do
+            sleep 1
+          done
+          docker compose run --rm web python manage.py test

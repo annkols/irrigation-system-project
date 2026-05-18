@@ -6,6 +6,8 @@ Adafruit_BME280 bme;
 
 void setup() {
   Serial.begin(9600);
+  
+  Wire.begin();
 
   bool status = bme.begin(0x76);
 

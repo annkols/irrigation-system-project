@@ -5,31 +5,25 @@ import bgImage from "./images/back.jpg";
 import logo from "./images/logo_cultiva.svg";
 
 function App() {
-
   const navigate = useNavigate();
   const [filter, setFilter] = React.useState("all");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [measurements, setMeasurements] = useState([]);
+  const [selectedId, setSelectedId] = useState(1);
+
   const experiments = [
     { id: 1, name: "SOY EXPERIMENT", status: "in-progress", endDate: "31.03.2026", tags: ["SOY", "BACTERIA"], collaborators: ["Anna N.", "Jan K.", "Katarzyna W."], description: "Testing growth conditions for soybean crops in controlled environment." },
     { id: 2, name: "WHEAT TEST", status: "soon", endDate: "15.05.2026", tags: ["WHEAT"], collaborators: ["Igor J."], description: "Wheat growth experiment under varied light conditions." }
   ];
-  
+
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
-  const nowTime = now.toLocaleTimeString("pl-PL",{
+  const nowTime = now.toLocaleTimeString("pl-PL", {
     hour: "2-digit",
     minute: "2-digit"
   });
 
-  const mock = [{
-    temperature: "20",
-    soilMoisture: "30",
-    airHumidity: "50",
-    light: "90"
-  }]
-  const stats = mock[0];
-
-  const statusMap={
+  const statusMap = {
     all: "ALL",
     "in-progress": "IN PROGRESS",
     soon: "SOON ENDING",
@@ -38,34 +32,26 @@ function App() {
   const filtered = experiments.filter((exp) =>
     filter === "all" ? true : exp.status === filter
   );
-  
-  // state for getting measurements from backend
-  const [measurements, setMeasurements] = useState([]);
-  const [selectedId, setSelectedId] = useState(1);
+
   useEffect(() => {
-      const fetchData = () => {
-        fetch("http://localhost:8000/api/measurements/")
-          .then(res => res.json())
-          .then(data => setMeasurements(data))
-          .catch(err => console.error(err));
-      };
+    const fetchData = () => {
+      fetch("http://localhost:8000/api/measurements/")
+        .then(res => res.json())
+        .then(data => setMeasurements(data))
+        .catch(err => console.error(err));
+    };
 
-      fetchData();
+    fetchData();
 
-      const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(fetchData, 10000);
 
-      return () => clearInterval(interval);
-    }, []);
+    return () => clearInterval(interval);
+  }, []);
 
-    const latest = measurements.length > 0 
-      ? measurements[measurements.length - 1] 
-      : null;
-
-    const mainexp = experiments.find(exp => exp.id === selectedId);
-
+  const latest = measurements.length > 0 ? measurements[0] : null;
+  const mainexp = experiments.find(exp => exp.id === selectedId);
 
   return (
-    
     <>
       <header className="header">
         <div className="logo">
@@ -90,19 +76,16 @@ function App() {
               </div>
               <div className="date">
                 <span>{nowDate}</span>
-              
                 <span>{nowTime}</span>
               </div>
             </div>
             <div className='img-bottom'>
               <div className='progress-bar'>
-                  <div className='progress' />
+                <div className='progress' />
               </div>
               <span className='status in-progress'>IN PROGRESS</span>
             </div>
           </div>
-
-
 
           {detailsOpen ? (
             <div className="exp-details">
@@ -132,11 +115,13 @@ function App() {
             </div>
           ) : (
             <div className="stats">
-              <div className="row"><span>Temperature</span><span>{stats.temperature}°C</span></div>
-              <div className="row"><span>Moisture content:</span><span>{stats.soilMoisture} %</span></div>
-              <div className="row"><span>Air humidity:</span><span>{stats.airHumidity} %</span></div>
-              <div className="row"><span>Light intensity:</span><span>{stats.light} lx</span></div>
-              <div className="row"><span>Soil moisture:</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
+              <div className="row"><span>Temperature</span><span>{latest?.air_temperature ?? "-"} °C</span></div>
+              <div className="row"><span>Moisture content:</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
+              <div className="row"><span>Air humidity:</span><span>{latest?.air_humidity ?? "-"} %</span></div>
+              <div className="row"><span>Light intensity:</span><span>{latest?.light_lux ?? "-"} lx</span></div>
+              <div className="row"><span>Soil temperature:</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
+              <div className="row"><span>Pressure:</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
+              <div className="row"><span>Pump:</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
             </div>
           )}
         </div>
@@ -160,11 +145,13 @@ function App() {
                 </div>
               </div>
               <div className="stats">
-                <div className="row"><span>Temperature inside</span><span>{stats.temperature} °C</span></div>
-                <div className="row"><span>Temperature outside</span><span>26 °C</span></div>
-                <div className="row"><span>Soil humidity</span><span>{stats.soilMoisture} %</span></div>
-                <div className="row"><span>Air humidity</span><span>{stats.airHumidity} %</span></div>
-                <div className="row"><span>Light intensity</span><span>{stats.light} lx</span></div>
+                <div className="row"><span>Temperature inside</span><span>{latest?.air_temperature ?? "-"} °C</span></div>
+                <div className="row"><span>Soil moisture</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
+                <div className="row"><span>Air humidity</span><span>{latest?.air_humidity ?? "-"} %</span></div>
+                <div className="row"><span>Light intensity</span><span>{latest?.light_lux ?? "-"} lx</span></div>
+                <div className="row"><span>Soil temperature</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
+                <div className="row"><span>Pressure</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
+                <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
               </div>
               <p className="next-reading">Next reading in 23 minutes</p>
             </div>
@@ -225,16 +212,15 @@ function App() {
           </div>
 
         </div>
-
       </div>
 
-      {/* raw measurements z backendu */}
       <div className="log">
-        <h3>Raw measurements</h3>
-
+        <h3>Measurements</h3>
         {measurements.map((m, index) => (
           <div key={index}>
-            [{m.device_name}] raw: {m.raw_value}, moisture: {m.moisture_percent}%
+            [station {m.station_number}, pot {m.pot_number}] moisture: {m.moisture_percent}%,
+            air: {m.air_temperature ?? "-"} C, humidity: {m.air_humidity ?? "-"}%,
+            light: {m.light_lux ?? "-"} lx, pump: {m.pump_on ? "ON" : "OFF"}
           </div>
         ))}
       </div>
