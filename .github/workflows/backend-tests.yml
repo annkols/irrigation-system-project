@@ -33,5 +33,8 @@ jobs:
       - name: Uruchom testy backendu
         run: |
           cd backend
-          docker compose up -d
-          docker compose exec -T web python manage.py test
+          docker compose up -d db
+          until docker compose exec -T db pg_isready -U greenhouse -d greenhouse_test; do
+            sleep 1
+          done
+          docker compose run --rm web python manage.py test
