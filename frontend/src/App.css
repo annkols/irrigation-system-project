@@ -455,3 +455,19 @@ body {
   border: none;
 }
 
+.error-text {
+    color: #d32f2f;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    display: block;
+    font-weight: bold;
+}
+
+.input-error {
+    border: 2px solid #d32f2f !important;
+}
+
+.setup-container + .error-text {
+    text-align: center;
+    margin-top: 10px;
+}
