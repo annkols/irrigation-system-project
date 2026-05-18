@@ -2,10 +2,18 @@ from django.db import models
 
 
 class Measurement(models.Model):
-    device_name = models.CharField(max_length=100)
-    raw_value = models.IntegerField()
+    device_name = models.CharField(max_length=100, blank=True, default="")
+    station_number = models.PositiveIntegerField(default=1)
+    pot_number = models.PositiveIntegerField(default=1)
+    raw_value = models.IntegerField(null=True, blank=True)
     moisture_percent = models.FloatField()
+    air_temperature = models.FloatField(null=True, blank=True)
+    air_humidity = models.FloatField(null=True, blank=True)
+    pressure_hpa = models.FloatField(null=True, blank=True)
+    soil_temperature = models.FloatField(null=True, blank=True)
+    light_lux = models.FloatField(null=True, blank=True)
+    pump_on = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.device_name} | {self.raw_value} | {self.moisture_percent}%"
+        return f"station {self.station_number} | pot {self.pot_number} | {self.moisture_percent}%"
