@@ -102,29 +102,15 @@ POST /api/measurements/
 
 ```json
 {
-  "device_name": "sensor_1",
-  "raw_value": 512,
-  "moisture_percent": 65.4
-}
-```
-
----
-
-## Test API (np. Postman)
-
-POST:
-
-```
-http://localhost:8000/api/measurements/
-```
-
-Body:
-
-```json
-{
-  "device_name": "test",
-  "raw_value": 500,
-  "moisture_percent": 50
+  "station_number": 1,
+  "pot_number": 1,
+  "moisture_percent": 64,
+  "air_temperature": 22.50,
+  "air_humidity": 51.20,
+  "pressure_hpa": 1008.40,
+  "soil_temperature": 19.80,
+  "light_lux": 420.50,
+  "pump_on": false
 }
 ```
 
@@ -205,7 +191,7 @@ przełącznik na: TXD0 / RXD0
 
 Arduino IDE:
 Board: Arduino Mega 2560
-kod: wgranie-na-mega.ino
+kod: all_sensors_final.ino
 
 kliknij: Upload
 
@@ -219,7 +205,7 @@ mały przełącznik: TXD0 / RXD0
 
 Arduino IDE:
 Board: Generic ESP8266 Module
-kod: wgranie-na-esp.ino
+kod: esp_wifi_backend.ino
 
 kliknij: Upload
 
