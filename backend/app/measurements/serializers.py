@@ -1,12 +1,38 @@
 from rest_framework import serializers
 from .models import Measurement
+from sensors.models import Sensor
 
 
 class MeasurementSerializer(serializers.ModelSerializer):
+    sensor_id = serializers.PrimaryKeyRelatedField(
+        queryset=Sensor.objects.all(),
+        source='sensor',
+        required=False,
+        allow_null=True
+    )
+
+    sensor_name = serializers.CharField(
+        source='sensor.name',
+        read_only=True
+    )
+
+    sensor_code = serializers.CharField(
+        source='sensor.code',
+        read_only=True
+    )
+
     class Meta:
         model = Measurement
-        fields = ['id', 'device_name', 'raw_value', 'moisture_percent', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = [
+            'id',
+            'sensor_id',
+            'sensor_name',
+            'sensor_code',
+            'raw_value',
+            'moisture_percent',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'sensor_name', 'sensor_code', 'created_at']
 
     def validate_moisture_percent(self, value):
         if value < 0 or value > 100:
