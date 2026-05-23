@@ -25,21 +25,21 @@ class MeasurementSerializer(serializers.ModelSerializer):
         model = Measurement
         fields = [
             'id',
-            'sensor_id',
-            'sensor_name',
-            'sensor_code',
-            'raw_value',
+            'station_number',
+            'pot_number',
             'moisture_percent',
+            'air_temperature',
+            'air_humidity',
+            'pressure_hpa',
+            'soil_temperature',
+            'light_lux',
+            'pump_on',
             'created_at',
         ]
-        read_only_fields = ['id', 'sensor_name', 'sensor_code', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
     def validate_moisture_percent(self, value):
         if value < 0 or value > 100:
             raise serializers.ValidationError("moisture_percent musi być w zakresie 0-100.")
         return value
 
-    def validate_raw_value(self, value):
-        if value < 0:
-            raise serializers.ValidationError("raw_value nie może być ujemne.")
-        return value

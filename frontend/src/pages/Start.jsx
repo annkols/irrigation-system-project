@@ -73,7 +73,7 @@ function Start() {
             margin: 0,
             lineHeight: 1.2,
           }}>
-            Intelligent management of greenhouse experiments
+            Greenhouse experiment management system
           </h1>
 
           <div style={{ display: 'flex', gap: '16px' }}>

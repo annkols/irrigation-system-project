@@ -10,6 +10,7 @@
   --bg-stat: #FBF6F6;
 
   --action-bg: #FBF6F6 ;
+  --back: #B0B0B0
 }
 
 body {
@@ -310,25 +311,348 @@ body {
   color: #1A47B8;
 }
 
-/* Wybór zestawu czujników przy tworzeniu eksperymentu */
+/* Wybï¿½r zestawu czujnikï¿½w przy tworzeniu eksperymentu */
+/*new experiment page*/
+
 .setup-container {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin: 15px 0;
+  margin-top: 10px;
 }
 
 .setup-card {
-  border: 1px solid #ccc;
-  padding: 10px;
+  border: 1px solid var(--action-bg);
+  border-radius: 6px;
+  padding: 8px 12px;
   cursor: pointer;
-  flex: 1;
+  gap: 16px;
+  display: flex;
+  align-items: center;
+  background: var(--back);
+  color: var(--text-on-dark);
+  box-sizing: border-box;
 }
 
 .setup-card.selected {
-  border: 2px solid black;
-  background-color: #eee;
+  border: 2px solid var(--text-on-dark);
+  background-color: var(--primary-green);
 }
 
-.setup-card h3, .setup-card p {
+.setup-card h3{
   margin: 0;
+  padding: 0;
+  min-width: 90px;
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+
+.form{
+  width: 720px;
+  margin: 0 auto;
+  padding: 50px 40px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  box-sizing: border-box;
+}
+
+.new-exp-form h2 {
+  font-size: 42px;
+  color: var(--primary-green);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.form-section{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-section p {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+}
+
+.date-choice label {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+}
+
+.add-collab p{
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+}
+
+.form input {
+  width: 100%;
+  border: 1px solid var(--back);
+  border-radius: 8px;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 15px;
+  background: var(--action-bg);
+  box-sizing: border-box;
+}
+
+.dates-choices {
+  display: flex;
+  gap: 40px;
+}
+
+.date-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+
+.is-public label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.is-public input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-green);
+}
+
+
+.btn-back{
+  height: 36px;
+  border-radius: 10px;
+  padding: 0 28px;
+  font-size: 10px;
+  cursor: pointer;
+  background-color: var(--back);
+  color: var(--text-on-dark);
+  width: 140px;
+  transition: 0.2s ease;
+  border: none;
+}
+
+.btn-create{
+  background: var(--primary-green);
+  color: var(--text-on-dark);
+  width: 240px;
+  height: 36px;
+  border-radius: 10px;
+  padding: 0 28px;
+  font-size: 10px;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-top: -70px;
+  border: none;
+}
+
+.error-text {
+    color: #d32f2f;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    display: block;
+    font-weight: bold;
+}
+
+.input-error {
+    border: 2px solid #d32f2f !important;
+}
+
+.setup-container + .error-text {
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* experiment details panel */
+
+.container {
+  overflow: hidden;
+  position: relative;
+}
+
+.right-panel-wrapper {
+  width: 50%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s ease;
+}
+
+.dashboard-hidden {
+  transform: translateX(100%);
+}
+
+.panel-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: var(--bg-stat);
+  border: 1px solid #e0e0e0;
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  padding: 12px 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.measurements-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.readings-spacer {
+  flex: 1;
+}
+
+.readings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.measurements-panel .stats {
+  flex: none;
+  background: var(--bg-main);
+}
+
+.readings-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.readings-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13px;
+  color: var(--primary-green);
+}
+
+.next-reading {
+  padding: 12px 20px;
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+.exp-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-stat);
+}
+
+.exp-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.exp-tag {
+  background: var(--back);
+  color: var(--text-on-dark);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+}
+
+.exp-tag-add {
+  background: transparent;
+  border: 1.5px solid var(--back);
+  color: var(--back);
+}
+
+.exp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exp-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+}
+
+.exp-collaborators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.collab-chip {
+  background: var(--primary-light);
+  border: 1px solid var(--primary-green);
+  color: var(--text-main);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.collab-chip-add {
+  background: transparent;
+  border: 1.5px solid var(--back);
+  color: var(--back);
+}
+
+.exp-show-all {
+  font-size: 12px;
+  color: var(--primary-green);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.exp-description {
+  font-size: 14px;
+  color: #444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.exp-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+  cursor: pointer;
+  color: #666;
 }
