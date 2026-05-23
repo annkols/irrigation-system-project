@@ -25,6 +25,9 @@ class MeasurementSerializer(serializers.ModelSerializer):
         model = Measurement
         fields = [
             'id',
+            'sensor_id',
+            'sensor_name',
+            'sensor_code',
             'station_number',
             'pot_number',
             'moisture_percent',
