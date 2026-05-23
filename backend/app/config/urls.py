@@ -32,7 +32,7 @@ def add_measurement(request):
         data = json.loads(request.body)
 
         measurement = Measurement.objects.create(
-            device_name=data["device_name"],
+            device_name=data["sensor"],
             raw_value=data["raw_value"],
             moisture_percent=data["moisture_percent"],
         )
@@ -55,4 +55,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('measurements.urls')),
     path('api/', include('experiments.urls')),
+    path('api/', include('sensors.urls')),
+    path('api/', include('users.urls')),
 ]

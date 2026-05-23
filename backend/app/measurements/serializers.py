@@ -1,12 +1,33 @@
 from rest_framework import serializers
 from .models import Measurement
+from sensors.models import Sensor
 
 
 class MeasurementSerializer(serializers.ModelSerializer):
+    sensor_id = serializers.PrimaryKeyRelatedField(
+        queryset=Sensor.objects.all(),
+        source='sensor',
+        required=False,
+        allow_null=True
+    )
+
+    sensor_name = serializers.CharField(
+        source='sensor.name',
+        read_only=True
+    )
+
+    sensor_code = serializers.CharField(
+        source='sensor.code',
+        read_only=True
+    )
+
     class Meta:
         model = Measurement
         fields = [
             'id',
+            'sensor_id',
+            'sensor_name',
+            'sensor_code',
             'station_number',
             'pot_number',
             'moisture_percent',

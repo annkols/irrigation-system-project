@@ -1,8 +1,15 @@
 from django.db import models
+from sensors.models import Sensor
 
 
 class Measurement(models.Model):
-    device_name = models.CharField(max_length=100, blank=True, default="")
+    sensor = models.ForeignKey(
+        Sensor,
+        on_delete=models.PROTECT,
+        related_name="measurements",
+        null=True,
+        blank=True,
+    )
     station_number = models.PositiveIntegerField(default=1)
     pot_number = models.PositiveIntegerField(default=1)
     raw_value = models.IntegerField(null=True, blank=True)

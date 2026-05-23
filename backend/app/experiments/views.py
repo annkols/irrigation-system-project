@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny
 
 from .models import Experiment
 from .serializers import ExperimentSerializer
+from rest_framework.exceptions import ValidationError
 
 # Create your views here.
 class ExperimentListCreateView(generics.ListCreateAPIView):
