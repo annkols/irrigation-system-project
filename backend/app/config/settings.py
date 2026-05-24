@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'experiments',
     'sensors',
     'users',
+    'pump_control',
     'rest_framework',
     'corsheaders',
 ]
