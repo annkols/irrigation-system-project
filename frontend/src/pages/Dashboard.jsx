@@ -5,12 +5,18 @@ import bgImage from "./images/back.jpg";
 import logo from "./images/logo_cultiva.svg";
 import ExperimentChart from "./ExperimentChart";
 
+const API_BASE_URL = "http://localhost:8000/api";
+const pumpCommands = ["ON", "OFF", "AUTO"];
+
 function App() {
   const navigate = useNavigate();
   const [filter, setFilter] = React.useState("all");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [measurements, setMeasurements] = useState([]);
   const [selectedId, setSelectedId] = useState(1);
+  const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
+  const [pumpCommandStatus, setPumpCommandStatus] = useState("");
+  const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
 
   const experiments = [
     { id: 1, name: "SOY EXPERIMENT", status: "in-progress", endDate: "31.03.2026", tags: ["SOY", "BACTERIA"], collaborators: ["Anna N.", "Jan K.", "Katarzyna W."], description: "Testing growth conditions for soybean crops in controlled environment." },
@@ -36,7 +42,7 @@ function App() {
 
   useEffect(() => {
     const fetchData = () => {
-      fetch("http://localhost:8000/api/measurements/")
+      fetch(`${API_BASE_URL}/measurements/`)
         .then(res => res.json())
         .then(data => setMeasurements(data))
         .catch(err => console.error(err));
@@ -51,6 +57,62 @@ function App() {
 
   const latest = measurements.length > 0 ? measurements[0] : null;
   const mainexp = experiments.find(exp => exp.id === selectedId);
+
+  const sendPumpCommand = async (command) => {
+    setIsSendingPumpCommand(true);
+    setPumpCommandStatus("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/pump-control/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ command }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Pump command request failed");
+      }
+
+      setSelectedPumpCommand(command);
+      setPumpCommandStatus(`Command ${command} sent`);
+    } catch (error) {
+      console.error(error);
+      setPumpCommandStatus("Command failed");
+    } finally {
+      setIsSendingPumpCommand(false);
+    }
+  };
+
+  const pumpControls = (
+    <div className="pump-control">
+      <div className="pump-control-header">
+        <span>Pump control</span>
+        <span className="pump-control-state">
+          {latest ? (latest.pump_on ? "RUNNING" : "STOPPED") : "NO DATA"}
+        </span>
+      </div>
+      <div className="pump-command-buttons">
+        {pumpCommands.map((command) => (
+          <button
+            key={command}
+            type="button"
+            className={`pump-command-btn ${selectedPumpCommand === command ? "active" : ""}`}
+            disabled={isSendingPumpCommand}
+            onClick={() => sendPumpCommand(command)}
+          >
+            {command}
+          </button>
+        ))}
+      </div>
+      {pumpCommandStatus && (
+        <p className={pumpCommandStatus.includes("failed") ? "pump-command-error" : "pump-command-status"}>
+          {pumpCommandStatus}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -123,6 +185,7 @@ function App() {
               <div className="row"><span>Soil temperature:</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
               <div className="row"><span>Pressure:</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
               <div className="row"><span>Pump:</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+              {pumpControls}
             </div>
           )}
         </div>
@@ -154,6 +217,7 @@ function App() {
                 <div className="row"><span>Soil temperature</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
                 <div className="row"><span>Pressure</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
                 <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+                {pumpControls}
               </div>
               <p className="next-reading">Next reading in 23 minutes</p>
             </div>

@@ -144,6 +144,77 @@ body {
   margin-bottom: 8px;
 }
 
+.pump-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.pump-control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pump-control-state {
+  color: var(--primary-green);
+  font-size: 12px;
+}
+
+.pump-command-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pump-command-btn {
+  min-height: 34px;
+  border: 1.5px solid var(--back);
+  border-radius: 6px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pump-command-btn:hover:not(:disabled) {
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+
+.pump-command-btn.active {
+  background: var(--primary-green);
+  border-color: var(--primary-green);
+  color: var(--text-on-dark);
+}
+
+.pump-command-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.pump-command-status,
+.pump-command-error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pump-command-status {
+  color: var(--primary-green);
+}
+
+.pump-command-error {
+  color: #d32f2f;
+}
+
 .dashboard {
   gap: 0;
   width: 50%;
