@@ -35,6 +35,7 @@ const int RELAY_ON = HIGH;
 const int RELAY_OFF = LOW;
 
 bool pumpState = false;
+bool manualPumpMode = false;
 
 void setup() {
   Serial.begin(9600);
@@ -66,6 +67,8 @@ void setup() {
 }
 
 void loop() {
+  handlePumpCommand();
+
   int rawSoil = analogRead(SOIL_MOISTURE_PIN);
 
   int soilMoisture = map(rawSoil, dryValue, wetValue, 0, 100);
@@ -80,13 +83,15 @@ void loop() {
   float airHumidity = bme.readHumidity();
   float pressure = bme.readPressure() / 100.0F;
 
-  if (soilMoisture > moistureLimit) {
-    if (pumpState) {
-      pumpOff();
-    }
-  } else {
-    if (!pumpState) {
-      pumpOn();
+  if (!manualPumpMode) {
+    if (soilMoisture > moistureLimit) {
+      if (pumpState) {
+        pumpOff();
+      }
+    } else {
+      if (!pumpState) {
+        pumpOn();
+      }
     }
   }
 
@@ -118,6 +123,8 @@ void loop() {
 
   Serial.print("Pompa: ");
   Serial.println(pumpState ? "WLACZONA" : "WYLACZONA");
+  Serial.print("Tryb pompy: ");
+  Serial.println(manualPumpMode ? "MANUAL" : "AUTO");
 
   Serial.println("--------------------------");
 
@@ -144,6 +151,26 @@ void pumpOff() {
   digitalWrite(RELAY_PIN, RELAY_OFF);
   pumpState = false;
   Serial.println("POMPA WYLACZONA");
+}
+
+void handlePumpCommand() {
+  if (!EspSerial.available()) {
+    return;
+  }
+
+  String command = EspSerial.readStringUntil('\n');
+  command.trim();
+
+  if (command == "PUMP_ON") {
+    manualPumpMode = true;
+    pumpOn();
+  } else if (command == "PUMP_OFF") {
+    manualPumpMode = true;
+    pumpOff();
+  } else if (command == "PUMP_AUTO") {
+    manualPumpMode = false;
+    Serial.println("TRYB POMPY AUTO");
+  }
 }
 
 void sendJsonToEsp(
