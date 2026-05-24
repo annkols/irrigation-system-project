@@ -15,40 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.http import JsonResponse
 from django.urls import path, include
-from django.views.decorators.csrf import csrf_exempt
-import json
-
-from measurements.models import Measurement
-
-
-@csrf_exempt
-def add_measurement(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Only POST allowed"}, status=405)
-
-    try:
-        data = json.loads(request.body)
-
-        measurement = Measurement.objects.create(
-            device_name=data["sensor"],
-            raw_value=data["raw_value"],
-            moisture_percent=data["moisture_percent"],
-        )
-
-        return JsonResponse(
-            {
-                "message": "Measurement saved",
-                "id": measurement.id,
-            },
-            status=201,
-        )
-
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
 
 urlpatterns = [
