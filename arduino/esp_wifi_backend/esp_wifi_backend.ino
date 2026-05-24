@@ -1,18 +1,11 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
+#include "arduino_secrets.h"
 
 // Dla ESP32 zamien powyzsze include na:
 // #include <WiFi.h>
 // #include <HTTPClient.h>
-
-const char* WIFI_SSID = "nazwaWifi";
-const char* WIFI_PASSWORD = "hasloDoWifi";
-
-// IP komputera z backendem w tej samej sieci Wi-Fi.
-// Nie wpisuj localhost, bo dla ESP localhost oznacza samo ESP.
-const char* MEASUREMENTS_API_URL = "http://192...:8000/api/measurements/";
-const char* PUMP_COMMAND_API_URL = "http://192...:8000/api/pump-control/latest/";
 
 unsigned long lastSendAt = 0;
 const unsigned long sendIntervalMs = 10000;
@@ -20,7 +13,7 @@ const unsigned long sendIntervalMs = 10000;
 unsigned long lastCommandCheckAt = 0;
 const unsigned long commandCheckIntervalMs = 5000;
 
-String lastForwardedCommand = "";
+int lastForwardedCommandId = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -98,15 +91,41 @@ void fetchPumpCommand() {
 
   if (statusCode == 200) {
     String response = http.getString();
+    int commandId = extractCommandId(response);
     String command = extractArduinoCommand(response);
 
-    if (command.length() > 0 && command != lastForwardedCommand) {
+    if (commandId > 0 && command.length() > 0 && commandId != lastForwardedCommandId) {
       Serial.println(command);
-      lastForwardedCommand = command;
+      lastForwardedCommandId = commandId;
     }
   }
 
   http.end();
+}
+
+int extractCommandId(String response) {
+  int keyIndex = response.indexOf("\"id\"");
+
+  if (keyIndex < 0) {
+    return 0;
+  }
+
+  int colonIndex = response.indexOf(':', keyIndex);
+  int commaIndex = response.indexOf(',', colonIndex + 1);
+
+  if (colonIndex < 0) {
+    return 0;
+  }
+
+  String idValue;
+  if (commaIndex < 0) {
+    idValue = response.substring(colonIndex + 1);
+  } else {
+    idValue = response.substring(colonIndex + 1, commaIndex);
+  }
+
+  idValue.trim();
+  return idValue.toInt();
 }
 
 String extractArduinoCommand(String response) {
