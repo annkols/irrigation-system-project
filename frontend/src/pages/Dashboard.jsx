@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import "../App.css";
 import bgImage from "./images/back.jpg";
 import logo from "./images/logo_cultiva.svg";
+import ExperimentChart from "./ExperimentChart";
 
 function App() {
   const navigate = useNavigate();
@@ -136,6 +137,7 @@ function App() {
                 <span>FULL EXPERIMENT HISTORY</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
+              <ExperimentChart />
               <div className="readings-spacer" />
               <div className="readings-header">
                 <span className="readings-title">LATEST READING</span>
