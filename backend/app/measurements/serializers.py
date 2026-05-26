@@ -1,33 +1,12 @@
 from rest_framework import serializers
 from .models import Measurement
-from sensors.models import Sensor
 
 
 class MeasurementSerializer(serializers.ModelSerializer):
-    sensor_id = serializers.PrimaryKeyRelatedField(
-        queryset=Sensor.objects.all(),
-        source='sensor',
-        required=False,
-        allow_null=True
-    )
-
-    sensor_name = serializers.CharField(
-        source='sensor.name',
-        read_only=True
-    )
-
-    sensor_code = serializers.CharField(
-        source='sensor.code',
-        read_only=True
-    )
-
     class Meta:
         model = Measurement
         fields = [
             'id',
-            'sensor_id',
-            'sensor_name',
-            'sensor_code',
             'station_number',
             'pot_number',
             'moisture_percent',
@@ -46,3 +25,17 @@ class MeasurementSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("moisture_percent musi być w zakresie 0-100.")
         return value
 
+    def validate_air_humidity(self, value):
+        if value is not None and (value < 0 or value > 100):
+            raise serializers.ValidationError("air_humidity musi być w zakresie 0-100.")
+        return value
+
+    def validate_light_lux(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("light_lux nie może być wartością ujemną.")
+        return value
+
+    def validate_pressure_hpa(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("pressure_hpa musi być wartością dodatnią.")
+        return value
