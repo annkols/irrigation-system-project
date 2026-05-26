@@ -124,6 +124,7 @@ body {
 .status{
   font-size: 12px;
   margin-top: 5px;
+  color: var(--primary-green);
 }
 
 .status.in-progress{
