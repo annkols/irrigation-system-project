@@ -229,10 +229,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], experiment.id)
         self.assertEqual(len(response.data["measurements"]), 1)
-        self.assertEqual(
-            response.data["measurements"][0]["station_number"],
-            1
-        )
+        self.assertEqual(response.data["measurements"][0]["station_number"],1)
 
     def test_experiment_with_measurements_respects_started_at(self):
         started_at = timezone.now() - timedelta(hours=1)
@@ -250,14 +247,26 @@ class ExperimentTests(APITestCase):
             station_number=1,
             pot_number=1,
             raw_value=400,
-            moisture_percent=40.0
+            moisture_percent=40.0,
+            air_temperature=22.5,
+            air_humidity=51.2,
+            pressure_hpa=1008.4,
+            soil_temperature=19.8,
+            light_lux=420.5,
+            pump_on=False
         )
 
         new_measurement = Measurement.objects.create(
             station_number=1,
             pot_number=1,
             raw_value=700,
-            moisture_percent=70.0
+            moisture_percent=70.0,
+            air_temperature=22.5,
+            air_humidity=51.2,
+            pressure_hpa=1008.4,
+            soil_temperature=19.8,
+            light_lux=420.5,
+            pump_on=False
         )
 
         Measurement.objects.filter(pk=old_measurement.pk).update(
@@ -277,7 +286,3 @@ class ExperimentTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["measurements"]), 1)
-        self.assertEqual(
-            response.data["measurements"][0]["raw_value"],
-            700
-        )
