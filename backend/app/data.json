@@ -1,9 +1,23 @@
 [
   {
+    "model": "experiments.experiment",
+    "pk": 1,
+    "fields": {
+      "name": "Soy test",
+      "description": "Test",
+      "plant_name": "Soy",
+      "owner": null,
+      "collaborators": [],
+      "sensor_set_id": 1,
+      "started_at": "2026-05-24T17:00:00Z",
+      "finished_at": null,
+      "created_at": "2026-05-24T17:00:00Z"
+    }
+  },
+  {
     "model": "measurements.measurement",
     "pk": 1,
     "fields": {
-      "sensor": null,
       "station_number": 1,
       "pot_number": 1,
       "raw_value": null,
@@ -21,9 +35,8 @@
     "model": "measurements.measurement",
     "pk": 2,
     "fields": {
-      "sensor": null,
       "station_number": 1,
-      "pot_number": 1,
+      "pot_number": 2,
       "raw_value": null,
       "moisture_percent": 47.0,
       "air_temperature": 23.1,
@@ -39,9 +52,8 @@
     "model": "measurements.measurement",
     "pk": 3,
     "fields": {
-      "sensor": null,
       "station_number": 1,
-      "pot_number": 2,
+      "pot_number": 3,
       "raw_value": null,
       "moisture_percent": 18.0,
       "air_temperature": 24.0,

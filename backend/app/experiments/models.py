@@ -12,6 +12,7 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     plant_name = models.CharField(max_length=100, blank=True)
 
+    # FK do userów eksperyment ---> 1 user (owner)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -20,6 +21,7 @@ class Experiment(models.Model):
         blank=True
     )
 
+    # FK do userów eksperyment ---> wielu userów (collab)
     collaborators = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name="collaborated_experiments",
