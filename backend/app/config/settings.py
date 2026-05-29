@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False')== 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 
 ALLOWED_HOSTS = ["*"]
@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'measurements',
     'experiments',
+    'sensors',
+    'users',
+    'pump_control',
     'rest_framework',
     'corsheaders',
 ]

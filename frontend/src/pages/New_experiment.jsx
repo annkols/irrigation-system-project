@@ -12,12 +12,20 @@ function New_experiment() {
   const [endDate, setEndDate] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
+  const [frequencies, setFrequencies] = useState({});
 
   const sensorSetups = [
-    { id: 1, title: 'BASIC', desc: 'temperature humidity' },
-    { id: 2, title: 'EXTENDED', desc: 'temperature humidity light' },
-    { id: 3, title: 'FULL', desc: 'temperature humidity light pH' }
-  ];
+      { id: 1, title: 'BASIC', sensors: ['temperature', 'humidity'] },
+      { id: 2, title: 'EXTENDED', sensors: ['temperature', 'humidity', 'light'] },
+      { id: 3, title: 'FULL', sensors: ['air humidity', 'light', 'soil moisture', 'pressure', 'soil temperature', 'air temperature'] }
+    ];
+
+  const handleFreqChange = (sensor, value) => {
+      setFrequencies(prev => ({
+        ...prev,
+        [sensor]: value
+      }));
+    };
 
   const handleCreate = () => {
     setErrors({});
@@ -39,6 +47,19 @@ function New_experiment() {
 
     if (!selectedSetup) {
       localErrors.sensor_set_id = ["Please select a sensor setup."];
+    } else {
+      const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
+      const invalidSensors = currentSetup.sensors.some(sensor => {
+        const val = frequencies[sensor];
+        const numVal = parseInt(val, 10);
+        const isEmpty = !val || val.trim() === "";
+        const isNotInteger = Number(val) !== numVal;
+        const isOutOfRange = numVal <= 0 || numVal > 1440;
+        return isEmpty || isNotInteger || isOutOfRange;
+      });
+      if (invalidSensors) {
+        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 1440 min (24h)."];
+      }
     }
 
     if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
@@ -59,6 +80,7 @@ function New_experiment() {
       finished_at: endDate || null,
       owner: null,
       collaborators: []
+      //sensor_frequencies: frequencies //odkomentowac jak dodamy to do backendu
     };
 
     console.log("Wysylane dane:", newExperiment);
@@ -168,7 +190,7 @@ function New_experiment() {
         </div>
 
         <div className="form-section">
-          <p>Select available setups of sensors you would like to use:</p>
+          <p>Select available setups of sensors you would like to use, all setups include a water pump:</p>
 
           <div className="setup-container">
             {sensorSetups.map((setup) => (
@@ -178,7 +200,34 @@ function New_experiment() {
                 onClick={() => setSelectedSetup(setup.id)}
               >
                 <h3>{setup.title}</h3>
-                <p>{setup.desc}</p>
+                {selectedSetup === setup.id && (
+                  <div className="setup-details" onClick={(e) => e.stopPropagation()}>
+                    <p style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.8 }}>
+                      Set reading frequency for each sensor (min):
+                    </p>
+                      {setup.sensors.map((sensor) => (
+                      <div key={sensor} className="sensor-freq-row">
+                        <span className="sensor-name">{sensor}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="1440"
+                          step="1"
+                          placeholder="min"
+                          className={errors.sensor_set_id && (!frequencies[sensor] || frequencies[sensor] <= 0 || frequencies[sensor] > 1440) ? "input-error" : ""}
+                          value={frequencies[sensor] || ""}
+                          onKeyDown={(e) => {
+                            // nie wolno znaków e E , .
+                            if (["e", "E", ".", ","].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onChange={(e) => handleFreqChange(sensor, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

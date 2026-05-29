@@ -2,9 +2,11 @@ from django.db import models
 
 
 class Measurement(models.Model):
-    device_name = models.CharField(max_length=100, blank=True, default="")
+    # identyfikatory do powiązania z eksperymentem
     station_number = models.PositiveIntegerField(default=1)
     pot_number = models.PositiveIntegerField(default=1)
+
+    # pomiary z arduino
     raw_value = models.IntegerField(null=True, blank=True)
     moisture_percent = models.FloatField()
     air_temperature = models.FloatField(null=True, blank=True)
@@ -13,7 +15,18 @@ class Measurement(models.Model):
     soil_temperature = models.FloatField(null=True, blank=True)
     light_lux = models.FloatField(null=True, blank=True)
     pump_on = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+
+        # default sortowanie
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['station_number', 'pot_number', 'created_at']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
         return f"station {self.station_number} | pot {self.pot_number} | {self.moisture_percent}%"
+    

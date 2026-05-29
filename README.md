@@ -116,12 +116,64 @@ POST /api/measurements/
 
 ---
 
+## API - sterowanie pompa
+
+Frontend wysyla komende sterowania pompa do backendu:
+
+```
+POST /api/pump-control/
+```
+
+Przykladowy JSON:
+
+```json
+{
+  "command": "ON"
+}
+```
+
+Dostepne komendy:
+
+* `ON` - wlacza pompe w trybie recznym
+* `OFF` - wylacza pompe w trybie recznym
+* `AUTO` - wraca do automatycznego sterowania wedlug wilgotnosci gleby
+
+ESP8266 pobiera najnowsza komende z backendu:
+
+```
+GET /api/pump-control/latest/
+```
+
+Backend zwraca rowniez pole `arduino_command`, ktore ESP wysyla do Arduino Mega:
+
+```json
+{
+  "command": "ON",
+  "arduino_command": "PUMP_ON"
+}
+```
+
+Komendy rozumiane przez Arduino Mega:
+
+* `PUMP_ON`
+* `PUMP_OFF`
+* `PUMP_AUTO`
+
+Przeplyw sterowania:
+
+```
+frontend -> backend -> ESP8266 -> Serial3 -> Arduino Mega -> przekaznik/pompa
+```
+
+---
+
 ## Połączenie z ESP8266
 
 W kodzie ESP ustaw:
 
 ```cpp
-const char* serverUrl = "http://<IP_KOMPUTERA>:8000/api/measurements/";
+const char* MEASUREMENTS_API_URL = "http://<IP_KOMPUTERA>:8000/api/measurements/";
+const char* PUMP_COMMAND_API_URL = "http://<IP_KOMPUTERA>:8000/api/pump-control/latest/";
 ```
 
 ### Jak znaleźć IP:

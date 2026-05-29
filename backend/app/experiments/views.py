@@ -3,7 +3,8 @@ from rest_framework import generics
 from rest_framework.permissions import AllowAny
 
 from .models import Experiment
-from .serializers import ExperimentSerializer
+from .serializers import ExperimentSerializer, ExperimentWithMeasurementsSerializer
+from rest_framework.exceptions import ValidationError
 
 # Create your views here.
 class ExperimentListCreateView(generics.ListCreateAPIView):
@@ -46,5 +47,22 @@ class ExperimentStatusListView(generics.ListAPIView):
             ).order_by('-created_at')
 
         raise ValidationError({
-            "status": "Invalid status. Use: not-started, in-progress, completed."
+            "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
         })
+    
+class ExperimentWithMeasurementsListView(generics.ListAPIView):
+    serializer_class = ExperimentWithMeasurementsSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get_queryset(self):
+        return Experiment.objects.all().order_by('-created_at')
+
+
+class ExperimentWithMeasurementsDetailView(generics.RetrieveAPIView):
+    serializer_class = ExperimentWithMeasurementsSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get_queryset(self):
+        return Experiment.objects.all()

@@ -3,18 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import "../App.css";
 import bgImage from "./images/back.jpg";
 import logo from "./images/logo_cultiva.svg";
+import ExperimentChart from "./ExperimentChart";
+
+const API_BASE_URL = "http://localhost:8000/api";
+const pumpCommands = ["ON", "OFF", "AUTO"];
 
 function App() {
   const navigate = useNavigate();
   const [filter, setFilter] = React.useState("all");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [measurements, setMeasurements] = useState([]);
-  const [selectedId, setSelectedId] = useState(1);
-
-  const experiments = [
-    { id: 1, name: "SOY EXPERIMENT", status: "in-progress", endDate: "31.03.2026", tags: ["SOY", "BACTERIA"], collaborators: ["Anna N.", "Jan K.", "Katarzyna W."], description: "Testing growth conditions for soybean crops in controlled environment." },
-    { id: 2, name: "WHEAT TEST", status: "soon", endDate: "15.05.2026", tags: ["WHEAT"], collaborators: ["Igor J."], description: "Wheat growth experiment under varied light conditions." }
-  ];
+  const [experiments, setExperiments] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
+  const [pumpCommandStatus, setPumpCommandStatus] = useState("");
+  const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
 
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
@@ -26,7 +29,9 @@ function App() {
   const statusMap = {
     all: "ALL",
     "in-progress": "IN PROGRESS",
-    soon: "SOON ENDING",
+    "not started": "NOT STARTED",
+    "completed": "COMPLETED",
+    "soon": "SOON ENDING",
   };
 
   const filtered = experiments.filter((exp) =>
@@ -35,10 +40,20 @@ function App() {
 
   useEffect(() => {
     const fetchData = () => {
-      fetch("http://localhost:8000/api/measurements/")
+      fetch(`${API_BASE_URL}/measurements/`)
         .then(res => res.json())
         .then(data => setMeasurements(data))
         .catch(err => console.error(err));
+
+        fetch(`${API_BASE_URL}/experiments/`)
+      .then(res => res.json())
+      .then(data => {
+        setExperiments(data);
+        if (data.length > 0 && selectedId === null) {
+          setSelectedId(data[0].id);
+        }
+      })
+      .catch(err => console.error(err));
     };
 
     fetchData();
@@ -46,10 +61,84 @@ function App() {
     const interval = setInterval(fetchData, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedId]);
 
   const latest = measurements.length > 0 ? measurements[0] : null;
-  const mainexp = experiments.find(exp => exp.id === selectedId);
+  const mainexp = experiments.find(exp => exp.id === selectedId) || experiments[0] || null;
+
+  const calculateProgress = (exp) => {
+  if (!exp || exp.status === "not started") return 0;
+  if (exp.status === "completed") return 100;
+  if (!exp.started_at || !exp.finished_at) return 0;
+  const start = new Date(exp.started_at).getTime();
+  const end = new Date(exp.finished_at).getTime();
+  const nowTs = new Date().getTime();
+
+  if (nowTs >= end) return 100;
+  if (nowTs <= start) return 0;
+
+  const total = end - start;
+  const elapsed = nowTs - start;
+  return Math.round((elapsed / total) * 100);
+  };
+
+    const progressPercent = calculateProgress(mainexp);
+
+  const sendPumpCommand = async (command) => {
+    setIsSendingPumpCommand(true);
+    setPumpCommandStatus("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/pump-control/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ command }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Pump command request failed");
+      }
+
+      setSelectedPumpCommand(command);
+      setPumpCommandStatus(`Command ${command} sent`);
+    } catch (error) {
+      console.error(error);
+      setPumpCommandStatus("Command failed");
+    } finally {
+      setIsSendingPumpCommand(false);
+    }
+  };
+
+  const pumpControls = (
+    <div className="pump-control">
+      <div className="pump-control-header">
+        <span>Pump control</span>
+        <span className="pump-control-state">
+          {latest ? (latest.pump_on ? "RUNNING" : "STOPPED") : "NO DATA"}
+        </span>
+      </div>
+      <div className="pump-command-buttons">
+        {pumpCommands.map((command) => (
+          <button
+            key={command}
+            type="button"
+            className={`pump-command-btn ${selectedPumpCommand === command ? "active" : ""}`}
+            disabled={isSendingPumpCommand}
+            onClick={() => sendPumpCommand(command)}
+          >
+            {command}
+          </button>
+        ))}
+      </div>
+      {pumpCommandStatus && (
+        <p className={pumpCommandStatus.includes("failed") ? "pump-command-error" : "pump-command-status"}>
+          {pumpCommandStatus}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -72,7 +161,7 @@ function App() {
           <div className="image-placeholder" style={{ backgroundImage: `url(${bgImage})` }}>
             <div className="card-header">
               <div>
-                <h2>{mainexp.name}</h2>
+                <h2>{mainexp?.name || "Loading..."}</h2>
               </div>
               <div className="date">
                 <span>{nowDate}</span>
@@ -80,23 +169,27 @@ function App() {
               </div>
             </div>
             <div className='img-bottom'>
-              <div className='progress-bar'>
-                <div className='progress' />
+                <div className='progress-bar'>
+                  <div className='progress' style={{ width: `${progressPercent}%` }} />
+                </div>
+                <span className={"status " + (mainexp?.status?.replace(/\s+/g, '-') || '')}>
+                  {mainexp?.status 
+                    ? (statusMap[mainexp.status] || mainexp.status.toUpperCase()) 
+                    : "UNKNOWN"}
+                </span>
               </div>
-              <span className='status in-progress'>IN PROGRESS</span>
             </div>
-          </div>
 
           {detailsOpen ? (
             <div className="exp-details">
               <div className="exp-tags">
-                {mainexp.tags.map((tag, i) => <span key={i} className="exp-tag">{tag}</span>)}
+                {mainexp?.tags?.map((tag, i) => <span key={i} className="exp-tag">{tag}</span>)}
                 <span className="exp-tag exp-tag-add">+</span>
               </div>
               <div className="exp-section">
                 <span className="exp-label">Collaborators:</span>
                 <div className="exp-collaborators">
-                  {mainexp.collaborators.map((c, i) => (
+                  {mainexp?.collaborators?.map((c, i) => (
                     <span key={i} className="collab-chip">{c} ×</span>
                   ))}
                   <span className="collab-chip collab-chip-add">+</span>
@@ -105,7 +198,7 @@ function App() {
               </div>
               <div className="exp-section">
                 <span className="exp-label">Description:</span>
-                <p className="exp-description">{mainexp.description}</p>
+                <p className="exp-description">{mainexp?.description}</p>
               </div>
               <div className="exp-actions">
                 <span className="material-symbols-outlined">edit</span>
@@ -122,6 +215,7 @@ function App() {
               <div className="row"><span>Soil temperature:</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
               <div className="row"><span>Pressure:</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
               <div className="row"><span>Pump:</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+              {pumpControls}
             </div>
           )}
         </div>
@@ -136,6 +230,7 @@ function App() {
                 <span>FULL EXPERIMENT HISTORY</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
+              <ExperimentChart />
               <div className="readings-spacer" />
               <div className="readings-header">
                 <span className="readings-title">LATEST READING</span>
@@ -152,6 +247,7 @@ function App() {
                 <div className="row"><span>Soil temperature</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
                 <div className="row"><span>Pressure</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
                 <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+                {pumpControls}
               </div>
               <p className="next-reading">Next reading in 23 minutes</p>
             </div>

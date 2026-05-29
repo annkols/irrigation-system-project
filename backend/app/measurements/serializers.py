@@ -25,3 +25,17 @@ class MeasurementSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("moisture_percent musi być w zakresie 0-100.")
         return value
 
+    def validate_air_humidity(self, value):
+        if value is not None and (value < 0 or value > 100):
+            raise serializers.ValidationError("air_humidity musi być w zakresie 0-100.")
+        return value
+
+    def validate_light_lux(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("light_lux nie może być wartością ujemną.")
+        return value
+
+    def validate_pressure_hpa(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("pressure_hpa musi być wartością dodatnią.")
+        return value
