@@ -209,8 +209,8 @@ function App() {
                 </button>
                 {exportOpen && (
                   <div className="export-menu">
-                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?format=csv`, '_blank'); setExportOpen(false); }}>CSV</button>
-                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?format=json`, '_blank'); setExportOpen(false); }}>JSON</button>
+                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?export_format=csv`, '_blank'); setExportOpen(false); }}>CSV</button>
+                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?export_format=json`, '_blank'); setExportOpen(false); }}>JSON</button>
                   </div>
                 )}
               </div>

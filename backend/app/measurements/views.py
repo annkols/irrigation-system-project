@@ -89,7 +89,7 @@ class MeasurementExportCSVView(APIView):
         if experiment.finished_at:
             queryset = queryset.filter(created_at__lte=experiment.finished_at)
 
-        export_format = request.query_params.get('format', 'csv')
+        export_format = request.query_params.get('export_format', 'csv')
 
         if export_format == 'json':
             data = [
