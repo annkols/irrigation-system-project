@@ -216,6 +216,61 @@ body {
   color: #d32f2f;
 }
 
+.export-dropdown {
+  position: relative;
+  width: fit-content;
+  margin-top: 12px;
+  z-index: 10;
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1.5px solid var(--primary-green);
+  border-radius: 6px;
+  color: var(--primary-green);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.export-btn:hover {
+  background: var(--primary-light);
+}
+
+.export-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  background: white;
+  border: 1.5px solid var(--primary-green);
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 10;
+  min-width: 100%;
+}
+
+.export-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+.export-menu button:hover {
+  background: var(--primary-light);
+}
+
 .dashboard {
   gap: 0;
   width: 50%;
@@ -704,6 +759,7 @@ body {
   gap: 16px;
   padding: 16px;
   background: var(--bg-stat);
+  overflow: visible;
 }
 
 .exp-tags {

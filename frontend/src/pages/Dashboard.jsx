@@ -18,6 +18,7 @@ function App() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
@@ -199,6 +200,19 @@ function App() {
               <div className="exp-section">
                 <span className="exp-label">Description:</span>
                 <p className="exp-description">{mainexp?.description}</p>
+              </div>
+              <div className="export-dropdown">
+                <button className="export-btn" onClick={() => setExportOpen(!exportOpen)}>
+                  <span className="material-symbols-outlined">download</span>
+                  <span>Export</span>
+                  <span className="material-symbols-outlined">expand_more</span>
+                </button>
+                {exportOpen && (
+                  <div className="export-menu">
+                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?format=csv`, '_blank'); setExportOpen(false); }}>CSV</button>
+                    <button onClick={() => { window.open(`http://localhost:8000/api/experiments/${selectedId}/export-csv/?format=json`, '_blank'); setExportOpen(false); }}>JSON</button>
+                  </div>
+                )}
               </div>
               <div className="exp-actions">
                 <span className="material-symbols-outlined">edit</span>
