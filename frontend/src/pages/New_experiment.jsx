@@ -54,11 +54,11 @@ function New_experiment() {
         const numVal = parseInt(val, 10);
         const isEmpty = !val || val.trim() === "";
         const isNotInteger = Number(val) !== numVal;
-        const isOutOfRange = numVal <= 0 || numVal > 1440;
+        const isOutOfRange = numVal <= 0 || numVal > 300;
         return isEmpty || isNotInteger || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 1440 min (24h)."];
+        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 300 min (5min)."];
       }
     }
 
@@ -203,7 +203,7 @@ function New_experiment() {
                 {selectedSetup === setup.id && (
                   <div className="setup-details" onClick={(e) => e.stopPropagation()}>
                     <p style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.8 }}>
-                      Set reading frequency for each sensor (min):
+                      Set reading frequency for each sensor (seconds):
                     </p>
                       {setup.sensors.map((sensor) => (
                       <div key={sensor} className="sensor-freq-row">
@@ -213,8 +213,8 @@ function New_experiment() {
                           min="1"
                           max="1440"
                           step="1"
-                          placeholder="min"
-                          className={errors.sensor_set_id && (!frequencies[sensor] || frequencies[sensor] <= 0 || frequencies[sensor] > 1440) ? "input-error" : ""}
+                          placeholder="seconds"
+                          className={errors.sensor_set_id && (!frequencies[sensor] || frequencies[sensor] <= 0 || frequencies[sensor] > 300) ? "input-error" : ""}
                           value={frequencies[sensor] || ""}
                           onKeyDown={(e) => {
                             // nie wolno znaków e E , .
