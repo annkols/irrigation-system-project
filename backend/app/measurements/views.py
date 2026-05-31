@@ -86,8 +86,8 @@ class MeasurementExportCSVView(APIView):
         queryset = Measurement.objects.all()
         if experiment.started_at:
             queryset = queryset.filter(created_at__gte=experiment.started_at)
-        if experiment.finished_at:
-            queryset = queryset.filter(created_at__lte=experiment.finished_at)
+        if experiment.planned_end_at:
+            queryset = queryset.filter(created_at__lte=experiment.planned_end_at)
 
         export_format = request.query_params.get('export_format', 'csv')
 

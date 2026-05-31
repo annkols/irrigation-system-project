@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+from django.core.validators import MinValueValidator
 
 # Create your models here.
 class Experiment(models.Model):
@@ -33,15 +35,25 @@ class Experiment(models.Model):
     )
 
     started_at = models.DateTimeField(null=True, blank=True)
+    planned_end_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    measurement_frequency_seconds = models.PositiveIntegerField(
+        default=900, #15 min
+        validators=[MinValueValidator(1)]
+    )
+    
+    is_public = models.BooleanField(default=False)
+
     @property
     def status(self):
+        now = timezone.now()
+
         if self.finished_at is not None:
             return "completed"
 
-        if self.started_at is not None:
+        if self.started_at is not None and self.started_at < now:
             return "in progress"
 
         return "not started"

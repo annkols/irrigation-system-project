@@ -16,10 +16,13 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'owner',
             'collaborators',
             'sensor_set_id',
+            'measurement_frequency_seconds',
+            'created_at',
             'started_at',
+            'planned_end_at',
             'finished_at',
             'status',
-            'created_at',
+            'is_public'
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
@@ -57,9 +60,19 @@ class ExperimentSerializer(serializers.ModelSerializer):
             getattr(instance, 'sensor_set_id', None)
         )
 
+        measurement_frequency_seconds = data.get(
+            'measurement_frequency_seconds',
+            getattr(instance, 'measurement_frequency_seconds', None)
+        )
+
         if sensor_set_id is not None and sensor_set_id < 1:
             raise serializers.ValidationError({
                 "sensor_set_id": "Id zestawu czujników musi być większe od 0."
+            })
+        
+        if measurement_frequency_seconds is not None and measurement_frequency_seconds < 1:
+            raise serializers.ValidationError({
+                "measurement_interval_seconds": "Częstotliwość pomiaru musi być większa od 0 sekund i nei może być pusta."
             })
 
         started_at = data.get(
@@ -72,9 +85,19 @@ class ExperimentSerializer(serializers.ModelSerializer):
             getattr(instance, 'finished_at', None)
         )
 
+        planned_end_at = data.get(
+            'planned_end_at',
+            getattr(instance, 'planned_end_at', None)
+        )
+
         if finished_at and not started_at:
             raise serializers.ValidationError({
                 "finished_at": "Nie można zakończyć eksperymentu, który nie ma daty rozpoczęcia."
+            })
+                
+        if planned_end_at and not started_at:
+            raise serializers.ValidationError({
+                "planned_end_at": "Nie można ustawić planowanej daty zakończenia bez daty rozpoczęcia."
             })
 
         if started_at and finished_at and finished_at < started_at:
