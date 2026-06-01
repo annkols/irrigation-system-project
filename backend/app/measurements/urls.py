@@ -1,6 +1,4 @@
 from django.urls import path
-from .views import MeasurementExportCSVView
-
 
 
 from .views import (

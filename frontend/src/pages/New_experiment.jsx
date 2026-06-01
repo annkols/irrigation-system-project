@@ -147,7 +147,7 @@ function New_experiment() {
   return (
     <>
       <header className="header">
-        <div className="logo">
+        <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="Cultiva logo" className="logo-img" />
           <h1>CULTIVA</h1>
         </div>

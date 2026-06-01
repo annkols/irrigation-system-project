@@ -306,7 +306,7 @@ function App() {
           <div className={`dashboard${detailsOpen ? ' dashboard-hidden' : ''}`}>
             <div className="welcome">
               <h2>HELLO USER!</h2>
-              <p>YOU HAVE CURRENTLY {experiments.length} EXPERIMENTS</p>
+              <p>YOU HAVE CURRENTLY <strong style={{ color: 'var(--primary-green)' }}>{experiments.length}</strong> EXPERIMENTS</p>
             </div>
 
             <button className='add-btn' onClick={() => navigate('/new-experiment')}>
@@ -330,7 +330,7 @@ function App() {
 
             <div className="list">
               {filtered.map((exp) => (
-                <div key={exp.id} className="item" onClick={() => { setSelectedId(exp.id); setDetailsOpen(true); }}>
+                <div key={exp.id} className="item" onClick={() => navigate(`/experiment/${exp.id}`)}>
                   <p>{exp.name}</p>
                   <span className={`badge ${exp.status}`}>{statusMap[exp.status]}</span>
                   <span className="item-date">{exp.endDate}</span>
