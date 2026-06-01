@@ -1,7 +1,11 @@
+from datetime import datetime
+
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from experiments.models import Experiment
 from .models import Measurement
 
 
@@ -81,3 +85,47 @@ class MeasurementApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("detail", response.data)
+
+    def test_export_filters_by_experiment_sensor_set_and_formats_local_time(self):
+        experiment = Experiment.objects.create(
+            name="Soy extended light test",
+            description="Export test.",
+            plant_name="Soy",
+            sensor_set_id=2,
+            started_at=datetime(2026, 6, 1, 8, 0, tzinfo=timezone.get_current_timezone()),
+            planned_end_at=datetime(2026, 6, 1, 10, 0, tzinfo=timezone.get_current_timezone()),
+            sensor_frequencies={
+                "soil_moisture": 30,
+                "air_temperature": 60,
+                "air_humidity": 60,
+                "light": 30,
+            },
+        )
+        matching = Measurement.objects.create(
+            station_number=2,
+            pot_number=1,
+            moisture_percent=64,
+            light_lux=420.5,
+        )
+        other_station = Measurement.objects.create(
+            station_number=1,
+            pot_number=1,
+            moisture_percent=90,
+        )
+        Measurement.objects.filter(pk=matching.pk).update(
+            created_at=datetime(2026, 6, 1, 9, 0, tzinfo=timezone.get_current_timezone())
+        )
+        Measurement.objects.filter(pk=other_station.pk).update(
+            created_at=datetime(2026, 6, 1, 9, 0, tzinfo=timezone.get_current_timezone())
+        )
+
+        response = self.client.get(
+            reverse("measurement-export-csv", kwargs={"experiment_id": experiment.pk})
+        )
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("2026-06-01 09:00:00", content)
+        self.assertIn(",2,1,", content)
+        self.assertNotIn(",1,1,90", content)
+        self.assertNotIn("+00:00", content)

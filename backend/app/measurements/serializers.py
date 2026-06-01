@@ -21,6 +21,9 @@ class MeasurementSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def validate_moisture_percent(self, value):
+        if value is None:
+            return value
+
         if value < 0 or value > 100:
             raise serializers.ValidationError("moisture_percent musi być w zakresie 0-100.")
         return value

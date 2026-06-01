@@ -43,6 +43,8 @@ class Experiment(models.Model):
         default=900, #15 min
         validators=[MinValueValidator(1)]
     )
+
+    sensor_frequencies = models.JSONField(default=dict, blank=True)
     
     is_public = models.BooleanField(default=False)
 

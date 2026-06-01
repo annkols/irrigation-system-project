@@ -15,9 +15,37 @@ function New_experiment() {
   const [frequencies, setFrequencies] = useState({});
 
   const sensorSetups = [
-      { id: 1, title: 'BASIC', sensors: ['temperature', 'humidity'] },
-      { id: 2, title: 'EXTENDED', sensors: ['temperature', 'humidity', 'light'] },
-      { id: 3, title: 'FULL', sensors: ['air humidity', 'light', 'soil moisture', 'pressure', 'soil temperature', 'air temperature'] }
+      {
+        id: 1,
+        title: 'BASIC',
+        sensors: [
+          { key: 'soil_moisture', label: 'soil moisture' },
+          { key: 'air_temperature', label: 'air temperature' },
+          { key: 'air_humidity', label: 'air humidity' }
+        ]
+      },
+      {
+        id: 2,
+        title: 'EXTENDED',
+        sensors: [
+          { key: 'soil_moisture', label: 'soil moisture' },
+          { key: 'air_temperature', label: 'air temperature' },
+          { key: 'air_humidity', label: 'air humidity' },
+          { key: 'light', label: 'light' }
+        ]
+      },
+      {
+        id: 3,
+        title: 'FULL',
+        sensors: [
+          { key: 'air_humidity', label: 'air humidity' },
+          { key: 'light', label: 'light' },
+          { key: 'soil_moisture', label: 'soil moisture' },
+          { key: 'pressure', label: 'pressure' },
+          { key: 'soil_temperature', label: 'soil temperature' },
+          { key: 'air_temperature', label: 'air temperature' }
+        ]
+      }
     ];
 
   const handleFreqChange = (sensor, value) => {
@@ -50,7 +78,7 @@ function New_experiment() {
     } else {
       const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
       const invalidSensors = currentSetup.sensors.some(sensor => {
-        const val = frequencies[sensor];
+        const val = frequencies[sensor.key];
         const numVal = parseInt(val, 10);
         const isEmpty = !val || val.trim() === "";
         const isNotInteger = Number(val) !== numVal;
@@ -58,7 +86,7 @@ function New_experiment() {
         return isEmpty || isNotInteger || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 300 min (5min)."];
+        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 300 seconds."];
       }
     }
 
@@ -71,16 +99,25 @@ function New_experiment() {
       return;
     }
 
+    const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
+    const sensorFrequencies = Object.fromEntries(
+      currentSetup.sensors.map(sensor => [
+        sensor.key,
+        parseInt(frequencies[sensor.key], 10)
+      ])
+    );
+
     const newExperiment = {
       name,
       description,
       plant_name: plantName,
       sensor_set_id: selectedSetup,
+      measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
+      sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
       finished_at: endDate || null,
       owner: null,
       collaborators: []
-      //sensor_frequencies: frequencies //odkomentowac jak dodamy to do backendu
     };
 
     console.log("Wysylane dane:", newExperiment);
@@ -206,23 +243,23 @@ function New_experiment() {
                       Set reading frequency for each sensor (seconds):
                     </p>
                       {setup.sensors.map((sensor) => (
-                      <div key={sensor} className="sensor-freq-row">
-                        <span className="sensor-name">{sensor}</span>
+                      <div key={sensor.key} className="sensor-freq-row">
+                        <span className="sensor-name">{sensor.label}</span>
                         <input
                           type="number"
                           min="1"
-                          max="1440"
+                          max="300"
                           step="1"
                           placeholder="seconds"
-                          className={errors.sensor_set_id && (!frequencies[sensor] || frequencies[sensor] <= 0 || frequencies[sensor] > 300) ? "input-error" : ""}
-                          value={frequencies[sensor] || ""}
+                          className={errors.sensor_set_id && (!frequencies[sensor.key] || frequencies[sensor.key] <= 0 || frequencies[sensor.key] > 300) ? "input-error" : ""}
+                          value={frequencies[sensor.key] || ""}
                           onKeyDown={(e) => {
                             // nie wolno znaków e E , .
                             if (["e", "E", ".", ","].includes(e.key)) {
                               e.preventDefault();
                             }
                           }}
-                          onChange={(e) => handleFreqChange(sensor, e.target.value)}
+                          onChange={(e) => handleFreqChange(sensor.key, e.target.value)}
                         />
                       </div>
                     ))}

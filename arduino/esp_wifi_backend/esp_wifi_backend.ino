@@ -7,13 +7,14 @@
 // #include <WiFi.h>
 // #include <HTTPClient.h>
 
-unsigned long lastSendAt = 0;
-const unsigned long sendIntervalMs = 10000;
-
 unsigned long lastCommandCheckAt = 0;
 const unsigned long commandCheckIntervalMs = 5000;
 
+unsigned long lastConfigCheckAt = 0;
+const unsigned long configCheckIntervalMs = 30000;
+
 int lastForwardedCommandId = 0;
+String lastForwardedConfig = "";
 
 void setup() {
   Serial.begin(9600);
@@ -35,15 +36,19 @@ void loop() {
     String payload = Serial.readStringUntil('\n');
     payload.trim();
 
-    if (payload.length() > 0 && millis() - lastSendAt >= sendIntervalMs) {
-      lastSendAt = millis();
+    if (payload.length() > 0) {
       sendToBackend(payload);
     }
   }
 
-  if (millis() - lastCommandCheckAt >= commandCheckIntervalMs) {
+  if (lastCommandCheckAt == 0 || millis() - lastCommandCheckAt >= commandCheckIntervalMs) {
     lastCommandCheckAt = millis();
     fetchPumpCommand();
+  }
+
+  if (lastConfigCheckAt == 0 || millis() - lastConfigCheckAt >= configCheckIntervalMs) {
+    lastConfigCheckAt = millis();
+    fetchSensorConfig();
   }
 }
 
@@ -101,6 +106,76 @@ void fetchPumpCommand() {
   }
 
   http.end();
+}
+
+void fetchSensorConfig() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Brak WiFi, ponawiam laczenie...");
+    WiFi.reconnect();
+    return;
+  }
+
+  WiFiClient client;
+  HTTPClient http;
+
+  http.begin(client, ACTIVE_SENSOR_CONFIG_API_URL);
+
+  int statusCode = http.GET();
+
+  Serial.print("GET sensor config status: ");
+  Serial.println(statusCode);
+
+  if (statusCode == 200) {
+    String response = http.getString();
+    String config = buildConfigCommand(response);
+
+    if (config.length() > 0 && config != lastForwardedConfig) {
+      Serial.println(config);
+      lastForwardedConfig = config;
+    }
+  }
+
+  http.end();
+}
+
+String buildConfigCommand(String response) {
+  String config = "CONFIG:";
+  config += "soil_moisture=" + String(extractFrequency(response, "soil_moisture"));
+  config += ";light=" + String(extractFrequency(response, "light"));
+  config += ";soil_temperature=" + String(extractFrequency(response, "soil_temperature"));
+  config += ";air_temperature=" + String(extractFrequency(response, "air_temperature"));
+  config += ";air_humidity=" + String(extractFrequency(response, "air_humidity"));
+  config += ";pressure=" + String(extractFrequency(response, "pressure"));
+  return config;
+}
+
+int extractFrequency(String response, String key) {
+  int keyIndex = response.indexOf("\"" + key + "\"");
+
+  if (keyIndex < 0) {
+    return 0;
+  }
+
+  int colonIndex = response.indexOf(':', keyIndex);
+  int commaIndex = response.indexOf(',', colonIndex + 1);
+  int braceIndex = response.indexOf('}', colonIndex + 1);
+
+  if (colonIndex < 0) {
+    return 0;
+  }
+
+  int endIndex = commaIndex;
+  if (endIndex < 0 || (braceIndex > 0 && braceIndex < endIndex)) {
+    endIndex = braceIndex;
+  }
+
+  if (endIndex < 0) {
+    endIndex = response.length();
+  }
+
+  String value = response.substring(colonIndex + 1, endIndex);
+  value.trim();
+  return value.toInt();
 }
 
 int extractCommandId(String response) {

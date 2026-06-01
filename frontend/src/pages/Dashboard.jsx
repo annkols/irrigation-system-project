@@ -7,6 +7,19 @@ import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = "http://localhost:8000/api";
 const pumpCommands = ["ON", "OFF", "AUTO"];
+const sensorRows = {
+  air_temperature: { label: "Temperature inside", unit: "°C", field: "air_temperature" },
+  soil_moisture: { label: "Soil moisture", unit: "%", field: "moisture_percent" },
+  air_humidity: { label: "Air humidity", unit: "%", field: "air_humidity" },
+  light: { label: "Light intensity", unit: "lx", field: "light_lux" },
+  soil_temperature: { label: "Soil temperature", unit: "°C", field: "soil_temperature" },
+  pressure: { label: "Pressure", unit: "hPa", field: "pressure_hpa" },
+};
+const sensorSetKeys = {
+  1: ["soil_moisture", "air_temperature", "air_humidity"],
+  2: ["soil_moisture", "air_temperature", "air_humidity", "light"],
+  3: ["air_humidity", "light", "soil_moisture", "pressure", "soil_temperature", "air_temperature"],
+};
 
 function App() {
   const navigate = useNavigate();
@@ -64,8 +77,35 @@ function App() {
     return () => clearInterval(interval);
   }, [selectedId]);
 
-  const latest = measurements.length > 0 ? measurements[0] : null;
   const mainexp = experiments.find(exp => exp.id === selectedId) || experiments[0] || null;
+  const experimentMeasurements = mainexp
+    ? measurements.filter((measurement) => measurement.station_number === mainexp.sensor_set_id)
+    : measurements;
+  const latest = experimentMeasurements.length > 0 ? experimentMeasurements[0] : null;
+  const visibleSensorKeys = sensorSetKeys[mainexp?.sensor_set_id] || Object.keys(sensorRows);
+  const visibleSensorRows = visibleSensorKeys
+    .map((key) => ({ key, ...sensorRows[key] }))
+    .filter((sensor) => sensor.field);
+  const latestValueForSensor = (field) => {
+    const measurement = experimentMeasurements.find((item) => item[field] !== null && item[field] !== undefined);
+    return measurement?.[field];
+  };
+
+  const renderSensorRows = () => (
+    <>
+      {visibleSensorRows.map((sensor) => {
+        const value = latestValueForSensor(sensor.field);
+
+        return (
+          <div className="row" key={sensor.key}>
+            <span>{sensor.label}</span>
+            <span>{value ?? "-"} {sensor.unit}</span>
+          </div>
+        );
+      })}
+      <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+    </>
+  );
 
   const calculateProgress = (exp) => {
   if (!exp || exp.status === "not started") return 0;
@@ -222,13 +262,7 @@ function App() {
             </div>
           ) : (
             <div className="stats">
-              <div className="row"><span>Temperature</span><span>{latest?.air_temperature ?? "-"} °C</span></div>
-              <div className="row"><span>Moisture content:</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
-              <div className="row"><span>Air humidity:</span><span>{latest?.air_humidity ?? "-"} %</span></div>
-              <div className="row"><span>Light intensity:</span><span>{latest?.light_lux ?? "-"} lx</span></div>
-              <div className="row"><span>Soil temperature:</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
-              <div className="row"><span>Pressure:</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
-              <div className="row"><span>Pump:</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+              {renderSensorRows()}
               {pumpControls}
             </div>
           )}
@@ -254,13 +288,7 @@ function App() {
                 </div>
               </div>
               <div className="stats">
-                <div className="row"><span>Temperature inside</span><span>{latest?.air_temperature ?? "-"} °C</span></div>
-                <div className="row"><span>Soil moisture</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
-                <div className="row"><span>Air humidity</span><span>{latest?.air_humidity ?? "-"} %</span></div>
-                <div className="row"><span>Light intensity</span><span>{latest?.light_lux ?? "-"} lx</span></div>
-                <div className="row"><span>Soil temperature</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
-                <div className="row"><span>Pressure</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
-                <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
+                {renderSensorRows()}
                 {pumpControls}
               </div>
               <p className="next-reading">Next reading in 23 minutes</p>
@@ -326,11 +354,13 @@ function App() {
 
       <div className="log">
         <h3>Measurements</h3>
-        {measurements.map((m, index) => (
+        {experimentMeasurements.map((m, index) => (
           <div key={index}>
-            [station {m.station_number}, pot {m.pot_number}] moisture: {m.moisture_percent}%,
-            air: {m.air_temperature ?? "-"} C, humidity: {m.air_humidity ?? "-"}%,
-            light: {m.light_lux ?? "-"} lx, pump: {m.pump_on ? "ON" : "OFF"}
+            [station {m.station_number}, pot {m.pot_number}]
+            {visibleSensorRows.map((sensor) => (
+              <span key={sensor.key}> {sensor.label}: {m[sensor.field] ?? "-"} {sensor.unit},</span>
+            ))}
+            pump: {m.pump_on ? "ON" : "OFF"}
           </div>
         ))}
       </div>

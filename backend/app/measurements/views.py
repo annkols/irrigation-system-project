@@ -1,6 +1,7 @@
 import csv
 import json
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import generics, status
 from .models import Measurement
 from .serializers import MeasurementSerializer
@@ -83,7 +84,9 @@ class MeasurementExportCSVView(APIView):
         except Experiment.DoesNotExist:
             return Response({"detail": "Experiment not found."}, status=404)
 
-        queryset = Measurement.objects.all()
+        queryset = Measurement.objects.filter(
+            station_number=experiment.sensor_set_id
+        ).order_by('created_at')
         if experiment.started_at:
             queryset = queryset.filter(created_at__gte=experiment.started_at)
         if experiment.planned_end_at:
@@ -91,10 +94,13 @@ class MeasurementExportCSVView(APIView):
 
         export_format = request.query_params.get('export_format', 'csv')
 
+        def format_timestamp(value):
+            return timezone.localtime(value).strftime('%Y-%m-%d %H:%M:%S')
+
         if export_format == 'json':
             data = [
                 {
-                    'timestamp': str(m.created_at),
+                    'timestamp': format_timestamp(m.created_at),
                     'station': m.station_number,
                     'pot': m.pot_number,
                     'moisture_%': m.moisture_percent,
@@ -121,6 +127,6 @@ class MeasurementExportCSVView(APIView):
         writer.writerow(['timestamp', 'station', 'pot', 'moisture_%', 'air_temp_C', 'air_humidity_%', 'pressure_hpa', 'soil_temp_C', 'light_lux', 'pump_on'])
 
         for m in queryset:
-            writer.writerow([m.created_at, m.station_number, m.pot_number, m.moisture_percent, m.air_temperature, m.air_humidity, m.pressure_hpa, m.soil_temperature, m.light_lux, m.pump_on])
+            writer.writerow([format_timestamp(m.created_at), m.station_number, m.pot_number, m.moisture_percent, m.air_temperature, m.air_humidity, m.pressure_hpa, m.soil_temperature, m.light_lux, m.pump_on])
 
         return response

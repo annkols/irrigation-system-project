@@ -5,6 +5,16 @@ from measurements.serializers import MeasurementSerializer
 from .models import Experiment
 
 
+ALLOWED_SENSOR_FREQUENCY_KEYS = {
+    'soil_moisture',
+    'light',
+    'soil_temperature',
+    'air_temperature',
+    'air_humidity',
+    'pressure',
+}
+
+
 class ExperimentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Experiment
@@ -17,6 +27,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'collaborators',
             'sensor_set_id',
             'measurement_frequency_seconds',
+            'sensor_frequencies',
             'created_at',
             'started_at',
             'planned_end_at',
@@ -74,6 +85,29 @@ class ExperimentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "measurement_interval_seconds": "Częstotliwość pomiaru musi być większa od 0 sekund i nei może być pusta."
             })
+
+        sensor_frequencies = data.get(
+            'sensor_frequencies',
+            getattr(instance, 'sensor_frequencies', None)
+        )
+
+        if sensor_frequencies:
+            if not isinstance(sensor_frequencies, dict):
+                raise serializers.ValidationError({
+                    "sensor_frequencies": "Czestotliwosci czujnikow musza byc obiektem."
+                })
+
+            invalid_keys = set(sensor_frequencies.keys()) - ALLOWED_SENSOR_FREQUENCY_KEYS
+            if invalid_keys:
+                raise serializers.ValidationError({
+                    "sensor_frequencies": f"Nieznane czujniki: {', '.join(sorted(invalid_keys))}."
+                })
+
+            for sensor, frequency in sensor_frequencies.items():
+                if not isinstance(frequency, int) or frequency < 1:
+                    raise serializers.ValidationError({
+                        "sensor_frequencies": f"Czestotliwosc dla {sensor} musi byc liczba calkowita wieksza od 0."
+                    })
 
         started_at = data.get(
             'started_at',

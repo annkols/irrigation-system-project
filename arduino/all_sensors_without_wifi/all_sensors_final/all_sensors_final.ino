@@ -31,6 +31,27 @@ int moistureLimit = 20;
 int stationNumber = 1;
 int potNumber = 1;
 
+unsigned long soilMoistureIntervalMs = 10000;
+unsigned long lightIntervalMs = 10000;
+unsigned long soilTemperatureIntervalMs = 10000;
+unsigned long airTemperatureIntervalMs = 10000;
+unsigned long airHumidityIntervalMs = 10000;
+unsigned long pressureIntervalMs = 10000;
+
+unsigned long lastSoilMoistureReadAt = 0;
+unsigned long lastLightReadAt = 0;
+unsigned long lastSoilTemperatureReadAt = 0;
+unsigned long lastAirTemperatureReadAt = 0;
+unsigned long lastAirHumidityReadAt = 0;
+unsigned long lastPressureReadAt = 0;
+
+int cachedSoilMoisture = 0;
+float cachedSoilTemperature = 0;
+float cachedLightLux = 0;
+float cachedAirTemperature = 0;
+float cachedAirHumidity = 0;
+float cachedPressure = 0;
+
 const int RELAY_ON = HIGH;
 const int RELAY_OFF = LOW;
 
@@ -69,22 +90,63 @@ void setup() {
 void loop() {
   handlePumpCommand();
 
-  int rawSoil = analogRead(SOIL_MOISTURE_PIN);
+  unsigned long now = millis();
+  bool shouldSend = false;
+  bool soilMoistureUpdated = false;
+  bool soilTemperatureUpdated = false;
+  bool lightUpdated = false;
+  bool airTemperatureUpdated = false;
+  bool airHumidityUpdated = false;
+  bool pressureUpdated = false;
 
-  int soilMoisture = map(rawSoil, dryValue, wetValue, 0, 100);
-  soilMoisture = constrain(soilMoisture, 0, 100);
+  if (shouldRead(lastSoilMoistureReadAt, soilMoistureIntervalMs, now)) {
+    readSoilMoisture();
+    lastSoilMoistureReadAt = now;
+    soilMoistureUpdated = true;
+    shouldSend = true;
+  }
 
-  soilTempSensor.requestTemperatures();
-  float soilTemperature = soilTempSensor.getTempCByIndex(0);
+  if (shouldRead(lastSoilTemperatureReadAt, soilTemperatureIntervalMs, now)) {
+    readSoilTemperature();
+    lastSoilTemperatureReadAt = now;
+    soilTemperatureUpdated = true;
+    shouldSend = true;
+  }
 
-  float lightLux = lightMeter.readLightLevel();
+  if (shouldRead(lastLightReadAt, lightIntervalMs, now)) {
+    readLight();
+    lastLightReadAt = now;
+    lightUpdated = true;
+    shouldSend = true;
+  }
 
-  float airTemperature = bme.readTemperature();
-  float airHumidity = bme.readHumidity();
-  float pressure = bme.readPressure() / 100.0F;
+  if (
+    shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now) ||
+    shouldRead(lastAirHumidityReadAt, airHumidityIntervalMs, now) ||
+    shouldRead(lastPressureReadAt, pressureIntervalMs, now)
+  ) {
+    readAirSensor();
+
+    if (shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now)) {
+      lastAirTemperatureReadAt = now;
+      airTemperatureUpdated = true;
+    }
+
+    if (shouldRead(lastAirHumidityReadAt, airHumidityIntervalMs, now)) {
+      lastAirHumidityReadAt = now;
+      airHumidityUpdated = true;
+    }
+
+    if (shouldRead(lastPressureReadAt, pressureIntervalMs, now)) {
+      lastPressureReadAt = now;
+      pressureUpdated = true;
+    }
+
+    shouldSend = true;
+  }
 
   if (!manualPumpMode) {
-    if (soilMoisture > moistureLimit) {
+    if (cachedSoilMoisture > moistureLimit) {
       if (pumpState) {
         pumpOff();
       }
@@ -95,30 +157,35 @@ void loop() {
     }
   }
 
+  if (!shouldSend) {
+    delay(50);
+    return;
+  }
+
   Serial.println("===== ODCZYTY =====");
 
   Serial.print("Swiatlo: ");
-  Serial.print(lightLux);
+  Serial.print(cachedLightLux);
   Serial.println(" lx");
 
   Serial.print("Temperatura powietrza: ");
-  Serial.print(airTemperature);
+  Serial.print(cachedAirTemperature);
   Serial.println(" C");
 
   Serial.print("Wilgotnosc powietrza: ");
-  Serial.print(airHumidity);
+  Serial.print(cachedAirHumidity);
   Serial.println(" %");
 
   Serial.print("Cisnienie: ");
-  Serial.print(pressure);
+  Serial.print(cachedPressure);
   Serial.println(" hPa");
 
   Serial.print("Temperatura gleby: ");
-  Serial.print(soilTemperature);
+  Serial.print(cachedSoilTemperature);
   Serial.println(" C");
 
   Serial.print("Wilgotnosc gleby: ");
-  Serial.print(soilMoisture);
+  Serial.print(cachedSoilMoisture);
   Serial.println(" %");
 
   Serial.print("Pompa: ");
@@ -129,16 +196,47 @@ void loop() {
   Serial.println("--------------------------");
 
   sendJsonToEsp(
-    soilMoisture,
-    soilTemperature,
-    lightLux,
-    airTemperature,
-    airHumidity,
-    pressure,
-    pumpState
+    cachedSoilMoisture,
+    cachedSoilTemperature,
+    cachedLightLux,
+    cachedAirTemperature,
+    cachedAirHumidity,
+    cachedPressure,
+    pumpState,
+    soilMoistureUpdated,
+    soilTemperatureUpdated,
+    lightUpdated,
+    airTemperatureUpdated,
+    airHumidityUpdated,
+    pressureUpdated
   );
 
-  delay(2000);
+  delay(50);
+}
+
+bool shouldRead(unsigned long lastReadAt, unsigned long intervalMs, unsigned long now) {
+  return intervalMs > 0 && (lastReadAt == 0 || now - lastReadAt >= intervalMs);
+}
+
+void readSoilMoisture() {
+  int rawSoil = analogRead(SOIL_MOISTURE_PIN);
+  cachedSoilMoisture = map(rawSoil, dryValue, wetValue, 0, 100);
+  cachedSoilMoisture = constrain(cachedSoilMoisture, 0, 100);
+}
+
+void readSoilTemperature() {
+  soilTempSensor.requestTemperatures();
+  cachedSoilTemperature = soilTempSensor.getTempCByIndex(0);
+}
+
+void readLight() {
+  cachedLightLux = lightMeter.readLightLevel();
+}
+
+void readAirSensor() {
+  cachedAirTemperature = bme.readTemperature();
+  cachedAirHumidity = bme.readHumidity();
+  cachedPressure = bme.readPressure() / 100.0F;
 }
 
 void pumpOn() {
@@ -161,7 +259,9 @@ void handlePumpCommand() {
   String command = EspSerial.readStringUntil('\n');
   command.trim();
 
-  if (command == "PUMP_ON") {
+  if (command.startsWith("CONFIG:")) {
+    applySensorConfig(command);
+  } else if (command == "PUMP_ON") {
     manualPumpMode = true;
     pumpOn();
   } else if (command == "PUMP_OFF") {
@@ -173,6 +273,38 @@ void handlePumpCommand() {
   }
 }
 
+void applySensorConfig(String command) {
+  updateInterval(command, "soil_moisture", soilMoistureIntervalMs);
+  updateInterval(command, "light", lightIntervalMs);
+  updateInterval(command, "soil_temperature", soilTemperatureIntervalMs);
+  updateInterval(command, "air_temperature", airTemperatureIntervalMs);
+  updateInterval(command, "air_humidity", airHumidityIntervalMs);
+  updateInterval(command, "pressure", pressureIntervalMs);
+
+  Serial.println("Zaktualizowano czestotliwosci czujnikow");
+}
+
+void updateInterval(String command, String key, unsigned long &intervalMs) {
+  int keyIndex = command.indexOf(key + "=");
+
+  if (keyIndex < 0) {
+    return;
+  }
+
+  int valueStart = keyIndex + key.length() + 1;
+  int valueEnd = command.indexOf(';', valueStart);
+
+  if (valueEnd < 0) {
+    valueEnd = command.length();
+  }
+
+  String value = command.substring(valueStart, valueEnd);
+  value.trim();
+
+  unsigned long seconds = value.toInt();
+  intervalMs = seconds * 1000UL;
+}
+
 void sendJsonToEsp(
   int soilMoisture,
   float soilTemperature,
@@ -180,24 +312,54 @@ void sendJsonToEsp(
   float airTemperature,
   float airHumidity,
   float pressure,
-  bool pumpState
+  bool pumpState,
+  bool soilMoistureUpdated,
+  bool soilTemperatureUpdated,
+  bool lightUpdated,
+  bool airTemperatureUpdated,
+  bool airHumidityUpdated,
+  bool pressureUpdated
 ) {
   EspSerial.print("{\"station_number\":");
   EspSerial.print(stationNumber);
   EspSerial.print(",\"pot_number\":");
   EspSerial.print(potNumber);
   EspSerial.print(",\"moisture_percent\":");
-  EspSerial.print(soilMoisture);
+  if (soilMoistureUpdated) {
+    EspSerial.print(soilMoisture);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"air_temperature\":");
-  EspSerial.print(airTemperature, 2);
+  if (airTemperatureUpdated) {
+    EspSerial.print(airTemperature, 2);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"air_humidity\":");
-  EspSerial.print(airHumidity, 2);
+  if (airHumidityUpdated) {
+    EspSerial.print(airHumidity, 2);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"pressure_hpa\":");
-  EspSerial.print(pressure, 2);
+  if (pressureUpdated) {
+    EspSerial.print(pressure, 2);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"soil_temperature\":");
-  EspSerial.print(soilTemperature, 2);
+  if (soilTemperatureUpdated) {
+    EspSerial.print(soilTemperature, 2);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"light_lux\":");
-  EspSerial.print(lightLux, 2);
+  if (lightUpdated) {
+    EspSerial.print(lightLux, 2);
+  } else {
+    EspSerial.print("null");
+  }
   EspSerial.print(",\"pump_on\":");
   EspSerial.print(pumpState ? "true" : "false");
   EspSerial.println("}");
