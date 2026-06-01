@@ -44,19 +44,26 @@ const sensors = [
 
 export default function ExperimentChart() {
 
-  const [activeSensors, setActiveSensors] = useState([
-    "temp",
-    "soilTemp",
-    "humidity",
-    "moisture",
-    "light",
-    "pressure",
-    "pumpLine"
-  ]);
+  const [leftSensor, setLeftSensor] =
+    useState("temp");
 
-  const [startDate, setStartDate] = useState();
+  const [rightSensor, setRightSensor] =
+    useState("humidity");
 
-  const [endDate, setEndDate] = useState();
+    const [startDate, setStartDate] = useState(() =>
+      measurements.length
+        ? new Date(measurements[0].timestamp)
+            .toISOString()
+            .slice(0, 16)
+        : ""
+    );
+    
+    const [endDate, setEndDate] = useState(() => {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      return now.toISOString().slice(0, 16);
+    });
+
 
   const allData = useMemo(() => {
 
@@ -64,29 +71,13 @@ export default function ExperimentChart() {
 
       ...m,
 
-      time: new Date(m.timestamp).toLocaleString(
-        {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit"
-        }
-      ),
+      time: new Date(m.timestamp),
 
       pumpLine: m.pumpOn ? 5 : 0
 
     }));
 
   }, []);
-
-  const toggleSensor = (key) => {
-
-    setActiveSensors((prev) =>
-      prev.includes(key)
-        ? prev.filter((s) => s !== key)
-        : [...prev, key]
-    );
-  };
 
   const filteredData = useMemo(() => {
 
@@ -118,6 +109,18 @@ export default function ExperimentChart() {
     allData
   ]);
 
+  const leftConfig = sensors.find(
+    (s) => s.key === leftSensor
+  );
+
+  const rightConfig = sensors.find(
+    (s) => s.key === rightSensor
+  );
+
+  if (!leftConfig || !rightConfig) {
+    return null;
+  }
+
   return (
 
     <div className="chart-panel">
@@ -126,32 +129,62 @@ export default function ExperimentChart() {
         <h3>EXPERIMENT CHARTS</h3>
       </div>
 
-      <div className="sensor-buttons">
+      <div className="sensor-selectors">
 
-        {sensors.map((sensor) => (
+        <div className="sensor-selector">
 
-          <button
-            key={sensor.key}
-            className={`sensor-btn ${
-              activeSensors.includes(sensor.key)
-                ? "active"
-                : ""
-            }`}
-            onClick={() => toggleSensor(sensor.key)}
+          <label>Left</label>
+
+          <select
+            value={leftSensor}
+            onChange={(e) =>
+              setLeftSensor(
+                e.target.value
+              )
+            }
           >
+            {sensors.map((sensor) => (
 
-            <span
-              className="sensor-dot"
-              style={{
-                background: sensor.color
-              }}
-            />
+              <option
+                key={sensor.key}
+                value={sensor.key}
+                disabled={sensor.key === rightSensor}
+              >
+                {sensor.label}
+              </option>
 
-            {sensor.label}
+            ))}
+          </select>
 
-          </button>
+        </div>
 
-        ))}
+        <div className="sensor-selector">
+
+          <label>Right</label>
+
+          <select
+            value={rightSensor}
+            onChange={(e) =>
+              setRightSensor(
+                e.target.value
+              )
+            }
+          >
+            {sensors.map((sensor) => (
+
+              <option
+                key={sensor.key}
+                value={sensor.key}
+                disabled={sensor.key === leftSensor
+                }
+              >
+                {sensor.label}
+              </option>
+
+            ))}
+          </select>
+
+        </div>
 
       </div>
 
@@ -198,52 +231,74 @@ export default function ExperimentChart() {
                 fill: "#666",
                 fontSize: 12
               }}
+              tickFormatter={(value) =>
+                new Date(value).toLocaleString(
+                  "pl-PL",
+                  {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }
+                )
+              }
             />
 
             <YAxis
-              domain={[0, "auto"]}
+              yAxisId="left"
+              orientation="left"
+              stroke={leftConfig.color}
+              domain={[
+                "auto",
+                "auto"
+              ]}
               tick={{
-                fill: "#666",
+                fill: leftConfig.color,
                 fontSize: 12
               }}
             />
 
-            <Tooltip />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke={rightConfig.color}
+              domain={[
+                "auto",
+                "auto"
+              ]}
+              tick={{
+                fill: rightConfig.color,
+                fontSize: 12
+              }}
+            />
 
-            <Legend />
-
-            {sensors.map((sensor) => {
-
-              if (
-                !activeSensors.includes(sensor.key)
-              ) {
-                return null;
+            <Line
+              yAxisId="left"
+              dataKey={leftSensor}
+              name={leftConfig.label}
+              stroke={leftConfig.color}
+              strokeWidth={3}
+              dot={false}
+              type={
+                leftSensor === "pumpLine"
+                  ? "stepAfter"
+                  : "monotone"
               }
+            />
 
-              return (
-
-                <Line
-                  key={sensor.key}
-
-                  type={
-                    sensor.key === "pumpLine"
-                      ? "stepAfter"
-                      : "monotone"
-                  }
-
-                  dataKey={sensor.key}
-
-                  stroke={sensor.color}
-
-                  strokeWidth={3}
-                  opacity={1}
-
-                  dot={false}
-
-                />
-
-              );
-            })}
+            <Line
+              yAxisId="right"
+              dataKey={rightSensor}
+              name={rightConfig.label}
+              stroke={rightConfig.color}
+              strokeWidth={3}
+              dot={false}
+              type={
+                rightSensor === "pumpLine"
+                  ? "stepAfter"
+                  : "monotone"
+              }
+            />
 
           </LineChart>
 
