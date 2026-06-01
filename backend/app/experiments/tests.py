@@ -33,6 +33,103 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.data["plant_name"], "Potato")
         self.assertEqual(response.data["sensor_set_id"], 1)
 
+    def test_create_experiment_with_sensor_frequencies(self):
+        url = reverse('experiment-list-create')
+
+        payload = {
+            "name": "Soy test",
+            "description": "Testing per-sensor frequencies.",
+            "plant_name": "Soy",
+            "sensor_set_id": 1,
+            "started_at": None,
+            "finished_at": None,
+            "owner": None,
+            "collaborators": [],
+            "sensor_frequencies": {
+                "soil_moisture": 30,
+                "light": 60,
+                "soil_temperature": 45,
+                "air_temperature": 15,
+                "air_humidity": 20,
+                "pressure": 120
+            }
+        }
+
+        response = self.client.post(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 30)
+        self.assertEqual(response.data["sensor_frequencies"]["pressure"], 120)
+
+    def test_sensor_frequency_must_be_positive_integer(self):
+        url = reverse('experiment-list-create')
+
+        payload = {
+            "name": "Soy test",
+            "description": "Invalid sensor frequency.",
+            "plant_name": "Soy",
+            "sensor_set_id": 1,
+            "started_at": None,
+            "finished_at": None,
+            "owner": None,
+            "collaborators": [],
+            "sensor_frequencies": {
+                "soil_moisture": 0
+            }
+        }
+
+        response = self.client.post(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("sensor_frequencies", response.data)
+
+    def test_active_sensor_config_returns_experiment_frequencies(self):
+        Experiment.objects.create(
+            name="Soy test",
+            description="Active config test.",
+            plant_name="Soy",
+            sensor_set_id=1,
+            started_at=timezone.now(),
+            finished_at=None,
+            measurement_frequency_seconds=90,
+            sensor_frequencies={
+                "soil_moisture": 30,
+                "light": 60
+            }
+        )
+
+        url = reverse('experiment-active-sensor-config')
+
+        response = self.client.get(url, {"sensor_set_id": 1})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 30)
+        self.assertEqual(response.data["sensor_frequencies"]["light"], 60)
+        self.assertEqual(response.data["sensor_frequencies"]["pressure"], 0)
+
+    def test_active_sensor_config_keeps_soil_moisture_enabled(self):
+        Experiment.objects.create(
+            name="Soy test",
+            description="Required soil moisture test.",
+            plant_name="Soy",
+            sensor_set_id=2,
+            started_at=timezone.now(),
+            finished_at=None,
+            measurement_frequency_seconds=90,
+            sensor_frequencies={
+                "air_temperature": 30,
+                "air_humidity": 30,
+                "light": 60
+            }
+        )
+
+        url = reverse('experiment-active-sensor-config')
+
+        response = self.client.get(url, {"sensor_set_id": 2})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 90)
+
     def test_experiment_name_cannot_be_empty(self):
         url = reverse('experiment-list-create')
 

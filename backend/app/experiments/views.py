@@ -1,9 +1,15 @@
 from django.shortcuts import render
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Experiment
-from .serializers import ExperimentSerializer, ExperimentWithMeasurementsSerializer
+from .serializers import (
+    ALLOWED_SENSOR_FREQUENCY_KEYS,
+    ExperimentSerializer,
+    ExperimentWithMeasurementsSerializer,
+)
 from rest_framework.exceptions import ValidationError
 
 # Create your views here.
@@ -50,6 +56,50 @@ class ExperimentStatusListView(generics.ListAPIView):
             "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
         })
     
+class ActiveExperimentSensorConfigView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        sensor_set_id = request.query_params.get('sensor_set_id', 1)
+
+        experiment = (
+            Experiment.objects
+            .filter(sensor_set_id=sensor_set_id, finished_at__isnull=True)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if not experiment:
+            return Response(
+                {"detail": "Brak aktywnego eksperymentu dla tego zestawu czujnikow."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        frequencies = {
+            key: 0
+            for key in ALLOWED_SENSOR_FREQUENCY_KEYS
+        }
+
+        if experiment.sensor_frequencies:
+            frequencies.update(experiment.sensor_frequencies)
+        else:
+            default_frequency = experiment.measurement_frequency_seconds
+            frequencies = {
+                key: default_frequency
+                for key in ALLOWED_SENSOR_FREQUENCY_KEYS
+            }
+
+        if not frequencies.get("soil_moisture"):
+            frequencies["soil_moisture"] = experiment.measurement_frequency_seconds
+
+        return Response({
+            "experiment_id": experiment.id,
+            "sensor_set_id": experiment.sensor_set_id,
+            "sensor_frequencies": frequencies,
+        })
+
+
 class ExperimentWithMeasurementsListView(generics.ListAPIView):
     serializer_class = ExperimentWithMeasurementsSerializer
     permission_classes = [AllowAny]

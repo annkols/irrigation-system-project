@@ -8,7 +8,7 @@ class Measurement(models.Model):
 
     # pomiary z arduino
     raw_value = models.IntegerField(null=True, blank=True)
-    moisture_percent = models.FloatField()
+    moisture_percent = models.FloatField(null=True, blank=True)
     air_temperature = models.FloatField(null=True, blank=True)
     air_humidity = models.FloatField(null=True, blank=True)
     pressure_hpa = models.FloatField(null=True, blank=True)
