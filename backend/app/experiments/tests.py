@@ -52,6 +52,25 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("name", response.data)
 
+    def test_experiment_name_too_long(self):
+        url = reverse('experiment-list-create')
+
+        payload = {
+            "name": "Wpływ inokulacji i koinokulacji nasion soi (Glycine max (L.) Merr.) bakteriami Bradyrhizobium japonicum oraz Bacillus spp. na wzrost i rozwoj roslin, a takze cechy fizjologiczne",
+            "description": "Test sprawdzajacy walidacje zbyt dlugiej nazwy doswiadczenia.",
+            "plant_name": "Soja",
+            "sensor_set_id": 1,
+            "started_at": None,
+            "finished_at": None,
+            "owner": None,
+            "collaborators": []
+        }
+
+        response = self.client.post(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+
     def test_plant_name_cannot_be_empty(self):
         url = reverse('experiment-list-create')
 
