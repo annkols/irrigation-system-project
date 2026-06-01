@@ -862,39 +862,32 @@ body {
   color: var(--text-main);
 }
 
-.sensor-buttons {
+.sensor-selectors {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.sensor-btn {
-  border: 1px solid var(--primary-light);
-  background: var(--action-bg);
-  border-radius: 999px;
-  padding: 10px 16px;
+.sensor-selector {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: 0.2s;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+}
+
+.sensor-selector label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sensor-selector select {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 10px 14px;
   font-size: 14px;
-}
-
-.sensor-btn:hover {
-  background-color: var(--primary-light);
-}
-
-.sensor-btn.active {
-  background: var(--primary-green);;
-  color: var(--text-on-dark);
-  border-color: var(--primary-green);;
-}
-
-.sensor-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  background: var(--action-bg);
+  color: var(--text-main);
 }
 
 .date-range-picker {
