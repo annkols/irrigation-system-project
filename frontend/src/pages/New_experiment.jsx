@@ -91,7 +91,7 @@ function New_experiment() {
     }
 
     if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-      localErrors.finished_at = ["End date cannot be earlier than start date."];
+      localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
     }
 
     if (Object.keys(localErrors).length > 0) {
@@ -115,7 +115,8 @@ function New_experiment() {
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
-      finished_at: endDate || null,
+      planned_end_at: endDate || null,
+      finished_at: null,
       owner: null,
       collaborators: []
     };
@@ -222,7 +223,7 @@ function New_experiment() {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
-            {errors.finished_at && <span className="error-text">{errors.finished_at[0]}</span>}
+            {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
           </div>
         </div>
 
