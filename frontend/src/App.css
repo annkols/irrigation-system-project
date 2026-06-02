@@ -24,7 +24,7 @@ body {
   background: var(--bg-main);
   color: var(--text-main);
   padding: 0px 25px;
-  height: 60px;
+  height: 52px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -48,7 +48,7 @@ body {
 
 .container {
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
 }
 
 .card {
@@ -280,13 +280,14 @@ body {
 }
 
 .welcome {
-  background: var(--primary-green);
-  color: var(--text-on-dark);
-  padding: 16px 20px 0 20px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  padding: 0 20px 8px 20px;
 }
 
 .welcome h2 {
   margin: 0 0 4px 0;
+  color: var(--primary-green);
 }
 
 .welcome p {
@@ -888,6 +889,191 @@ body {
   font-size: 14px;
   background: var(--action-bg);
   color: var(--text-main);
+}
+
+/* ===== Experiment Details Page ===== */
+
+.exp-details-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.exp-details-title {
+  color: var(--primary-green);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.exp-details-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exp-details-name {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.exp-details-actions {
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.exp-details-status-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.exp-details-status-label {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.exp-details-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--primary-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.exp-details-progress {
+  height: 100%;
+  background: var(--primary-green);
+  border-radius: 4px;
+}
+
+.exp-details-private {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+
+.exp-details-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exp-details-field-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.exp-details-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.exp-details-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exp-details-dates {
+  display: flex;
+  gap: 32px;
+}
+
+.exp-details-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exp-details-date-field label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.exp-details-date-field input[type="date"] {
+  padding: 8px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--bg-main);
+  cursor: pointer;
+}
+
+.exp-details-date-field input[type="date"]:focus {
+  outline: none;
+  border-color: var(--primary-green);
+}
+
+.exp-details-readings-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.exp-details-img-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.exp-details-img {
+  width: 200px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.exp-details-readings {
+  flex: 1;
+}
+
+.exp-charts-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.exp-details-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-main);
+  padding: 0;
+  margin-left: -32px;
+}
+
+.exp-back-btn:hover {
+  color: #444;
+}
+
+.exp-details-page .action {
+  padding: 16px 0;
+  background: transparent;
+}
+
+.exp-details-page .export-dropdown {
+  margin-top: 0;
 }
 
 .date-range-picker {
