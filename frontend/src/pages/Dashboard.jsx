@@ -184,7 +184,7 @@ function App() {
   return (
     <>
       <header className="header">
-        <div className="logo">
+        <div className="logo" onClick={() => { setDetailsOpen(false); navigate('/dashboard'); }} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="Cultiva logo" className="logo-img" />
           <h1>CULTIVA</h1>
         </div>
