@@ -65,12 +65,14 @@ function New_experiment() {
       localErrors.name = ["Ensure the name has no more than 100 characters."];
     }
 
-    if (plantName.length > 100) {
+    if (!plantName.trim()) {
+      localErrors.plant_name = ["This field is required."];
+    } else if (plantName.length > 100) {
       localErrors.plant_name = ["Ensure the plant type has no more than 100 characters."];
     }
 
     if (description.length > 2000) {
-      localErrors.description = ["Ensure the description has no more than 1000 characters."];
+      localErrors.description = ["Ensure the description has no more than 2000 characters."];
     }
 
     if (!selectedSetup) {
@@ -284,7 +286,7 @@ function New_experiment() {
         </div>
 
         <button className="btn-back" onClick={() => navigate('/dashboard')}>
-          <span>BACK</span>
+          <span>CANCEL</span>
         </button>
 
         <button className="btn-create" onClick={handleCreate}>
