@@ -5,7 +5,8 @@ import bgImage from "./images/back.jpg";
 import logo from "./images/logo_cultiva.svg";
 import ExperimentChart from "./ExperimentChart";
 
-const API_BASE_URL = "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const pumpCommands = ["ON", "OFF", "AUTO"];
 const sensorRows = {
   air_temperature: { label: "Temperature inside", unit: "°C", field: "air_temperature" },
