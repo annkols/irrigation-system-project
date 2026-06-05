@@ -286,7 +286,7 @@ function New_experiment() {
         </div>
 
         <button className="btn-back" onClick={() => navigate('/dashboard')}>
-          <span>BACK</span>
+          <span>CANCEL</span>
         </button>
 
         <button className="btn-create" onClick={handleCreate}>
