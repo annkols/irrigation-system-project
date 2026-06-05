@@ -365,7 +365,11 @@ function App() {
               {filtered.map((exp) => (
                 <div key={exp.id} className="item" onClick={() => navigate(`/experiment/${exp.id}`)}>
                   <p>{exp.name}</p>
-                  <span className={`badge ${exp.status}`}>{statusMap[exp.status]}</span>
+                  <span className={"status list-status " + (exp.status?.toLowerCase().replace(/\s+/g, '-') || '')}>
+                    {exp.status 
+                      ? (statusMap[exp.status.toLowerCase()] || exp.status.toUpperCase()) 
+                      : "UNKNOWN"}
+                  </span>
                   <span className="item-date">{exp.endDate}</span>
                 </div>
               ))}
