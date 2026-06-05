@@ -162,11 +162,11 @@ function Experiment_details() {
         <div className="exp-details-dates">
           <div className="exp-details-date-field">
             <label>Start date:</label>
-            <input type="date" defaultValue={experiment.started_at?.slice(0, 10)} />
+            <span> {formatDate(experiment.started_at) || "-"} </span>
           </div>
           <div className="exp-details-date-field">
             <label>Planned end date:</label>
-            <input type="date" defaultValue={experiment.finished_at?.slice(0, 10)} />
+            <span>{formatDate(experiment.finished_at) || "-"}</span>
           </div>
         </div>
 

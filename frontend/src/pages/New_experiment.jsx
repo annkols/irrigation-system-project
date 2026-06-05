@@ -70,7 +70,7 @@ function New_experiment() {
     }
 
     if (description.length > 2000) {
-      localErrors.description = ["Ensure the description has no more than 1000 characters."];
+      localErrors.description = ["Ensure the description has no more than 2000 characters."];
     }
 
     if (!selectedSetup) {
