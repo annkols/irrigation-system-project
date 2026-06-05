@@ -109,19 +109,14 @@ function App() {
   );
 
   const calculateProgress = (exp) => {
-  if (!exp || exp.status === "not started") return 0;
-  if (exp.status === "completed") return 100;
-  if (!exp.started_at || !exp.planned_end_at) return 0;
-  const start = new Date(exp.started_at).getTime();
-  const end = new Date(exp.planned_end_at).getTime();
-  const nowTs = new Date().getTime();
-
-  if (nowTs >= end) return 100;
-  if (nowTs <= start) return 0;
-
-  const total = end - start;
-  const elapsed = nowTs - start;
-  return Math.round((elapsed / total) * 100);
+    if (!exp || !exp.started_at) return 0;
+    if (!exp.finished_at) return 0;
+    const start = new Date(exp.started_at).getTime();
+    const end = new Date(exp.finished_at).getTime();
+    const nowTs = new Date().getTime();
+    if (nowTs >= end) return 100;
+    if (nowTs <= start) return 0;
+    return Math.round(((nowTs - start) / (end - start)) * 100);
   };
 
     const progressPercent = calculateProgress(mainexp);
