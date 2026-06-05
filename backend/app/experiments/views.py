@@ -9,7 +9,9 @@ from .serializers import (
     ALLOWED_SENSOR_FREQUENCY_KEYS,
     ExperimentSerializer,
     ExperimentWithMeasurementsSerializer,
+    ExperimentUpdateSerializer
 )
+
 from rest_framework.exceptions import ValidationError
 
 # Create your views here.
@@ -55,6 +57,12 @@ class ExperimentStatusListView(generics.ListAPIView):
         raise ValidationError({
             "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
         })
+    
+class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = Experiment.objects.all()
+    serializer_class = ExperimentUpdateSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
     
 class ActiveExperimentSensorConfigView(APIView):
     permission_classes = [AllowAny]

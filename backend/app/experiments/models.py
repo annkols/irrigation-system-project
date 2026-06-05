@@ -39,11 +39,6 @@ class Experiment(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    measurement_frequency_seconds = models.PositiveIntegerField(
-        default=900, #15 min
-        validators=[MinValueValidator(1)]
-    )
-
     sensor_frequencies = models.JSONField(default=dict, blank=True)
     
     is_public = models.BooleanField(default=False)

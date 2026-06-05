@@ -14,7 +14,7 @@ ALLOWED_SENSOR_FREQUENCY_KEYS = {
     'pressure',
 }
 
-
+# CREATE/READ EXPERIMENT
 class ExperimentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Experiment
@@ -26,7 +26,6 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'owner',
             'collaborators',
             'sensor_set_id',
-            'measurement_frequency_seconds',
             'sensor_frequencies',
             'created_at',
             'started_at',
@@ -71,19 +70,9 @@ class ExperimentSerializer(serializers.ModelSerializer):
             getattr(instance, 'sensor_set_id', None)
         )
 
-        measurement_frequency_seconds = data.get(
-            'measurement_frequency_seconds',
-            getattr(instance, 'measurement_frequency_seconds', None)
-        )
-
         if sensor_set_id is not None and sensor_set_id < 1:
             raise serializers.ValidationError({
                 "sensor_set_id": "Id zestawu czujników musi być większe od 0."
-            })
-        
-        if measurement_frequency_seconds is not None and measurement_frequency_seconds < 1:
-            raise serializers.ValidationError({
-                "measurement_interval_seconds": "Częstotliwość pomiaru musi być większa od 0 sekund i nei może być pusta."
             })
 
         sensor_frequencies = data.get(
@@ -155,7 +144,45 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
         return data
 
+# UPDATE EXPERIMENT
+class ExperimentUpdateSerializer(ExperimentSerializer):
+    NONCHANGEABLE_FIELDS = {
+        "sensor_set_id",
+        "owner",
+        "created_at"
+    }
 
+    class Meta(ExperimentSerializer.Meta):
+        read_only_fields = ExperimentSerializer.Meta.read_only_fields + [
+            "sensor_set_id",
+            "owner",
+            "created_at"
+        ]
+
+    def validate(self, data):
+        forbidden_fields = self.NONCHANGEABLE_FIELDS.intersection(self.initial_data.keys())
+        
+
+        if forbidden_fields:
+            errors = {}
+
+            if "sensor_set_id" in forbidden_fields:
+                errors["sensor_set_id"] = "Nie można edytować zestawu sensorów."
+
+            if "owner" in forbidden_fields:
+                errors["owner"] = "Nie można zmienić właściciela eksperymentu."
+
+            if "started_at" in forbidden_fields:
+                errors["started_at"] = "Nie można edytować daty rozpoczęcia eksperymentu."
+
+            if "created_at" in forbidden_fields:
+                errors["created_at"] = "Nie można edytować daty stworzenia eksperymentu."
+
+            raise serializers.ValidationError(errors)
+
+        return super().validate(data)
+
+# READ WITH MEASUREMENTS
 class ExperimentWithMeasurementsSerializer(ExperimentSerializer):
     measurements = serializers.SerializerMethodField()
 
