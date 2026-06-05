@@ -26,6 +26,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'owner',
             'collaborators',
             'sensor_set_id',
+            'measurement_frequency_seconds',
             'sensor_frequencies',
             'created_at',
             'started_at',
@@ -73,6 +74,16 @@ class ExperimentSerializer(serializers.ModelSerializer):
         if sensor_set_id is not None and sensor_set_id < 1:
             raise serializers.ValidationError({
                 "sensor_set_id": "Id zestawu czujników musi być większe od 0."
+            })
+        
+        measurement_frequency_seconds = data.get(
+            'measurement_frequency_seconds',
+            getattr(instance, 'measurement_frequency_seconds', None)
+        )
+
+        if measurement_frequency_seconds is not None and measurement_frequency_seconds < 1:
+            raise serializers.ValidationError({
+                "measurement_frequency_seconds": "Częstotliwość pomiaru musi być większa od 0 sekund i nie może być pusta."
             })
 
         sensor_frequencies = data.get(
@@ -149,14 +160,16 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
     NONCHANGEABLE_FIELDS = {
         "sensor_set_id",
         "owner",
-        "created_at"
+        "created_at",
+        'finished_at',
     }
 
     class Meta(ExperimentSerializer.Meta):
         read_only_fields = ExperimentSerializer.Meta.read_only_fields + [
             "sensor_set_id",
             "owner",
-            "created_at"
+            "created_at",
+            'finished_at'
         ]
 
     def validate(self, data):
@@ -172,11 +185,11 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
             if "owner" in forbidden_fields:
                 errors["owner"] = "Nie można zmienić właściciela eksperymentu."
 
-            if "started_at" in forbidden_fields:
-                errors["started_at"] = "Nie można edytować daty rozpoczęcia eksperymentu."
-
             if "created_at" in forbidden_fields:
                 errors["created_at"] = "Nie można edytować daty stworzenia eksperymentu."
+
+            if "finished_at" in forbidden_fields:
+                errors["finished_at"] = "Nie można edytować daty zakończenia eksperymentu."
 
             raise serializers.ValidationError(errors)
 
