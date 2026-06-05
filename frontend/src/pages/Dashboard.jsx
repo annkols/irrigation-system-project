@@ -32,6 +32,7 @@ function App() {
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [experimentListOpen, setExperimentListOpen] = useState(false); //lista do wybierania eksperymentu, do wyświetlania po lewej stronie
 
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
@@ -201,8 +202,45 @@ function App() {
         <div className="card">
           <div className="image-placeholder" style={{ backgroundImage: `url(${bgImage})` }}>
             <div className="card-header">
-              <div>
-                <h2>{mainexp?.name || "Loading..."}</h2>
+            {/* dropdown do wybierania eksperymentu, do wyświetlania po lewej stronie, korzystam z css eksportowania */}
+              <div className="export-dropdown" style={{ marginTop: 0 }}>
+                <button 
+                  className="export-btn" 
+                  onClick={() => setExperimentListOpen(!experimentListOpen)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  style={{ 
+                    color: 'white', 
+                    borderColor: 'white', 
+                    fontSize: '18px', 
+                    padding: '4px 12px',
+                    transition: 'background-color 0.2s',
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  <span>{mainexp?.name || "Loading..."}</span>
+                  <span className="material-symbols-outlined">expand_more</span>
+                </button>
+
+                {experimentListOpen && (
+                  <div className="export-menu" style={{ bottom: 'auto', top: 'calc(100% + 4px)' }}>
+                    {experiments.map((exp) => (
+                      <button 
+                        key={exp.id}
+                        onClick={() => { 
+                          setSelectedId(exp.id); 
+                          setExperimentListOpen(false); 
+                        }}
+                      >
+                        {exp.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="date">
                 <span>{nowDate}</span>
