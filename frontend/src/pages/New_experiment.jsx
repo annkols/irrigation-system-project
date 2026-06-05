@@ -65,7 +65,9 @@ function New_experiment() {
       localErrors.name = ["Ensure the name has no more than 100 characters."];
     }
 
-    if (plantName.length > 100) {
+    if (!plantName.trim()) {
+      localErrors.plant_name = ["This field is required."];
+    } else if (plantName.length > 100) {
       localErrors.plant_name = ["Ensure the plant type has no more than 100 characters."];
     }
 
