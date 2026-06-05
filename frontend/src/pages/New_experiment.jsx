@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 function New_experiment() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -125,7 +127,7 @@ function New_experiment() {
 
     console.log("Wysylane dane:", newExperiment);
 
-    fetch("http://localhost:8000/api/experiments/", {
+    fetch(`${API_BASE_URL}/experiments/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -5,7 +5,8 @@ import logo from "./images/logo_cultiva.svg";
 import bgImage from "./images/back.jpg";
 import ExperimentChart from "./ExperimentChart";
 
-const API_BASE_URL = "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
 function Experiment_details() {
