@@ -1,12 +1,13 @@
-﻿import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-function New_experiment() {
+function Experiment_edit() {
   const navigate = useNavigate();
+  const {id} = useParams();
   const [name, setName] = useState("");
   const [plantName, setPlantName] = useState("");
   const [description, setDescription] = useState("");
@@ -15,6 +16,8 @@ function New_experiment() {
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
 
   const sensorSetups = [
       {
@@ -50,6 +53,39 @@ function New_experiment() {
       }
     ];
 
+    useEffect(() => {
+      fetch(`${API_BASE_URL}/experiments/${id}/`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch experiment data");
+          return res.json();
+        })
+        .then((data) => {
+          setName(data.name || "");
+          setPlantName(data.plant_name || "");
+          setDescription(data.description || "");
+          setIsPublic(data.is_public || false);
+      
+          if (data.started_at) setStartDate(data.started_at.split('T')[0]);
+          if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
+      
+          setSelectedSetup(data.sensor_set_id);
+      
+          if (data.sensor_frequencies) {
+            const stringFreqs = {};
+            Object.entries(data.sensor_frequencies).forEach(([key, val]) => {
+              stringFreqs[key] = String(val);
+            });
+            setFrequencies(stringFreqs);
+          }
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Error loading experiment details.");
+          navigate('/dashboard');
+        });
+    }, [id, navigate]);
+
   const handleFreqChange = (sensor, value) => {
       setFrequencies(prev => ({
         ...prev,
@@ -57,7 +93,7 @@ function New_experiment() {
       }));
     };
 
-  const handleCreate = () => {
+  const handleSave = () => {
     setErrors({});
     const localErrors = {};
 
@@ -111,43 +147,44 @@ function New_experiment() {
       ])
     );
 
-    const newExperiment = {
+    const updatedExperiment = {
       name,
       description,
       plant_name: plantName,
-      sensor_set_id: selectedSetup,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
       planned_end_at: endDate || null,
-      finished_at: null,
-      owner: null,
-      collaborators: []
+      is_public: isPublic
     };
 
-    console.log("Wysylane dane:", newExperiment);
+    console.log("Wysylane dane edycji:", updatedExperiment);
 
-    fetch(`${API_BASE_URL}/experiments/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(newExperiment),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (res.ok) {
-          alert("Experiment created!");
-          navigate('/dashboard');
-        } else {
-          setErrors(data);
-        }
+    fetch(`${API_BASE_URL}/experiments/${id}/edit/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedExperiment),
       })
-      .catch((err) => {
-        console.error("Error creating experiment:", err);
-        alert("Server connection error.");
-      });
-  };
+        .then(async (res) => {
+          const data = await res.json();
+          if (res.ok) {
+            alert("Experiment updated successfully!");
+            navigate(`/experiment/${id}`);
+          } else {
+            setErrors(data);
+          }
+        })
+        .catch((err) => {
+          console.error("Error updating experiment:", err);
+          alert("Server connection error.");
+        });
+    };
+
+    if (isLoading) {
+      return <div className="loading">Loading experiment data...</div>;
+    }
 
   return (
     <>
@@ -165,7 +202,7 @@ function New_experiment() {
 
       <div className="form">
         <div className="new-exp-form">
-          <h2>Add a new experiment</h2>
+          <h2>Edit experiment</h2>
         </div>
 
         <div className="form-section">
@@ -234,20 +271,23 @@ function New_experiment() {
         <div className="form-section">
           <p>Select available setups of sensors you would like to use, all setups include a water pump:</p>
 
-          <div className="setup-container">
-            {sensorSetups.map((setup) => (
+          <div className="setup-container" style={{ opacity: 0.85 }}>
+          {sensorSetups.map((setup) => {
+            const isSelected = selectedSetup === setup.id;
+            return (
               <div
                 key={setup.id}
-                className={`setup-card ${selectedSetup === setup.id ? 'selected' : ''}`}
-                onClick={() => setSelectedSetup(setup.id)}
+                className={`setup-card ${isSelected ? 'selected' : 'disabled-card'}`}
+                onClick={null} 
+                style={{ cursor: 'not-allowed' }}
               >
                 <h3>{setup.title}</h3>
-                {selectedSetup === setup.id && (
+                {isSelected && (
                   <div className="setup-details" onClick={(e) => e.stopPropagation()}>
                     <p style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.8 }}>
                       Set reading frequency for each sensor (seconds):
                     </p>
-                      {setup.sensors.map((sensor) => (
+                    {setup.sensors.map((sensor) => (
                       <div key={sensor.key} className="sensor-freq-row">
                         <span className="sensor-name">{sensor.label}</span>
                         <input
@@ -259,7 +299,6 @@ function New_experiment() {
                           className={errors.sensor_set_id && (!frequencies[sensor.key] || frequencies[sensor.key] <= 0 || frequencies[sensor.key] > 300) ? "input-error" : ""}
                           value={frequencies[sensor.key] || ""}
                           onKeyDown={(e) => {
-                            // nie wolno znaków e E , .
                             if (["e", "E", ".", ","].includes(e.key)) {
                               e.preventDefault();
                             }
@@ -271,8 +310,9 @@ function New_experiment() {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
           {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
         </div>
 
@@ -282,16 +322,22 @@ function New_experiment() {
 
         <div className="is-public">
           <label htmlFor="experiment_public">
-            <input type="checkbox" id="experiment_public" name="experiment_public" value="true" />
+            <input 
+              type="checkbox" 
+              id="experiment_public" 
+              name="experiment_public" 
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+            />
             Make my experiment public and let other users see the data.
           </label>
         </div>
 
-        <button className="btn-back" onClick={() => navigate('/dashboard')}>
+        <button className="btn-back" onClick={() => navigate(`/experiment/${id}`)}>
           <span>CANCEL</span>
         </button>
 
-        <button className="btn-create" onClick={handleCreate}>
+        <button className="btn-create" onClick={handleSave}>
           <span>SAVE CHANGES</span>
         </button>
       </div>
@@ -299,4 +345,4 @@ function New_experiment() {
   );
 }
 
-export default New_experiment;
+export default Experiment_edit;
