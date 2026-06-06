@@ -292,7 +292,7 @@ function New_experiment() {
         </button>
 
         <button className="btn-create" onClick={handleCreate}>
-          <span>SAVE CHANGES</span>
+          <span>CREATE EXPERIMENT</span>
         </button>
       </div>
     </>
