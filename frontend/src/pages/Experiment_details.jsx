@@ -53,9 +53,9 @@ function Experiment_details() {
 
   const calculateProgress = (exp) => {
     if (!exp || !exp.started_at) return 0;
-    if (!exp.finished_at) return 0;
+    if (!exp.planned_end_at) return 0;
     const start = new Date(exp.started_at).getTime();
-    const end = new Date(exp.finished_at).getTime();
+    const end = new Date(exp.planned_end_at).getTime();
     const nowTs = new Date().getTime();
     if (nowTs >= end) return 100;
     if (nowTs <= start) return 0;
@@ -167,6 +167,10 @@ function Experiment_details() {
           </div>
           <div className="exp-details-date-field">
             <label>Planned end date:</label>
+            <span>{formatDate(experiment.planned_end_at) || "-"}</span>
+          </div>
+          <div className="exp-details-date-field">
+            <label>End date:</label>
             <span>{formatDate(experiment.finished_at) || "-"}</span>
           </div>
         </div>

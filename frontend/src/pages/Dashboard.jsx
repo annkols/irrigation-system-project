@@ -111,9 +111,9 @@ function App() {
 
   const calculateProgress = (exp) => {
     if (!exp || !exp.started_at) return 0;
-    if (!exp.finished_at) return 0;
+    if (!exp.planned_end_at) return 0;
     const start = new Date(exp.started_at).getTime();
-    const end = new Date(exp.finished_at).getTime();
+    const end = new Date(exp.planned_end_at).getTime();
     const nowTs = new Date().getTime();
     if (nowTs >= end) return 100;
     if (nowTs <= start) return 0;
