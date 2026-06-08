@@ -67,6 +67,13 @@ class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+
+class ExperimentDeleteView(generics.DestroyAPIView):
+    queryset = Experiment.objects.all()
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+
 class ExperimentEndView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
