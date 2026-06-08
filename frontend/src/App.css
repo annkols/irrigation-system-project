@@ -60,6 +60,11 @@ body {
   padding: 0;
 }
 
+.disabled-card {
+  opacity: 0.5;
+  filter: grayscale(30%);
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
