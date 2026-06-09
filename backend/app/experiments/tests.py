@@ -287,6 +287,23 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["sensor_set_id"], 1)
 
+    def test_delete_experiment_successfully(self):
+        experiment = Experiment.objects.create(
+            name="Potato test",
+            description="Experiment to delete.",
+            plant_name="Potato",
+            sensor_set_id=1,
+            started_at=None,
+            finished_at=None
+        )
+
+        url = reverse('experiment-delete', kwargs={"pk": experiment.pk})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Experiment.objects.filter(pk=experiment.pk).exists())
+
     def test_experiment_with_measurements_returns_matching_station_measurements(self):
         started_at = timezone.now() - timedelta(hours=2)
 
