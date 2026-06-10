@@ -1,5 +1,5 @@
 import csv
-import json
+from io import BytesIO
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import generics, status
@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+import openpyxl
 
 class MeasurementListCreateView(generics.ListCreateAPIView):
     serializer_class = MeasurementSerializer
@@ -94,39 +95,52 @@ class MeasurementExportCSVView(APIView):
 
         export_format = request.query_params.get('export_format', 'csv')
 
+        ALL_COLUMNS = {
+            'moisture_percent': ('moisture_%',    lambda m: m.moisture_percent),
+            'air_temperature':  ('air_temp_C',    lambda m: m.air_temperature),
+            'air_humidity':     ('air_humidity_%', lambda m: m.air_humidity),
+            'pressure_hpa':     ('pressure_hpa',  lambda m: m.pressure_hpa),
+            'soil_temperature': ('soil_temp_C',   lambda m: m.soil_temperature),
+            'light_lux':        ('light_lux',     lambda m: m.light_lux),
+            'pump_on':          ('pump_on',       lambda m: m.pump_on),
+        }
+
+        columns_param = request.query_params.get('columns', '')
+        selected_keys = [k for k in columns_param.split(',') if k in ALL_COLUMNS] if columns_param else list(ALL_COLUMNS.keys())
+
         def format_timestamp(value):
             return timezone.localtime(value).strftime('%Y-%m-%d %H:%M:%S')
 
-        if export_format == 'json':
-            data = [
-                {
-                    'timestamp': format_timestamp(m.created_at),
-                    'station': m.station_number,
-                    'pot': m.pot_number,
-                    'moisture_%': m.moisture_percent,
-                    'air_temp_C': m.air_temperature,
-                    'air_humidity_%': m.air_humidity,
-                    'pressure_hpa': m.pressure_hpa,
-                    'soil_temp_C': m.soil_temperature,
-                    'light_lux': m.light_lux,
-                    'pump_on': m.pump_on,
-                }
-                for m in queryset
-            ]
+        if export_format == 'excel':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = f"Experiment {experiment_id}"
+
+            ws.append(['timestamp', 'station', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
+
+            for m in queryset:
+                row = [format_timestamp(m.created_at), m.station_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
+                ws.append(row)
+
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+
             response = HttpResponse(
-                json.dumps(data, indent=2),
-                content_type='application/json'
+                buffer.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-            response['Content-Disposition'] = f'attachment; filename="experiment_{experiment_id}.json"'
+            response['Content-Disposition'] = f'attachment; filename="experiment_{experiment_id}.xlsx"'
             return response
 
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="experiment_{experiment_id}.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['timestamp', 'station', 'pot', 'moisture_%', 'air_temp_C', 'air_humidity_%', 'pressure_hpa', 'soil_temp_C', 'light_lux', 'pump_on'])
+        writer.writerow(['timestamp', 'station', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
 
         for m in queryset:
-            writer.writerow([format_timestamp(m.created_at), m.station_number, m.pot_number, m.moisture_percent, m.air_temperature, m.air_humidity, m.pressure_hpa, m.soil_temperature, m.light_lux, m.pump_on])
+            row = [format_timestamp(m.created_at), m.station_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
+            writer.writerow(row)
 
         return response
