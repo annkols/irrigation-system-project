@@ -180,7 +180,7 @@ function Start() {
           margin: 0,
           lineHeight: 1.2,
         }}>
-          Our system features
+          About us
         </h2>
 
         <p style={{
@@ -190,8 +190,7 @@ function Start() {
           lineHeight: '1.7',
           margin: 0,
         }}>
-          <strong>Tutaj napiszemy o systemie — na razie placeholder.</strong>
-          {' '}Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi ullamcorper consectetur elit, vel dapibus augue consequat id. Aenean posuere ante consectetur bibendum blandit. Donec erat urna, volutpat in scelerisque eu, ultricies at ligula. Fusce faucibus dui eu lorem bibendum volutpat. Nulla facilisi. Aliquam volutpat purus nec mi mollis, in ultricies dui auctor. Quisque id aliquet lorem.
+          {' '}Cultiva is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management.
         </p>
       </div>
     </>

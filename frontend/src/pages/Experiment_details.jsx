@@ -19,6 +19,8 @@ function Experiment_details() {
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [lastSuccessTime, setLastSuccessTime] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
@@ -31,16 +33,64 @@ function Experiment_details() {
       .catch(err => console.error(err));
 
     const fetchMeasurements = () => {
+      const currentTime = new Date().toLocaleString();
+
       fetch(`${API_BASE_URL}/measurements/`)
-        .then(res => res.json())
-        .then(data => setMeasurements(data))
-        .catch(err => console.error(err));
+        .then(res => {
+          if (!res.ok) throw new Error("Server error");
+          return res.json();
+        })
+        .then(data => {
+          // jeśli tablica z pomiarami jest pusta to jest tak jakby błąd pobrania pomiarów
+          if (!data || data.length === 0) {
+            throw new Error("No measurements available");
+          }
+          setMeasurements(data);
+          setLastSuccessTime(currentTime);
+            setErrors(prevErrors => ({
+            ...prevErrors,
+            measurements: null
+          }));
+        })
+        .catch(err => {
+          console.error(err);       
+          const successString = lastSuccessTime ? lastSuccessTime : "never";
+            setErrors(prevErrors => ({
+            ...prevErrors,
+            measurements: `Failed to fetch measurements at ${currentTime}. Last successful fetch at ${successString}.`
+          }));
+         });
     };
 
     fetchMeasurements();
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, lastSuccessTime]);
+
+  const handleEndExperiment = async () => {
+    const confirmEnd = window.confirm("Are you sure you want to end this experiment?");
+    if (!confirmEnd) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/${id}/end/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(`Błąd: ${data.detail || 'Failed to end the experiment.'}`);
+        return;
+      }
+      alert("Experiment has been successfully ended!");
+  
+      setExperiment(data); 
+           } catch (error) {
+      console.error("Network error:", error);
+      alert("Server connection error.");
+    }
+  };
 
   const latest = measurements.length > 0 ? measurements[0] : null;
 
@@ -181,6 +231,13 @@ function Experiment_details() {
             <label>End date:</label>
             <span>{formatDate(experiment.finished_at) || "-"}</span>
           </div>
+          {/* zakończ eksperyment button, widoczny tylko jeśli można zakończyć */}
+          {experiment.started_at && !experiment.finished_at && (
+            <button className="end-experiment-btn" onClick={handleEndExperiment}>
+              <span className="material-symbols-outlined">check</span>
+              <span>END EXPERIMENT</span>
+            </button>
+          )}
         </div>
 
         {/* współpracownicy */}
@@ -192,6 +249,13 @@ function Experiment_details() {
             ))}
           </div>
         </div>
+
+        {/* error jeśli nie ma odczytów w czujników */}
+        {errors.measurements && (
+          <span className="error-text">
+            {errors.measurements}
+          </span>
+        )}
 
         {/* zdjęcie + odczyty */}
         <div className="exp-details-readings-row">
