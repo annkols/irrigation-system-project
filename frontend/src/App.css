@@ -276,6 +276,27 @@ body {
   background: var(--primary-light);
 }
 
+.end-experiment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1.5px solid var(--primary-green);
+  border-radius: 6px;
+  color: var(--primary-green);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  margin-left: auto;
+}
+
+.end-experiment-btn:hover {
+  background: var(--primary-light);
+}
+
 .dashboard {
   gap: 0;
   width: 50%;

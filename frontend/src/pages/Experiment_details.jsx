@@ -42,6 +42,31 @@ function Experiment_details() {
     return () => clearInterval(interval);
   }, [id]);
 
+  const handleEndExperiment = async () => {
+    const confirmEnd = window.confirm("Are you sure you want to end this experiment?");
+    if (!confirmEnd) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/${id}/end/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(`Błąd: ${data.detail || 'Failed to end the experiment.'}`);
+        return;
+      }
+      alert("Experiment has been successfully ended!");
+  
+      setExperiment(data); 
+           } catch (error) {
+      console.error("Network error:", error);
+      alert("Server connection error.");
+    }
+  };
+
   const latest = measurements.length > 0 ? measurements[0] : null;
 
   const statusMap = {
@@ -181,6 +206,13 @@ function Experiment_details() {
             <label>End date:</label>
             <span>{formatDate(experiment.finished_at) || "-"}</span>
           </div>
+          {/* zakończ eksperyment button, widoczny tylko jeśli można zakończyć */}
+          {experiment.started_at && !experiment.finished_at && (
+            <button className="end-experiment-btn" onClick={handleEndExperiment}>
+              <span className="material-symbols-outlined">check</span>
+              <span>END EXPERIMENT</span>
+            </button>
+          )}
         </div>
 
         {/* współpracownicy */}
