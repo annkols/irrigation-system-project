@@ -37,6 +37,18 @@ class ExperimentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
+    def _time_ranges_overlap(self, first_start, first_end, second_start, second_end):
+        if first_start is None or second_start is None:
+            return first_start is None and second_start is None
+
+        if first_end is not None and second_start is not None and first_end <= second_start:
+            return False
+
+        if second_end is not None and first_start is not None and second_end <= first_start:
+            return False
+
+        return True
+
     def validate(self, data):
         instance = getattr(self, 'instance', None)
 
@@ -124,34 +136,54 @@ class ExperimentSerializer(serializers.ModelSerializer):
             getattr(instance, 'planned_end_at', None)
         )
 
+        if not started_at:
+            raise serializers.ValidationError({
+                "started_at": "Data rozpoczęcia eksperymentu jest wymagana."
+            })
+
+        if not planned_end_at:
+            raise serializers.ValidationError({
+                "planned_end_at": "Planowana data zakończenia eksperymentu jest wymagana."
+            })
+
         if finished_at and not started_at:
             raise serializers.ValidationError({
                 "finished_at": "Nie można zakończyć eksperymentu, który nie ma daty rozpoczęcia."
             })
                 
-        if planned_end_at and not started_at:
-            raise serializers.ValidationError({
-                "planned_end_at": "Nie można ustawić planowanej daty zakończenia bez daty rozpoczęcia."
-            })
-
         if started_at and finished_at and finished_at < started_at:
             raise serializers.ValidationError({
                 "finished_at": "Data zakończenia eksperymentu musi być nie wcześniejsza niż data rozpoczęcia eksperymentu."
             })
 
-        if sensor_set_id and not finished_at:
-            active_experiments = Experiment.objects.filter(
+        if planned_end_at < started_at:
+            raise serializers.ValidationError({
+                "planned_end_at": "Planowana data zakończenia nie może być wcześniejsza niż data rozpoczęcia."
+            })
+
+        if sensor_set_id:
+            experiments_for_sensor_set = Experiment.objects.filter(
                 sensor_set_id=sensor_set_id,
                 finished_at__isnull=True
             )
 
             if instance:
-                active_experiments = active_experiments.exclude(pk=instance.pk)
+                experiments_for_sensor_set = experiments_for_sensor_set.exclude(pk=instance.pk)
 
-            if active_experiments.exists():
-                raise serializers.ValidationError({
-                    "sensor_set_id": "Istnieje już niezakończony eksperyment dla tego zestawu czujników."
-                })
+            current_end_at = finished_at or planned_end_at
+
+            for experiment in experiments_for_sensor_set:
+                experiment_end_at = experiment.finished_at or experiment.planned_end_at
+
+                if self._time_ranges_overlap(
+                    started_at,
+                    current_end_at,
+                    experiment.started_at,
+                    experiment_end_at
+                ):
+                    raise serializers.ValidationError({
+                        "sensor_set_id": "Istnieje już eksperyment dla tego zestawu czujników w wybranym terminie."
+                    })
 
         return data
 
