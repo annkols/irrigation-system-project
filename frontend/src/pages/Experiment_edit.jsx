@@ -130,7 +130,13 @@ function Experiment_edit() {
       }
     }
 
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+    if (!startDate) {
+      localErrors.started_at = ["Start date is required."];
+    }
+
+    if (!endDate) {
+      localErrors.planned_end_at = ["Planned end date is required."];
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
       localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
     }
 
@@ -247,17 +253,20 @@ function Experiment_edit() {
           <div className="date-choice">
             <label htmlFor="start_date">Start date:</label>
             <input
+              className={errors.started_at ? "input-error" : ""}
               type="date"
               id="start_date"
               name="start_date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
+            {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
           </div>
 
           <div className="date-choice">
             <label htmlFor="end_date">Planned end date:</label>
             <input
+              className={errors.planned_end_at ? "input-error" : ""}
               type="date"
               id="end_date"
               name="end_date"
