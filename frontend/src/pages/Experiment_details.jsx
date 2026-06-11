@@ -19,8 +19,47 @@ function Experiment_details() {
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('csv');
+  const [selectedColumns, setSelectedColumns] = useState({
+    moisture_percent: true,
+    air_temperature: true,
+    air_humidity: true,
+    soil_temperature: true,
+    pressure_hpa: true,
+    light_lux: true,
+    pump_on: true,
+  });
   const [lastSuccessTime, setLastSuccessTime] = useState(null);
   const [errors, setErrors] = useState({});
+
+  const columnLabels = {
+    moisture_percent: 'Soil moisture',
+    air_temperature: 'Air temperature',
+    air_humidity: 'Air humidity',
+    soil_temperature: 'Soil temperature',
+    pressure_hpa: 'Pressure',
+    light_lux: 'Light intensity',
+    pump_on: 'Pump status',
+  };
+
+  const handleExportClick = (format) => {
+    setExportFormat(format);
+    setExportOpen(false);
+    setExportModalOpen(true);
+  };
+
+  const handleDownload = () => {
+    const cols = Object.entries(selectedColumns)
+      .filter(([_, checked]) => checked)
+      .map(([key]) => key)
+      .join(',');
+    window.open(
+      `${API_BASE_URL}/experiments/${id}/export-csv/?export_format=${exportFormat}&columns=${cols}`,
+      '_blank'
+    );
+    setExportModalOpen(false);
+  };
 
   const now = new Date();
   const nowDate = now.toLocaleDateString("pl-PL");
@@ -322,8 +361,8 @@ function Experiment_details() {
           </button>
           {exportOpen && (
             <div className="export-menu">
-              <button onClick={() => { window.open(`${API_BASE_URL}/experiments/${id}/export-csv/?export_format=csv`, '_blank'); setExportOpen(false); }}>CSV</button>
-              <button onClick={() => { window.open(`${API_BASE_URL}/experiments/${id}/export-csv/?export_format=json`, '_blank'); setExportOpen(false); }}>JSON</button>
+              <button onClick={() => handleExportClick('csv')}>CSV</button>
+              <button onClick={() => handleExportClick('excel')}>Excel</button>
             </div>
           )}
         </div>
@@ -333,6 +372,33 @@ function Experiment_details() {
 
 
       </div>
+
+      {exportModalOpen && (
+        <div className="export-modal-overlay" onClick={() => setExportModalOpen(false)}>
+          <div className="export-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Select sensors to export</h3>
+            <div className="export-checkboxes">
+              {Object.entries(columnLabels).map(([key, label]) => (
+                <label key={key} className="export-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns[key]}
+                    onChange={() => setSelectedColumns(prev => ({
+                      ...prev,
+                      [key]: !prev[key]
+                    }))}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="export-modal-buttons">
+              <button className="export-cancel-btn" onClick={() => setExportModalOpen(false)}>Cancel</button>
+              <button className="export-download-btn" onClick={handleDownload}>Download {exportFormat.toUpperCase()}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

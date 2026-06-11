@@ -4,3 +4,4 @@ djangorestframework>=3.15
 python-dotenv>=1.0
 djangorestframework
 django-cors-headers
+openpyxl
