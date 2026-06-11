@@ -312,7 +312,7 @@ function App() {
                 <span>FULL EXPERIMENT HISTORY</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
-              <ExperimentChart />
+              <ExperimentChart sensorSetId={experiment?.sensor_set_id}/>
               <div className="readings-spacer" />
               <div className="readings-header">
                 <span className="readings-title">LATEST READING</span>
