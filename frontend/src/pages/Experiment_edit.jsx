@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
@@ -81,7 +82,7 @@ function Experiment_edit() {
         })
         .catch((err) => {
           console.error(err);
-          alert("Error loading experiment details.");
+          toast.error("Error loading experiment details.");
           navigate('/dashboard');
         });
     }, [id, navigate]);
@@ -176,7 +177,7 @@ function Experiment_edit() {
         .then(async (res) => {
           const data = await res.json();
           if (res.ok) {
-            alert("Experiment updated successfully!");
+            toast.success("Experiment updated successfully!");
             navigate(`/experiment/${id}`);
           } else {
             setErrors(data);
@@ -184,7 +185,7 @@ function Experiment_edit() {
         })
         .catch((err) => {
           console.error("Error updating experiment:", err);
-          alert("Server connection error.");
+          toast.error("Server connection error.");
         });
     };
 

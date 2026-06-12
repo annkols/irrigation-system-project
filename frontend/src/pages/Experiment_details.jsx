@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 import bgImage from "./images/back.jpg";
@@ -106,29 +107,47 @@ function Experiment_details() {
     return () => clearInterval(interval);
   }, [id, lastSuccessTime]);
 
-  const handleEndExperiment = async () => {
-    const confirmEnd = window.confirm("Are you sure you want to end this experiment?");
-    if (!confirmEnd) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/experiments/${id}/end/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        alert(`Błąd: ${data.detail || 'Failed to end the experiment.'}`);
-        return;
-      }
-      alert("Experiment has been successfully ended!");
-  
-      setExperiment(data); 
-           } catch (error) {
-      console.error("Network error:", error);
-      alert("Server connection error.");
-    }
+  const handleEndExperiment = () => {
+    toast(
+      ({ closeToast }) => (
+        <div>
+          <p>Are you sure you want to end this experiment?</p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button
+              onClick={async () => {
+                closeToast();
+                try {
+                  const response = await fetch(`${API_BASE_URL}/experiments/${id}/end/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+                  const data = await response.json();
+                  if (!response.ok) {
+                    toast.error(data.detail || 'Failed to end the experiment.');
+                    return;
+                  }
+                  toast.success("Experiment has been successfully ended!");
+                  setExperiment(data);
+                } catch (error) {
+                  console.error("Network error:", error);
+                  toast.error("Server connection error.");
+                }
+              }}
+              style={{ padding: '4px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={closeToast}
+              style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false, closeOnClick: false }
+    );
   };
 
   const latest = measurements.length > 0 ? measurements[0] : null;

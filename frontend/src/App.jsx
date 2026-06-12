@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Start from './pages/Start'; //strona przed logowaniem
 import Dashboard from './pages/Dashboard'; //strona po zalogowaniu (wczesniej App.jsx)
 import New_experiment from './pages/New_experiment'; //dodawanie nowego eksperymentu
@@ -16,6 +18,7 @@ function App() {
         <Route path="/experiment/:id" element={<Experiment_details />} />
         <Route path="/experiment/:id/edit" element={<Experiment_edit />} />
       </Routes>
+      <ToastContainer position="top-right" autoClose={3000} />
     </Router>
   );
 }
