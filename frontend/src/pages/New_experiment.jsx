@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
@@ -143,7 +144,7 @@ function New_experiment() {
       .then(async (res) => {
         const data = await res.json();
         if (res.ok) {
-          alert("Experiment created!");
+          toast.success("Experiment created!");
           navigate('/dashboard');
         } else {
           setErrors(data);
@@ -151,7 +152,7 @@ function New_experiment() {
       })
       .catch((err) => {
         console.error("Error creating experiment:", err);
-        alert("Server connection error.");
+        toast.error("Server connection error.");
       });
   };
 
