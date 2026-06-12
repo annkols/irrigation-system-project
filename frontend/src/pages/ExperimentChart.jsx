@@ -42,7 +42,24 @@ const sensors = [
   }
 ];
 
-export default function ExperimentChart() {
+const sensorSetKeys = {
+  1: ["moisture", "temp", "humidity","pumpLine"],
+  2: ["moisture", "temp", "humidity", "light", "pumpLine"],
+  3: ["moisture", "temp", "humidity","light", "pressure", "soilTemp", "pumpLine"]
+};
+
+const getAvailableSensors = (sensorSetId) => {
+  const allowedKeys =
+    sensorSetKeys[Number(sensorSetId)] ||
+    sensors.map((s) => s.key);
+
+  return sensors.filter((sensor) =>
+    allowedKeys.includes(sensor.key)
+  );
+};
+
+export default function ExperimentChart({sensorSetId}) {
+  const availableSensors = getAvailableSensors(sensorSetId);
 
   const [leftSensor, setLeftSensor] =
     useState("temp");
@@ -109,11 +126,11 @@ export default function ExperimentChart() {
     allData
   ]);
 
-  const leftConfig = sensors.find(
+  const leftConfig = availableSensors.find(
     (s) => s.key === leftSensor
   );
 
-  const rightConfig = sensors.find(
+  const rightConfig = availableSensors.find(
     (s) => s.key === rightSensor
   );
 
@@ -143,7 +160,7 @@ export default function ExperimentChart() {
               )
             }
           >
-            {sensors.map((sensor) => (
+            {availableSensors.map((sensor) => (
 
               <option
                 key={sensor.key}
@@ -170,7 +187,7 @@ export default function ExperimentChart() {
               )
             }
           >
-            {sensors.map((sensor) => (
+            {availableSensors.map((sensor) => (
 
               <option
                 key={sensor.key}

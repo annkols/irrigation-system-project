@@ -368,7 +368,7 @@ function Experiment_details() {
         </div>
 
         {/* wykresy */}
-        <ExperimentChart />
+        <ExperimentChart sensorSetId={experiment?.sensor_set_id}/>
 
 
       </div>
