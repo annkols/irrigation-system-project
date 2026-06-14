@@ -3,7 +3,7 @@ from django.db import models
 
 class Measurement(models.Model):
     # identyfikatory do powiązania z eksperymentem
-    station_number = models.PositiveIntegerField(default=1)
+    table_number = models.PositiveIntegerField(default=1)
     pot_number = models.PositiveIntegerField(default=1)
 
     # pomiary z arduino
@@ -23,10 +23,11 @@ class Measurement(models.Model):
         # default sortowanie
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['station_number', 'pot_number', 'created_at']),
+            models.Index(fields=['table_number', 'pot_number', 'created_at']),
             models.Index(fields=['created_at']),
         ]
 
     def __str__(self):
-        return f"station {self.station_number} | pot {self.pot_number} | {self.moisture_percent}%"
+        return f"table {self.table_number} | pot {self.pot_number} | {self.moisture_percent}%"
     
+

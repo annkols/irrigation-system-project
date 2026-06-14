@@ -101,6 +101,7 @@ class ExperimentEndView(APIView):
 
         experiment.finished_at = timezone.now()
         experiment.save(update_fields=["finished_at"])
+        experiment.device_assignments.update(assigned_to=experiment.finished_at)
 
         serializer = ExperimentSerializer(experiment)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -110,11 +111,11 @@ class ActiveExperimentSensorConfigView(APIView):
     authentication_classes = []
 
     def get(self, request):
-        sensor_set_id = request.query_params.get('sensor_set_id', 1)
+        sensor_package_variant = request.query_params.get('sensor_package_variant', 1)
 
         experiment = (
             Experiment.objects
-            .filter(sensor_set_id=sensor_set_id, finished_at__isnull=True)
+            .filter(sensor_package_variant=sensor_package_variant, finished_at__isnull=True)
             .order_by('-created_at')
             .first()
         )
@@ -144,7 +145,7 @@ class ActiveExperimentSensorConfigView(APIView):
 
         return Response({
             "experiment_id": experiment.id,
-            "sensor_set_id": experiment.sensor_set_id,
+            "sensor_package_variant": experiment.sensor_package_variant,
             "sensor_frequencies": frequencies,
         })
 
@@ -165,3 +166,4 @@ class ExperimentWithMeasurementsDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Experiment.objects.all()
+

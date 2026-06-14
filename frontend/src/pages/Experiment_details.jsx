@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import "../App.css";
@@ -7,6 +7,31 @@ import bgImage from "./images/back.jpg";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+const getTableConfigs = (experiment) => {
+  if (experiment?.table_configs?.length) {
+    return experiment.table_configs;
+  }
+
+  const tableCount = experiment?.table_count || 1;
+  const potCount = experiment?.pots_per_table || 1;
+  return Array.from({ length: tableCount }, (_, index) => ({
+    table_number: index + 1,
+    pot_count: potCount,
+  }));
+};
+
+const getMaxPotCount = (experiment) => Math.max(
+  ...getTableConfigs(experiment).map(config => config.pot_count || 1),
+  1
+);
+
+const measurementMatchesExperiment = (measurement, experiment) => (
+  getTableConfigs(experiment).some(config => (
+    measurement.table_number === config.table_number &&
+    measurement.pot_number <= config.pot_count
+  ))
+);
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
@@ -31,7 +56,7 @@ function Experiment_details() {
     light_lux: true,
     pump_on: true,
   });
-  const [lastSuccessTime, setLastSuccessTime] = useState(null);
+  const lastSuccessTimeRef = useRef(null);
   const [errors, setErrors] = useState({});
 
   const columnLabels = {
@@ -52,7 +77,7 @@ function Experiment_details() {
 
   const handleDownload = () => {
     const cols = Object.entries(selectedColumns)
-      .filter(([_, checked]) => checked)
+      .filter(([, checked]) => checked)
       .map(([key]) => key)
       .join(',');
     window.open(
@@ -67,15 +92,31 @@ function Experiment_details() {
   const nowTime = now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/`)
-      .then(res => res.json())
-      .then(data => setExperiment(data))
-      .catch(err => console.error(err));
+    if (!experiment) {
+      fetch(`${API_BASE_URL}/experiments/${id}/`)
+        .then(res => res.json())
+        .then(data => setExperiment(data))
+        .catch(err => console.error(err));
+      return;
+    }
 
     const fetchMeasurements = () => {
       const currentTime = new Date().toLocaleString();
+      const params = new URLSearchParams({
+        table_number_max: String(experiment.table_count || 1),
+        pot_number_max: String(getMaxPotCount(experiment)),
+        limit: "500",
+      });
 
-      fetch(`${API_BASE_URL}/measurements/`)
+      if (experiment.started_at) {
+        params.set("date_from", experiment.started_at);
+      }
+
+      if (experiment.planned_end_at) {
+        params.set("date_to", experiment.planned_end_at);
+      }
+
+      fetch(`${API_BASE_URL}/measurements/?${params.toString()}`)
         .then(res => {
           if (!res.ok) throw new Error("Server error");
           return res.json();
@@ -86,7 +127,7 @@ function Experiment_details() {
             throw new Error("No measurements available");
           }
           setMeasurements(data);
-          setLastSuccessTime(currentTime);
+          lastSuccessTimeRef.current = currentTime;
             setErrors(prevErrors => ({
             ...prevErrors,
             measurements: null
@@ -94,7 +135,7 @@ function Experiment_details() {
         })
         .catch(err => {
           console.error(err);       
-          const successString = lastSuccessTime ? lastSuccessTime : "never";
+          const successString = lastSuccessTimeRef.current || "never";
             setErrors(prevErrors => ({
             ...prevErrors,
             measurements: `Failed to fetch measurements at ${currentTime}. Last successful fetch at ${successString}.`
@@ -105,7 +146,7 @@ function Experiment_details() {
     fetchMeasurements();
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
-  }, [id, lastSuccessTime]);
+  }, [id, experiment]);
 
   const handleEndExperiment = () => {
     toast(
@@ -150,14 +191,10 @@ function Experiment_details() {
     );
   };
 
-  const latest = measurements.length > 0 ? measurements[0] : null;
-
-  const statusMap = {
-    "in-progress": "IN PROGRESS",
-    "not started": "NOT STARTED",
-    "completed": "COMPLETED",
-    "soon": "SOON ENDING",
-  };
+  const experimentMeasurements = experiment
+    ? measurements.filter((measurement) => measurementMatchesExperiment(measurement, experiment))
+    : measurements;
+  const latest = experimentMeasurements.length > 0 ? experimentMeasurements[0] : null;
 
   const calculateProgress = (exp) => {
     if (!exp || !exp.started_at) return 0;
@@ -182,7 +219,7 @@ function Experiment_details() {
       if (!response.ok) throw new Error("Pump command failed");
       setSelectedPumpCommand(command);
       setPumpCommandStatus(`Command ${command} sent`);
-    } catch (error) {
+    } catch {
       setPumpCommandStatus("Command failed");
     } finally {
       setIsSendingPumpCommand(false);
@@ -387,7 +424,7 @@ function Experiment_details() {
         </div>
 
         {/* wykresy */}
-        <ExperimentChart sensorSetId={experiment?.sensor_set_id}/>
+        <ExperimentChart sensorPackageVariant={experiment?.sensor_package_variant}/>
 
 
       </div>
@@ -423,3 +460,5 @@ function Experiment_details() {
 }
 
 export default Experiment_details;
+
+

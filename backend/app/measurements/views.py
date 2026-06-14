@@ -1,6 +1,7 @@
 import csv
 from io import BytesIO
 from django.http import HttpResponse
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, status
 from .models import Measurement
@@ -11,6 +12,18 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 import openpyxl
 
+
+def measurement_filter_for_table_configs(table_configs):
+    query = Q()
+
+    for config in table_configs:
+        query |= Q(
+            table_number=config["table_number"],
+            pot_number__lte=config["pot_count"]
+        )
+
+    return query
+
 class MeasurementListCreateView(generics.ListCreateAPIView):
     serializer_class = MeasurementSerializer
     permission_classes = [AllowAny]
@@ -19,22 +32,38 @@ class MeasurementListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         queryset = Measurement.objects.all()
 
-        station_number = self.request.query_params.get('station_number')
+        table_number = self.request.query_params.get('table_number')
+        table_number_max = self.request.query_params.get('table_number_max')
         pot_number = self.request.query_params.get('pot_number')
+        pot_number_max = self.request.query_params.get('pot_number_max')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
+        limit = self.request.query_params.get('limit')
 
-        if station_number:
-            queryset = queryset.filter(station_number=station_number)
+        if table_number:
+            queryset = queryset.filter(table_number=table_number)
+
+        if table_number_max:
+            queryset = queryset.filter(table_number__lte=table_number_max)
 
         if pot_number:
             queryset = queryset.filter(pot_number=pot_number)
+
+        if pot_number_max:
+            queryset = queryset.filter(pot_number__lte=pot_number_max)
 
         if date_from:
             queryset = queryset.filter(created_at__gte=date_from)
 
         if date_to:
             queryset = queryset.filter(created_at__lte=date_to)
+
+        if limit:
+            try:
+                limit_value = max(1, min(int(limit), 1000))
+                queryset = queryset[:limit_value]
+            except ValueError:
+                pass
 
         return queryset
 
@@ -53,11 +82,11 @@ class MeasurementLatestView(APIView):
     def get(self, request):
         queryset = Measurement.objects.all()
 
-        station_number = request.query_params.get('station_number')
+        table_number = request.query_params.get('table_number')
         pot_number = request.query_params.get('pot_number')
 
-        if station_number:
-            queryset = queryset.filter(station_number=station_number)
+        if table_number:
+            queryset = queryset.filter(table_number=table_number)
 
         if pot_number:
             queryset = queryset.filter(pot_number=pot_number)
@@ -86,7 +115,7 @@ class MeasurementExportCSVView(APIView):
             return Response({"detail": "Experiment not found."}, status=404)
 
         queryset = Measurement.objects.filter(
-            station_number=experiment.sensor_set_id
+            measurement_filter_for_table_configs(experiment.normalized_table_configs())
         ).order_by('created_at')
         if experiment.started_at:
             queryset = queryset.filter(created_at__gte=experiment.started_at)
@@ -116,10 +145,10 @@ class MeasurementExportCSVView(APIView):
             ws = wb.active
             ws.title = f"Experiment {experiment_id}"
 
-            ws.append(['timestamp', 'station', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
+            ws.append(['timestamp', 'table', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
 
             for m in queryset:
-                row = [format_timestamp(m.created_at), m.station_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
+                row = [format_timestamp(m.created_at), m.table_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
                 ws.append(row)
 
             buffer = BytesIO()
@@ -137,10 +166,11 @@ class MeasurementExportCSVView(APIView):
         response['Content-Disposition'] = f'attachment; filename="experiment_{experiment_id}.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['timestamp', 'station', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
+        writer.writerow(['timestamp', 'table', 'pot'] + [ALL_COLUMNS[k][0] for k in selected_keys])
 
         for m in queryset:
-            row = [format_timestamp(m.created_at), m.station_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
+            row = [format_timestamp(m.created_at), m.table_number, m.pot_number] + [ALL_COLUMNS[k][1](m) for k in selected_keys]
             writer.writerow(row)
 
         return response
+

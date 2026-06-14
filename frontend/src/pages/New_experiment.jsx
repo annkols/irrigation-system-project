@@ -1,10 +1,25 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const MAX_TABLES = 20;
+const MAX_POTS_PER_TABLE = 40;
+
+const createTableConfigs = (count, previousConfigs = []) => {
+  const safeCount = Number.isInteger(count) && count > 0 ? Math.min(count, MAX_TABLES) : 1;
+
+  return Array.from({ length: safeCount }, (_, index) => {
+    const tableNumber = index + 1;
+    const previous = previousConfigs.find(config => config.table_number === tableNumber);
+    return {
+      table_number: tableNumber,
+      pot_count: previous?.pot_count || "1",
+    };
+  });
+};
 
 function New_experiment() {
   const navigate = useNavigate();
@@ -13,11 +28,13 @@ function New_experiment() {
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [tableCount, setTableCount] = useState("1");
+  const [tableConfigs, setTableConfigs] = useState(createTableConfigs(1));
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
 
-  const sensorSetups = [
+  const sensorPackages = [
       {
         id: 1,
         title: 'BASIC',
@@ -58,6 +75,23 @@ function New_experiment() {
       }));
     };
 
+  const handleTableCountChange = (value) => {
+    setTableCount(value);
+    const parsedValue = parseInt(value, 10);
+
+    if (Number(value) === parsedValue && parsedValue >= 1 && parsedValue <= MAX_TABLES) {
+      setTableConfigs(prev => createTableConfigs(parsedValue, prev));
+    }
+  };
+
+  const handleTablePotCountChange = (tableNumber, value) => {
+    setTableConfigs(prev => prev.map(config => (
+      config.table_number === tableNumber
+        ? { ...config, pot_count: value }
+        : config
+    )));
+  };
+
   const handleCreate = () => {
     setErrors({});
     const localErrors = {};
@@ -79,9 +113,9 @@ function New_experiment() {
     }
 
     if (!selectedSetup) {
-      localErrors.sensor_set_id = ["Please select a sensor setup."];
+      localErrors.sensor_package_variant = ["Please select a sensor package."];
     } else {
-      const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
+      const currentSetup = sensorPackages.find(s => s.id === selectedSetup);
       const invalidSensors = currentSetup.sensors.some(sensor => {
         const val = frequencies[sensor.key];
         const numVal = parseInt(val, 10);
@@ -91,7 +125,7 @@ function New_experiment() {
         return isEmpty || isNotInteger || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 300 seconds."];
+        localErrors.sensor_package_variant = ["Frequencies must be whole numbers between 1 and 300 seconds."];
       }
     }
 
@@ -105,12 +139,41 @@ function New_experiment() {
       localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
     }
 
+    const tableCountValue = parseInt(tableCount, 10);
+    if (
+      !tableCount ||
+      Number(tableCount) !== tableCountValue ||
+      tableCountValue < 1 ||
+      tableCountValue > MAX_TABLES
+    ) {
+      localErrors.table_count = [`Number of tables must be a whole number from 1 to ${MAX_TABLES}.`];
+    }
+
+    const normalizedTableConfigs = tableConfigs.map(config => ({
+      table_number: config.table_number,
+      pot_count: parseInt(config.pot_count, 10)
+    }));
+
+    const invalidTableConfig = tableConfigs.some((config) => {
+      const value = parseInt(config.pot_count, 10);
+      return (
+        !config.pot_count ||
+        Number(config.pot_count) !== value ||
+        value < 1 ||
+        value > MAX_POTS_PER_TABLE
+      );
+    });
+
+    if (invalidTableConfig || normalizedTableConfigs.length !== tableCountValue) {
+      localErrors.table_configs = [`Number of pots for each table must be a whole number from 1 to ${MAX_POTS_PER_TABLE}.`];
+    }
+
     if (Object.keys(localErrors).length > 0) {
       setErrors(localErrors);
       return;
     }
 
-    const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
+    const currentSetup = sensorPackages.find(s => s.id === selectedSetup);
     const sensorFrequencies = Object.fromEntries(
       currentSetup.sensors.map(sensor => [
         sensor.key,
@@ -122,7 +185,9 @@ function New_experiment() {
       name,
       description,
       plant_name: plantName,
-      sensor_set_id: selectedSetup,
+      sensor_package_variant: selectedSetup,
+      table_count: tableCountValue,
+      table_configs: normalizedTableConfigs,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
@@ -241,11 +306,60 @@ function New_experiment() {
           </div>
         </div>
 
+        <div className="dates-choices">
+          <div className="date-choice">
+            <label htmlFor="table_count">Number of tables:</label>
+            <input
+              className={errors.table_count ? "input-error" : ""}
+              type="number"
+              id="table_count"
+              name="table_count"
+              min="1"
+              max={MAX_TABLES}
+              step="1"
+              value={tableCount}
+              onKeyDown={(e) => {
+                if (["e", "E", ".", ","].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+              onChange={(e) => handleTableCountChange(e.target.value)}
+            />
+            {errors.table_count && <span className="error-text">{errors.table_count[0]}</span>}
+          </div>
+        </div>
+
+        <div className="form-section">
+          <p>Pots on each table:</p>
+          {tableConfigs.map((config) => (
+            <div className="sensor-freq-row" key={config.table_number}>
+              <span className="sensor-name">Table {config.table_number}</span>
+              <input
+                className={errors.table_configs ? "input-error" : ""}
+                type="number"
+                id={`table_${config.table_number}_pot_count`}
+                name={`table_${config.table_number}_pot_count`}
+                min="1"
+                max={MAX_POTS_PER_TABLE}
+                step="1"
+                value={config.pot_count}
+                onKeyDown={(e) => {
+                  if (["e", "E", ".", ","].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => handleTablePotCountChange(config.table_number, e.target.value)}
+              />
+            </div>
+          ))}
+          {errors.table_configs && <span className="error-text">{errors.table_configs[0]}</span>}
+        </div>
+
         <div className="form-section">
           <p>Select available setups of sensors you would like to use, all setups include a water pump:</p>
 
           <div className="setup-container">
-            {sensorSetups.map((setup) => (
+            {sensorPackages.map((setup) => (
               <div
                 key={setup.id}
                 className={`setup-card ${selectedSetup === setup.id ? 'selected' : ''}`}
@@ -266,10 +380,10 @@ function New_experiment() {
                           max="300"
                           step="1"
                           placeholder="seconds"
-                          className={errors.sensor_set_id && (!frequencies[sensor.key] || frequencies[sensor.key] <= 0 || frequencies[sensor.key] > 300) ? "input-error" : ""}
+                          className={errors.sensor_package_variant && (!frequencies[sensor.key] || frequencies[sensor.key] <= 0 || frequencies[sensor.key] > 300) ? "input-error" : ""}
                           value={frequencies[sensor.key] || ""}
                           onKeyDown={(e) => {
-                            // nie wolno znaków e E , .
+                            // nie wolno znak�w e E , .
                             if (["e", "E", ".", ","].includes(e.key)) {
                               e.preventDefault();
                             }
@@ -283,7 +397,7 @@ function New_experiment() {
               </div>
             ))}
           </div>
-          {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
+          {errors.sensor_package_variant && <span className="error-text">{errors.sensor_package_variant[0]}</span>}
         </div>
 
         <div className="add-collab">
@@ -310,3 +424,5 @@ function New_experiment() {
 }
 
 export default New_experiment;
+
+

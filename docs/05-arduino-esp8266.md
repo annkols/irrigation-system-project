@@ -97,7 +97,7 @@ Przykladowy payload:
 
 ```json
 {
-  "station_number": 1,
+  "table_number": 1,
   "pot_number": 1,
   "moisture_percent": 45,
   "air_temperature": 24.10,
@@ -201,7 +201,7 @@ const char* WIFI_PASSWORD = "hasloDoWifi";
 
 const char* MEASUREMENTS_API_URL = "http://<IP_KOMPUTERA>:8000/api/measurements/";
 const char* PUMP_COMMAND_API_URL = "http://<IP_KOMPUTERA>:8000/api/pump-control/latest/";
-const char* ACTIVE_SENSOR_CONFIG_API_URL = "http://<IP_KOMPUTERA>:8000/api/experiments/active-sensor-config/?sensor_set_id=1";
+const char* ACTIVE_SENSOR_CONFIG_API_URL = "http://<IP_KOMPUTERA>:8000/api/experiments/active-sensor-config/?sensor_package_variant=1";
 ```
 
 Wazne: dla ESP8266 nie nalezy wpisywac `localhost`, bo `localhost` oznacza samo ESP8266, a nie komputer z backendem.
@@ -229,3 +229,4 @@ README opisuje sposob pracy z plytka Arduino Mega + ESP8266.
 - DIP: `1 ON`, `2 ON`, reszta `OFF`,
 - maly przelacznik: `TXD3 / RXD3`,
 - wykonac reset plytki.
+

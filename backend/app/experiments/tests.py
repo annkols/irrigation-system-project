@@ -8,6 +8,7 @@ from rest_framework import status
 
 
 from measurements.models import Measurement
+from sensors.models import SensorDevice, SensorDeviceAssignment
 from .models import Experiment
 
 # Create your tests here.
@@ -21,7 +22,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Testing potato irrigation.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
@@ -34,7 +35,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], "Potato test")
         self.assertEqual(response.data["plant_name"], "Potato")
-        self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
     def test_create_experiment_with_sensor_frequencies(self):
         url = reverse('experiment-list-create')
@@ -45,7 +46,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Testing per-sensor frequencies.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
@@ -74,7 +75,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Invalid sensor frequency.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "finished_at": None,
             "owner": None,
@@ -94,7 +95,7 @@ class ExperimentTests(APITestCase):
             name="Soy test",
             description="Active config test.",
             plant_name="Soy",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=timezone.now(),
             finished_at=None,
             measurement_frequency_seconds=90,
@@ -106,7 +107,7 @@ class ExperimentTests(APITestCase):
 
         url = reverse('experiment-active-sensor-config')
 
-        response = self.client.get(url, {"sensor_set_id": 1})
+        response = self.client.get(url, {"sensor_package_variant": 1})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 30)
@@ -118,7 +119,7 @@ class ExperimentTests(APITestCase):
             name="Soy test",
             description="Required soil moisture test.",
             plant_name="Soy",
-            sensor_set_id=2,
+            sensor_package_variant=2,
             started_at=timezone.now(),
             finished_at=None,
             measurement_frequency_seconds=90,
@@ -131,7 +132,7 @@ class ExperimentTests(APITestCase):
 
         url = reverse('experiment-active-sensor-config')
 
-        response = self.client.get(url, {"sensor_set_id": 2})
+        response = self.client.get(url, {"sensor_package_variant": 2})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 90)
@@ -143,7 +144,7 @@ class ExperimentTests(APITestCase):
             "name": "   ",
             "description": "Invalid experiment.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "finished_at": None,
             "owner": None,
@@ -162,7 +163,7 @@ class ExperimentTests(APITestCase):
             "name": "Wpływ inokulacji i koinokulacji nasion soi (Glycine max (L.) Merr.) bakteriami Bradyrhizobium japonicum oraz Bacillus spp. na wzrost i rozwoj roslin, a takze cechy fizjologiczne",
             "description": "Test sprawdzajacy walidacje zbyt dlugiej nazwy doswiadczenia.",
             "plant_name": "Soja",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "finished_at": None,
             "owner": None,
@@ -181,7 +182,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Invalid experiment.",
             "plant_name": "   ",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "finished_at": None,
             "owner": None,
@@ -203,7 +204,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Invalid date test.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": (started_at + timedelta(days=1)).isoformat(),
             "finished_at": finished_at.isoformat(),
@@ -223,7 +224,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Invalid finished date.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "planned_end_at": timezone.now().isoformat(),
             "finished_at": timezone.now().isoformat(),
@@ -243,7 +244,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Missing start date.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": None,
             "planned_end_at": timezone.now().isoformat(),
             "finished_at": None,
@@ -263,7 +264,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Missing planned end date.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": timezone.now().isoformat(),
             "planned_end_at": None,
             "finished_at": None,
@@ -276,7 +277,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("planned_end_at", response.data)
 
-    def test_cannot_create_two_unfinished_experiments_for_same_sensor_set(self):
+    def test_can_create_two_unfinished_experiments_for_same_sensor_package_without_device_inventory(self):
         started_at = timezone.now()
         planned_end_at = started_at + timedelta(days=7)
 
@@ -284,7 +285,7 @@ class ExperimentTests(APITestCase):
             name="Potato test",
             description="First experiment.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             planned_end_at=planned_end_at,
             finished_at=None
@@ -296,7 +297,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Second experiment.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": (started_at + timedelta(days=1)).isoformat(),
             "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
             "finished_at": None,
@@ -306,10 +307,10 @@ class ExperimentTests(APITestCase):
 
         response = self.client.post(url, payload, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("sensor_set_id", response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
-    def test_cannot_create_experiment_for_same_sensor_set_when_dates_overlap(self):
+    def test_can_create_experiment_for_same_sensor_package_when_dates_overlap_without_device_inventory(self):
         started_at = timezone.now() + timedelta(days=1)
         planned_end_at = started_at + timedelta(days=3)
 
@@ -317,7 +318,7 @@ class ExperimentTests(APITestCase):
             name="Potato test",
             description="First scheduled experiment.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             planned_end_at=planned_end_at,
             finished_at=None
@@ -329,7 +330,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Overlapping scheduled experiment.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": (started_at + timedelta(days=1)).isoformat(),
             "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
             "finished_at": None,
@@ -339,8 +340,8 @@ class ExperimentTests(APITestCase):
 
         response = self.client.post(url, payload, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("sensor_set_id", response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
     def test_can_create_experiment_for_same_sensor_set_when_dates_do_not_overlap(self):
         started_at = timezone.now() + timedelta(days=1)
@@ -350,7 +351,7 @@ class ExperimentTests(APITestCase):
             name="Potato test",
             description="First scheduled experiment.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             planned_end_at=planned_end_at,
             finished_at=None
@@ -362,7 +363,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Later scheduled experiment.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": (planned_end_at + timedelta(hours=1)).isoformat(),
             "planned_end_at": (planned_end_at + timedelta(days=2)).isoformat(),
             "finished_at": None,
@@ -373,14 +374,14 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
     def test_can_create_scheduled_experiment_when_existing_same_sensor_set_has_no_dates(self):
         Experiment.objects.create(
             name="Unscheduled potato test",
             description="No dates selected.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=None,
             planned_end_at=None,
             finished_at=None
@@ -394,7 +395,7 @@ class ExperimentTests(APITestCase):
             "name": "Scheduled soy test",
             "description": "Scheduled experiment.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
@@ -405,7 +406,7 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
     def test_can_create_finished_experiment_for_same_sensor_set(self):
         started_at = timezone.now() - timedelta(days=2)
@@ -415,7 +416,7 @@ class ExperimentTests(APITestCase):
             name="Old potato test",
             description="Finished experiment.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             finished_at=finished_at
         )
@@ -428,7 +429,7 @@ class ExperimentTests(APITestCase):
             "name": "New potato test",
             "description": "New experiment.",
             "plant_name": "Potato",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": new_started_at.isoformat(),
             "planned_end_at": new_planned_end_at.isoformat(),
             "finished_at": None,
@@ -439,7 +440,7 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
 
     def test_completed_experiment_does_not_block_same_sensor_set_date_range(self):
         started_at = timezone.now() + timedelta(days=1)
@@ -450,7 +451,7 @@ class ExperimentTests(APITestCase):
             name="Completed potato test",
             description="Historical experiment.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             planned_end_at=planned_end_at,
             finished_at=finished_at
@@ -462,7 +463,7 @@ class ExperimentTests(APITestCase):
             "name": "New soy test",
             "description": "Same date range as completed experiment.",
             "plant_name": "Soy",
-            "sensor_set_id": 1,
+            "sensor_package_variant": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
@@ -473,14 +474,87 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["sensor_package_variant"], 1)
+
+    def test_create_experiment_assigns_available_sensor_devices(self):
+        SensorDevice.objects.create(code="DEVICE-001")
+        SensorDevice.objects.create(code="DEVICE-002")
+
+        started_at = timezone.now() + timedelta(days=1)
+        planned_end_at = started_at + timedelta(days=7)
+        url = reverse('experiment-list-create')
+
+        payload = {
+            "name": "Device assignment test",
+            "description": "Needs two devices.",
+            "plant_name": "Soy",
+            "sensor_package_variant": 1,
+            "table_count": 1,
+            "pots_per_table": 2,
+            "started_at": started_at.isoformat(),
+            "planned_end_at": planned_end_at.isoformat(),
+            "finished_at": None,
+            "owner": None,
+            "collaborators": []
+        }
+
+        response = self.client.post(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SensorDeviceAssignment.objects.count(), 2)
+        self.assertEqual(len(response.data["device_assignments"]), 2)
+
+    def test_create_experiment_rejects_when_not_enough_free_sensor_devices(self):
+        SensorDevice.objects.create(code="DEVICE-001")
+
+        started_at = timezone.now() + timedelta(days=1)
+        planned_end_at = started_at + timedelta(days=7)
+
+        existing_experiment = Experiment.objects.create(
+            name="Existing device assignment",
+            description="Uses the only device.",
+            plant_name="Soy",
+            sensor_package_variant=1,
+            table_count=1,
+            pots_per_table=1,
+            started_at=started_at,
+            planned_end_at=planned_end_at,
+        )
+        SensorDeviceAssignment.objects.create(
+            experiment=existing_experiment,
+            device=SensorDevice.objects.get(code="DEVICE-001"),
+            table_number=1,
+            pot_number=1,
+            assigned_from=started_at,
+            assigned_to=planned_end_at,
+        )
+
+        url = reverse('experiment-list-create')
+        payload = {
+            "name": "Overlapping device assignment",
+            "description": "Needs a device but none are free.",
+            "plant_name": "Soy",
+            "sensor_package_variant": 1,
+            "table_count": 1,
+            "pots_per_table": 1,
+            "started_at": (started_at + timedelta(days=1)).isoformat(),
+            "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
+            "finished_at": None,
+            "owner": None,
+            "collaborators": []
+        }
+
+        response = self.client.post(url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("devices", response.data)
 
     def test_delete_experiment_successfully(self):
         experiment = Experiment.objects.create(
             name="Potato test",
             description="Experiment to delete.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=None,
             finished_at=None
         )
@@ -499,13 +573,13 @@ class ExperimentTests(APITestCase):
             name="Potato test",
             description="Experiment with measurements.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             finished_at=None
         )
 
         matching_measurement = Measurement.objects.create(
-            station_number=1,
+            table_number=1,
             pot_number=1,
             raw_value=512,
             moisture_percent=64.0,
@@ -518,7 +592,7 @@ class ExperimentTests(APITestCase):
         )
 
         non_matching_measurement = Measurement.objects.create(
-            station_number=2,
+            table_number=2,
             pot_number=1,
             raw_value=600,
             moisture_percent=18.0,
@@ -550,7 +624,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], experiment.id)
         self.assertEqual(len(response.data["measurements"]), 1)
-        self.assertEqual(response.data["measurements"][0]["station_number"],1)
+        self.assertEqual(response.data["measurements"][0]["table_number"],1)
 
     def test_experiment_with_measurements_respects_started_at(self):
         started_at = timezone.now() - timedelta(hours=1)
@@ -559,13 +633,13 @@ class ExperimentTests(APITestCase):
             name="Potato test",
             description="Date filter test.",
             plant_name="Potato",
-            sensor_set_id=1,
+            sensor_package_variant=1,
             started_at=started_at,
             finished_at=None
         )
 
         old_measurement = Measurement.objects.create(
-            station_number=1,
+            table_number=1,
             pot_number=1,
             raw_value=400,
             moisture_percent=40.0,
@@ -578,7 +652,7 @@ class ExperimentTests(APITestCase):
         )
 
         new_measurement = Measurement.objects.create(
-            station_number=1,
+            table_number=1,
             pot_number=1,
             raw_value=700,
             moisture_percent=70.0,
@@ -607,3 +681,5 @@ class ExperimentTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["measurements"]), 1)
+
+

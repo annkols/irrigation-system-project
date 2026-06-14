@@ -7,4 +7,5 @@ const char* WIFI_PASSWORD = "hasloDoWifi";
 // Nie wpisuj localhost, bo dla ESP localhost oznacza samo ESP.
 const char* MEASUREMENTS_API_URL = "http://<IP_KOMPUTERA>:8000/api/measurements/";
 const char* PUMP_COMMAND_API_URL = "http://<IP_KOMPUTERA>:8000/api/pump-control/latest/";
-const char* ACTIVE_SENSOR_CONFIG_API_URL = "http://<IP_KOMPUTERA>:8000/api/experiments/active-sensor-config/?sensor_set_id=1";
+const char* ACTIVE_SENSOR_CONFIG_API_URL = "http://<IP_KOMPUTERA>:8000/api/experiments/active-sensor-config/?sensor_package_variant=1";
+

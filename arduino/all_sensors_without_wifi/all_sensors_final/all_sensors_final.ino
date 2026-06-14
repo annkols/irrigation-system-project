@@ -28,7 +28,7 @@ int dryValue = 502;
 int wetValue = 259;
 
 int moistureLimit = 20;
-int stationNumber = 1;
+int tableNumber = 1;
 int potNumber = 1;
 
 unsigned long soilMoistureIntervalMs = 10000;
@@ -320,8 +320,8 @@ void sendJsonToEsp(
   bool airHumidityUpdated,
   bool pressureUpdated
 ) {
-  EspSerial.print("{\"station_number\":");
-  EspSerial.print(stationNumber);
+  EspSerial.print("{\"table_number\":");
+  EspSerial.print(tableNumber);
   EspSerial.print(",\"pot_number\":");
   EspSerial.print(potNumber);
   EspSerial.print(",\"moisture_percent\":");
@@ -364,3 +364,4 @@ void sendJsonToEsp(
   EspSerial.print(pumpState ? "true" : "false");
   EspSerial.println("}");
 }
+

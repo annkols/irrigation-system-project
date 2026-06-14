@@ -29,6 +29,8 @@ POSTGRES_PORT=5432
 
 DJANGO_SECRET_KEY=dev-secret-key
 DEBUG=true
+ALLOWED_HOSTS=*
+CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
 ### Uruchomienie kontenerow
@@ -198,20 +200,17 @@ Dla wdrozenia produkcyjnego nalezy ustawic adres produkcyjnego backendu, np.:
 VITE_API_URL=https://backend.cultiva-greenhouse.pl/api
 ```
 
-Po stronie Django trzeba tez dopisac adres produkcyjnego frontendu do CORS, np.:
+Po stronie Django trzeba tez ustawic adres produkcyjnego frontendu w zmiennej `CORS_ALLOWED_ORIGINS`, np.:
 
-```python
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://cultiva-greenhouse.pl",
-]
+```env
+CORS_ALLOWED_ORIGINS=https://cultiva-greenhouse.pl
 ```
 
 Dla produkcji nalezy rowniez ustawic:
 
 - bezpieczny `DJANGO_SECRET_KEY`,
 - `DEBUG=false`,
-- konkretne `ALLOWED_HOSTS`,
+- konkretne `ALLOWED_HOSTS`, np. `backend.cultiva-greenhouse.pl`,
 - HTTPS,
 - autoryzacje endpointow zapisujacych dane.
 
@@ -232,4 +231,3 @@ const char* MEASUREMENTS_API_URL = "http://xxx.xxx.x.xxx:8000/api/measurements/"
 ```
 
 Komputer z backendem i ESP8266 musza byc w tej samej sieci Wi-Fi.
-

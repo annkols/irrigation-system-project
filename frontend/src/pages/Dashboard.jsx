@@ -7,6 +7,31 @@ import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+const getTableConfigs = (experiment) => {
+  if (experiment?.table_configs?.length) {
+    return experiment.table_configs;
+  }
+
+  const tableCount = experiment?.table_count || 1;
+  const potCount = experiment?.pots_per_table || 1;
+  return Array.from({ length: tableCount }, (_, index) => ({
+    table_number: index + 1,
+    pot_count: potCount,
+  }));
+};
+
+const getMaxPotCount = (experiment) => Math.max(
+  ...getTableConfigs(experiment).map(config => config.pot_count || 1),
+  1
+);
+
+const measurementMatchesExperiment = (measurement, experiment) => (
+  getTableConfigs(experiment).some(config => (
+    measurement.table_number === config.table_number &&
+    measurement.pot_number <= config.pot_count
+  ))
+);
+
 const pumpCommands = ["ON", "OFF", "AUTO"];
 const sensorRows = {
   air_temperature: { label: "Temperature inside", unit: "°C", field: "air_temperature" },
@@ -16,7 +41,7 @@ const sensorRows = {
   soil_temperature: { label: "Soil temperature", unit: "°C", field: "soil_temperature" },
   pressure: { label: "Pressure", unit: "hPa", field: "pressure_hpa" },
 };
-const sensorSetKeys = {
+const sensorPackageKeys = {
   1: ["soil_moisture", "air_temperature", "air_humidity"],
   2: ["soil_moisture", "air_temperature", "air_humidity", "light"],
   3: ["air_humidity", "light", "soil_moisture", "pressure", "soil_temperature", "air_temperature"],
@@ -55,21 +80,43 @@ function App() {
   );
 
   useEffect(() => {
-    const fetchData = () => {
-      fetch(`${API_BASE_URL}/measurements/`)
-        .then(res => res.json())
-        .then(data => setMeasurements(data))
-        .catch(err => console.error(err));
+    const fetchData = async () => {
+      try {
+        const experimentsResponse = await fetch(`${API_BASE_URL}/experiments/`);
+        const experimentsData = await experimentsResponse.json();
+        setExperiments(experimentsData);
 
-        fetch(`${API_BASE_URL}/experiments/`)
-      .then(res => res.json())
-      .then(data => {
-        setExperiments(data);
-        if (data.length > 0 && selectedId === null) {
-          setSelectedId(data[0].id);
+        const activeExperiment = experimentsData.find(exp => exp.id === selectedId) || experimentsData[0] || null;
+
+        if (experimentsData.length > 0 && selectedId === null) {
+          setSelectedId(experimentsData[0].id);
         }
-      })
-      .catch(err => console.error(err));
+
+        if (!activeExperiment) {
+          setMeasurements([]);
+          return;
+        }
+
+        const params = new URLSearchParams({
+          table_number_max: String(activeExperiment.table_count || 1),
+          pot_number_max: String(getMaxPotCount(activeExperiment)),
+          limit: "300",
+        });
+
+        if (activeExperiment.started_at) {
+          params.set("date_from", activeExperiment.started_at);
+        }
+
+        if (activeExperiment.planned_end_at) {
+          params.set("date_to", activeExperiment.planned_end_at);
+        }
+
+        const measurementsResponse = await fetch(`${API_BASE_URL}/measurements/?${params.toString()}`);
+        const measurementsData = await measurementsResponse.json();
+        setMeasurements(measurementsData);
+      } catch (err) {
+        console.error(err);
+      }
     };
 
     fetchData();
@@ -81,10 +128,10 @@ function App() {
 
   const mainexp = experiments.find(exp => exp.id === selectedId) || experiments[0] || null;
   const experimentMeasurements = mainexp
-    ? measurements.filter((measurement) => measurement.station_number === mainexp.sensor_set_id)
+    ? measurements.filter((measurement) => measurementMatchesExperiment(measurement, mainexp))
     : measurements;
   const latest = experimentMeasurements.length > 0 ? experimentMeasurements[0] : null;
-  const visibleSensorKeys = sensorSetKeys[mainexp?.sensor_set_id] || Object.keys(sensorRows);
+  const visibleSensorKeys = sensorPackageKeys[mainexp?.sensor_package_variant] || Object.keys(sensorRows);
   const visibleSensorRows = visibleSensorKeys
     .map((key) => ({ key, ...sensorRows[key] }))
     .filter((sensor) => sensor.field);
@@ -312,7 +359,7 @@ function App() {
                 <span>FULL EXPERIMENT HISTORY</span>
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
-              <ExperimentChart sensorSetId={experiment?.sensor_set_id}/>
+              <ExperimentChart sensorPackageVariant={mainexp?.sensor_package_variant}/>
               <div className="readings-spacer" />
               <div className="readings-header">
                 <span className="readings-title">LATEST READING</span>
@@ -394,7 +441,7 @@ function App() {
         <h3>Measurements</h3>
         {experimentMeasurements.map((m, index) => (
           <div key={index}>
-            [station {m.station_number}, pot {m.pot_number}]
+            [table {m.table_number}, pot {m.pot_number}]
             {visibleSensorRows.map((sensor) => (
               <span key={sensor.key}> {sensor.label}: {m[sensor.field] ?? "-"} {sensor.unit},</span>
             ))}
@@ -407,3 +454,5 @@ function App() {
 }
 
 export default App
+
+

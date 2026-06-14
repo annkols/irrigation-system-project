@@ -42,15 +42,15 @@ const sensors = [
   }
 ];
 
-const sensorSetKeys = {
+const sensorPackageKeys = {
   1: ["moisture", "temp", "humidity","pumpLine"],
   2: ["moisture", "temp", "humidity", "light", "pumpLine"],
   3: ["moisture", "temp", "humidity","light", "pressure", "soilTemp", "pumpLine"]
 };
 
-const getAvailableSensors = (sensorSetId) => {
+const getAvailableSensors = (sensorPackageVariant) => {
   const allowedKeys =
-    sensorSetKeys[Number(sensorSetId)] ||
+    sensorPackageKeys[Number(sensorPackageVariant)] ||
     sensors.map((s) => s.key);
 
   return sensors.filter((sensor) =>
@@ -58,8 +58,8 @@ const getAvailableSensors = (sensorSetId) => {
   );
 };
 
-export default function ExperimentChart({sensorSetId}) {
-  const availableSensors = getAvailableSensors(sensorSetId);
+export default function ExperimentChart({sensorPackageVariant}) {
+  const availableSensors = getAvailableSensors(sensorPackageVariant);
 
   const [leftSensor, setLeftSensor] =
     useState("temp");

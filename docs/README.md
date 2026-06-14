@@ -14,7 +14,7 @@ Ten katalog zawiera dokumentacje projektu systemu do prowadzenia eksperymentow s
 
 ## Najkrotszy opis systemu
 
-Cultiva to aplikacja webowa wspierajaca prowadzenie eksperymentow roslinnych w szklarni. System zbiera pomiary z czujnikow podlaczonych do Arduino Mega, przekazuje je przez ESP8266 do backendu Django, zapisuje w bazie PostgreSQL i prezentuje uzytkownikowi w panelu React. Aplikacja pozwala tez tworzyc eksperymenty, przypisywac zestawy czujnikow, ustawiac czestotliwosci odczytow, eksportowac dane oraz sterowac pompa podlewajaca.
+Cultiva to aplikacja webowa wspierajaca prowadzenie eksperymentow roslinnych w szklarni. System zbiera pomiary z czujnikow podlaczonych do Arduino Mega, przekazuje je przez ESP8266 do backendu Django, zapisuje w bazie PostgreSQL i prezentuje uzytkownikowi w panelu React. Aplikacja pozwala tez tworzyc eksperymenty, definiowac liczbe stolow i doniczek, wybierac wariant pakietu odczytow czujnikow, ustawiac czestotliwosci odczytow, eksportowac dane oraz sterowac pompa podlewajaca.
 
 ## Glowne technologie
 

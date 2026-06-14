@@ -8,7 +8,7 @@
       "plant_name": "Soy",
       "owner": null,
       "collaborators": [],
-      "sensor_set_id": 1,
+      "sensor_package_variant": 1,
       "measurement_frequency_seconds": 60,
       "sensor_frequencies": {
         "soil_moisture": 60,
@@ -31,7 +31,7 @@
       "plant_name": "Soy",
       "owner": null,
       "collaborators": [],
-      "sensor_set_id": 2,
+      "sensor_package_variant": 2,
       "measurement_frequency_seconds": 30,
       "sensor_frequencies": {
         "soil_moisture": 30,
@@ -55,7 +55,7 @@
       "plant_name": "Soy",
       "owner": null,
       "collaborators": [],
-      "sensor_set_id": 3,
+      "sensor_package_variant": 3,
       "measurement_frequency_seconds": 45,
       "sensor_frequencies": {
         "soil_moisture": 45,
@@ -76,7 +76,7 @@
     "model": "measurements.measurement",
     "pk": 1,
     "fields": {
-      "station_number": 1,
+      "table_number": 1,
       "pot_number": 1,
       "raw_value": 487,
       "moisture_percent": 67.0,
@@ -93,7 +93,7 @@
     "model": "measurements.measurement",
     "pk": 2,
     "fields": {
-      "station_number": 1,
+      "table_number": 1,
       "pot_number": 1,
       "raw_value": 502,
       "moisture_percent": 58.0,
@@ -110,7 +110,7 @@
     "model": "measurements.measurement",
     "pk": 3,
     "fields": {
-      "station_number": 1,
+      "table_number": 1,
       "pot_number": 1,
       "raw_value": 536,
       "moisture_percent": 42.0,
@@ -127,7 +127,7 @@
     "model": "measurements.measurement",
     "pk": 4,
     "fields": {
-      "station_number": 1,
+      "table_number": 1,
       "pot_number": 1,
       "raw_value": 565,
       "moisture_percent": 24.0,
@@ -144,7 +144,7 @@
     "model": "measurements.measurement",
     "pk": 5,
     "fields": {
-      "station_number": 2,
+      "table_number": 2,
       "pot_number": 1,
       "raw_value": 470,
       "moisture_percent": 72.0,
@@ -161,7 +161,7 @@
     "model": "measurements.measurement",
     "pk": 6,
     "fields": {
-      "station_number": 2,
+      "table_number": 2,
       "pot_number": 1,
       "raw_value": 489,
       "moisture_percent": 64.0,
@@ -178,7 +178,7 @@
     "model": "measurements.measurement",
     "pk": 7,
     "fields": {
-      "station_number": 2,
+      "table_number": 2,
       "pot_number": 1,
       "raw_value": 520,
       "moisture_percent": 48.0,
@@ -195,7 +195,7 @@
     "model": "measurements.measurement",
     "pk": 8,
     "fields": {
-      "station_number": 2,
+      "table_number": 2,
       "pot_number": 1,
       "raw_value": 566,
       "moisture_percent": 21.0,
@@ -212,7 +212,7 @@
     "model": "measurements.measurement",
     "pk": 9,
     "fields": {
-      "station_number": 3,
+      "table_number": 3,
       "pot_number": 1,
       "raw_value": 455,
       "moisture_percent": 76.0,
@@ -229,7 +229,7 @@
     "model": "measurements.measurement",
     "pk": 10,
     "fields": {
-      "station_number": 3,
+      "table_number": 3,
       "pot_number": 1,
       "raw_value": 482,
       "moisture_percent": 62.0,
@@ -246,7 +246,7 @@
     "model": "measurements.measurement",
     "pk": 11,
     "fields": {
-      "station_number": 3,
+      "table_number": 3,
       "pot_number": 1,
       "raw_value": 525,
       "moisture_percent": 43.0,
@@ -263,7 +263,7 @@
     "model": "measurements.measurement",
     "pk": 12,
     "fields": {
-      "station_number": 3,
+      "table_number": 3,
       "pot_number": 1,
       "raw_value": 568,
       "moisture_percent": 19.0,
@@ -277,3 +277,5 @@
     }
   }
 ]
+
+

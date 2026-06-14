@@ -78,8 +78,9 @@ Autoryzacja nie jest obecnie wdrozona, dlatego wejscie do dashboardu nie wymaga 
 
 Komponent `Dashboard.jsx`:
 
-- cyklicznie pobiera pomiary z `/api/measurements/`,
 - cyklicznie pobiera eksperymenty z `/api/experiments/`,
+- wybiera aktywny albo zaznaczony eksperyment,
+- pobiera tylko ograniczona paczke pomiarow pasujacych do liczby stolow i doniczek eksperymentu,
 - odswieza dane co 10 sekund,
 - pokazuje liste eksperymentow,
 - pozwala filtrowac eksperymenty po statusie,
@@ -101,13 +102,23 @@ Frontend mapuje statusy na etykiety:
 
 ### Widoczne czujniki wedlug zestawu
 
-Dashboard pokazuje rozne wiersze pomiarow w zaleznosci od `sensor_set_id`.
+Dashboard pokazuje rozne wiersze pomiarow w zaleznosci od `sensor_package_variant`.
 
 | Zestaw | Czujniki |
 | --- | --- |
 | `1` | wilgotnosc gleby, temperatura powietrza, wilgotnosc powietrza |
 | `2` | zestaw 1 + swiatlo |
 | `3` | zestaw 2 + cisnienie + temperatura gleby |
+
+Wazne: `sensor_package_variant` oznacza wariant pakietu odczytow czujnikow, czyli zakres danych widocznych w aplikacji. Fizyczny zakres pomiarow w eksperymencie okreslaja `table_count` i `table_configs`, a konkretne plytki Arduino moga byc przydzielane przez backend jako `SensorDeviceAssignment`.
+
+Dashboard pobiera pomiary przez zapytanie w tym stylu:
+
+```text
+GET /api/measurements/?table_number_max=2&pot_number_max=10&date_from=...&date_to=...&limit=300
+```
+
+Dzieki temu frontend nie pobiera calej tabeli pomiarow z backendu.
 
 ## Tworzenie eksperymentu
 
@@ -117,6 +128,8 @@ Komponent `New_experiment.jsx` wyswietla formularz:
 - typ rosliny,
 - opis,
 - daty,
+- liczba stolow obejmowanych przez eksperyment,
+- liczba doniczek osobno dla kazdego stolu,
 - wybor zestawu czujnikow,
 - czestotliwosc odczytu dla kazdego czujnika,
 - checkbox publicznosci eksperymentu widoczny w UI.
@@ -133,7 +146,9 @@ Frontend przed wyslaniem sprawdza:
 - czestotliwosci musza byc liczbami calkowitymi z zakresu `1-300`,
 - data rozpoczecia jest wymagana,
 - data planowanego zakonczenia jest wymagana,
-- data konca nie moze byc wczesniejsza niz data startu.
+- data konca nie moze byc wczesniejsza niz data startu,
+- liczba stolow musi byc liczba calkowita z zakresu `1-20`,
+- liczba doniczek na kazdym stole musi byc liczba calkowita z zakresu `1-40`.
 
 ### Dane wysylane do backendu
 
@@ -144,7 +159,12 @@ Frontend wysyla:
   "name": "Nazwa",
   "description": "Opis",
   "plant_name": "Soy",
-  "sensor_set_id": 1,
+  "sensor_package_variant": 1,
+  "table_count": 2,
+  "table_configs": [
+    { "table_number": 1, "pot_count": 15 },
+    { "table_number": 2, "pot_count": 8 }
+  ],
   "measurement_frequency_seconds": 30,
   "sensor_frequencies": {
     "soil_moisture": 30,
@@ -171,18 +191,18 @@ Komponent `Experiment_edit.jsx`:
 
 - pobiera dane eksperymentu z `/api/experiments/:id/`,
 - uzupelnia formularz,
-- pozwala zmienic nazwe, typ rosliny, opis, daty, czestotliwosci i publicznosc,
+- pozwala zmienic nazwe, typ rosliny, opis, daty, czestotliwosci, publicznosc, liczbe stolow i liczbe doniczek na kazdym stole,
 - nie pozwala zmienic zestawu czujnikow,
 - zapisuje zmiany przez `PATCH /api/experiments/:id/edit/`.
 
-Wazne: backend dodatkowo blokuje zmiane `sensor_set_id`, `owner`, `created_at` i `finished_at`.
+Wazne: backend dodatkowo blokuje zmiane `sensor_package_variant`, `owner`, `created_at` i `finished_at`.
 
 ## Szczegoly eksperymentu
 
 Komponent `Experiment_details.jsx`:
 
 - pobiera szczegoly eksperymentu,
-- pobiera pomiary,
+- pobiera ograniczona paczke pomiarow pasujacych do `table_configs` i dat eksperymentu,
 - odswieza pomiary co 10 sekund,
 - pokazuje status i pasek postepu,
 - pokazuje daty eksperymentu,
@@ -190,6 +210,12 @@ Komponent `Experiment_details.jsx`:
 - pozwala sterowac pompa,
 - pozwala eksportowac dane,
 - wyswietla wykres.
+
+Zapytanie o pomiary w szczegolach eksperymentu ma postac:
+
+```text
+GET /api/measurements/?table_number_max=2&pot_number_max=10&date_from=...&date_to=...&limit=500
+```
 
 ## Eksport danych
 
@@ -246,3 +272,4 @@ Przyklad:
 ```
 
 Po stronie backendu komenda jest zapisywana, a ESP8266 pobiera najnowsza komende osobnym endpointem.
+

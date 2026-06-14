@@ -32,8 +32,8 @@ Najwazniejsze ustawienia sa w `backend/app/config/settings.py`.
 | `DATABASES` | Laczy backend z PostgreSQL przez zmienne srodowiskowe. |
 | `TIME_ZONE` | `Europe/Warsaw`. |
 | `USE_TZ` | `True`, daty sa przechowywane jako timezone-aware. |
-| `CORS_ALLOWED_ORIGINS` | Lokalnie dopuszcza `http://localhost:5173`. |
-| `ALLOWED_HOSTS` | Obecnie `["*"]`. |
+| `CORS_ALLOWED_ORIGINS` | Lista dozwolonych adresow frontendu pobierana ze zmiennej srodowiskowej. |
+| `ALLOWED_HOSTS` | Lista hostow backendu pobierana ze zmiennej srodowiskowej. |
 
 Glowne URL-e sa laczone w `backend/app/config/urls.py` pod prefiksem `/api/`.
 
@@ -45,7 +45,7 @@ Model przechowuje pojedynczy odczyt z zestawu czujnikow.
 
 | Pole | Typ | Znaczenie |
 | --- | --- | --- |
-| `station_number` | integer | Numer stanowiska. W praktyce odpowiada `sensor_set_id` eksperymentu. |
+| `table_number` | integer | Numer stolu / stanowiska pomiarowego, z ktorego przychodzi pomiar. |
 | `pot_number` | integer | Numer doniczki. |
 | `raw_value` | integer/null | Surowy odczyt analogowy, obecnie nie jest wystawiany w serializerze. |
 | `moisture_percent` | float/null | Wilgotnosc gleby w procentach. |
@@ -57,7 +57,7 @@ Model przechowuje pojedynczy odczyt z zestawu czujnikow.
 | `pump_on` | boolean | Informacja, czy pompa byla wlaczona przy pomiarze. |
 | `created_at` | datetime | Data utworzenia rekordu. |
 
-Model ma indeksy po `station_number`, `pot_number`, `created_at` oraz po samym `created_at`.
+Model ma indeksy po `table_number`, `pot_number`, `created_at` oraz po samym `created_at`.
 
 ### Walidacje pomiarow
 
@@ -86,15 +86,24 @@ Endpoint `/api/measurements/` obsluguje parametry:
 
 | Parametr | Znaczenie |
 | --- | --- |
-| `station_number` | Filtr po zestawie/stacji. |
+| `table_number` | Filtr po jednym stole. |
+| `table_number_max` | Filtr po zakresie stolow od `1` do podanej wartosci. |
 | `pot_number` | Filtr po doniczce. |
+| `pot_number_max` | Filtr po zakresie doniczek od `1` do podanej wartosci. |
 | `date_from` | Pomiary od wskazanej daty. |
 | `date_to` | Pomiary do wskazanej daty. |
+| `limit` | Maksymalna liczba zwracanych pomiarow, ograniczana przez backend do `1-1000`. |
 
 Przyklad:
 
 ```text
-GET /api/measurements/?station_number=1&pot_number=1
+GET /api/measurements/?table_number=1&pot_number=1
+```
+
+Przyklad pobrania ograniczonej paczki pomiarow dla eksperymentu z 2 stolami i 10 doniczkami na stole:
+
+```text
+GET /api/measurements/?table_number_max=2&pot_number_max=10&limit=300
 ```
 
 ### Dodanie pomiaru
@@ -106,7 +115,7 @@ Content-Type: application/json
 
 ```json
 {
-  "station_number": 1,
+  "table_number": 1,
   "pot_number": 1,
   "moisture_percent": 64,
   "air_temperature": 22.5,
@@ -141,7 +150,7 @@ GET /api/experiments/1/export-csv/?export_format=excel&columns=moisture_percent,
 
 Eksport filtruje pomiary wedlug:
 
-- `station_number = experiment.sensor_set_id`,
+- `table_number` i `pot_number` musza pasowac do `experiment.table_configs`,
 - `created_at >= experiment.started_at`, jesli eksperyment ma date startu,
 - `created_at <= experiment.planned_end_at`, jesli eksperyment ma planowana date zakonczenia.
 
@@ -156,7 +165,10 @@ Eksport filtruje pomiary wedlug:
 | `plant_name` | char | Nazwa/typ rosliny, maks. 100 znakow. |
 | `owner` | FK User/null | Wlasciciel eksperymentu. |
 | `collaborators` | M2M User | Wspolpracownicy. |
-| `sensor_set_id` | small int | Zestaw czujnikow: 1, 2 albo 3. |
+| `sensor_package_variant` | small int | Wariant pakietu odczytow: 1, 2 albo 3. |
+| `table_count` | integer | Liczba stolow / stanowisk pomiarowych w eksperymencie, zakres `1-20`. |
+| `table_configs` | JSON | Lista stolow i liczba doniczek na kazdym stole. |
+| `pots_per_table` | integer | Pole techniczne utrzymywane jako najwieksza liczba doniczek na stole, dla zgodnosci starszych zapytan. |
 | `started_at` | datetime/null | Data rozpoczecia. |
 | `planned_end_at` | datetime/null | Planowana data zakonczenia. |
 | `finished_at` | datetime/null | Rzeczywista data zakonczenia. |
@@ -177,9 +189,9 @@ Status jest liczony jako property:
 
 Wazne: samo przekroczenie `planned_end_at` nie ustawia automatycznie `completed`. Eksperyment konczy sie dopiero przez ustawienie `finished_at`.
 
-### Zestawy czujnikow
+### Warianty pakietu odczytow
 
-Frontend i backend operuja na trzech zestawach:
+Frontend i backend operuja na trzech wariantach pakietu odczytow:
 
 | ID | Nazwa w UI | Czujniki |
 | --- | --- | --- |
@@ -187,7 +199,30 @@ Frontend i backend operuja na trzech zestawach:
 | `2` | `EXTENDED` | BASIC + swiatlo |
 | `3` | `FULL` | EXTENDED + cisnienie + temperatura gleby |
 
-W kazdym zestawie zakladana jest obecnosc pompy.
+W kazdym wariancie zakladana jest obecnosc pompy. `sensor_package_variant` okresla tylko wariant pakietu odczytow czujnikow: BASIC, EXTENDED albo FULL. Nie jest to fizyczny zestaw Arduino i nie jest uzywany do blokowania terminow eksperymentow.
+
+### Stoly i doniczki
+
+Eksperyment opisuje zakres fizyczny doswiadczenia przez:
+
+```text
+table_count
+table_configs
+```
+
+Przyklad:
+
+```json
+{
+  "table_count": 2,
+  "table_configs": [
+    { "table_number": 1, "pot_count": 15 },
+    { "table_number": 2, "pot_count": 8 }
+  ]
+}
+```
+
+Oznacza to, ze eksperyment obejmuje dwa stoly: na stole `1` jest 15 doniczek, a na stole `2` jest 8 doniczek. Pomiary z Arduino musza miec `table_number` i `pot_number`, zeby backend mogl dopasowac je do zakresu eksperymentu.
 
 ### Klucze czestotliwosci czujnikow
 
@@ -211,26 +246,39 @@ Backend sprawdza:
 - wlasciciel nie moze byc jednoczesnie wspolpracownikiem,
 - nazwa eksperymentu nie moze byc pusta,
 - nazwa rosliny nie moze byc pusta,
-- `sensor_set_id` musi byc wieksze od 0,
+- `sensor_package_variant` musi byc wieksze od 0,
+- `table_count` musi byc liczba calkowita w zakresie `1-20`,
+- `table_configs` musi zawierac od 1 do 20 stolow,
+- `pot_count` dla kazdego stolu musi byc liczba calkowita w zakresie `1-40`,
 - `measurement_frequency_seconds` musi byc wieksze od 0,
 - `started_at` jest wymagane,
 - `planned_end_at` jest wymagane,
 - `finished_at` nie moze byc wczesniejsze niz `started_at`,
 - `planned_end_at` nie moze byc wczesniejsze niz `started_at`,
-- aktywne/niedokonczone eksperymenty nie moga nachodzic terminami na ten sam `sensor_set_id`.
+- jezeli w bazie sa zarejestrowane fizyczne urzadzenia `SensorDevice`, backend musi znalezc wystarczajaca liczbe wolnych urzadzen dla zakresu stolow i doniczek eksperymentu.
 
-### Walidacja konfliktu terminow
+### Przydzial fizycznych urzadzen
 
-Konflikt jest sprawdzany dla eksperymentow:
+Fizyczne plytki Arduino / zestawy czujnikow sa reprezentowane przez model `SensorDevice`. Przy tworzeniu eksperymentu backend oblicza zapotrzebowanie:
 
 ```text
-sensor_set_id = wybrany zestaw
-finished_at IS NULL
+suma pot_count ze wszystkich elementow table_configs
 ```
 
-Podczas edycji aktualnie edytowany eksperyment jest wykluczany z porownania.
+Nastepnie szuka wolnych aktywnych urzadzen, ktore nie maja nachodzacego przypisania w terminie eksperymentu. Jesli urzadzenia sa skonfigurowane w bazie i nie ma wystarczajacej liczby wolnych urzadzen, backend odrzuca utworzenie eksperymentu.
 
-Eksperyment z ustawionym `finished_at` nie blokuje ponownego uzycia zestawu czujnikow, nawet jesli jego daty nachodza na nowy termin.
+Przydzial jest zapisywany w modelu `SensorDeviceAssignment`:
+
+```text
+experiment
+device
+table_number
+pot_number
+assigned_from
+assigned_to
+```
+
+Jezeli w bazie nie ma jeszcze zadnych rekordow `SensorDevice`, aplikacja nie blokuje tworzenia eksperymentow i dziala w trybie bez automatycznego przydzialu urzadzen.
 
 ### Endpointy eksperymentow
 
@@ -259,7 +307,12 @@ Content-Type: application/json
   "name": "Soy basic irrigation test",
   "description": "Test podlewania soi.",
   "plant_name": "Soy",
-  "sensor_set_id": 1,
+  "sensor_package_variant": 1,
+  "table_count": 2,
+  "table_configs": [
+    { "table_number": 1, "pot_count": 15 },
+    { "table_number": 2, "pot_count": 8 }
+  ],
   "measurement_frequency_seconds": 60,
   "sensor_frequencies": {
     "soil_moisture": 60,
@@ -278,7 +331,7 @@ Content-Type: application/json
 
 Endpoint edycji uzywa `ExperimentUpdateSerializer`. Nie pozwala zmieniac:
 
-- `sensor_set_id`,
+- `sensor_package_variant`,
 - `owner`,
 - `created_at`,
 - `finished_at`.
@@ -332,7 +385,7 @@ Backend ustawia `finished_at` na aktualny czas serwera.
 ### Aktywna konfiguracja czujnikow
 
 ```text
-GET /api/experiments/active-sensor-config/?sensor_set_id=1
+GET /api/experiments/active-sensor-config/?sensor_package_variant=1
 ```
 
 Przykladowa odpowiedz:
@@ -340,7 +393,7 @@ Przykladowa odpowiedz:
 ```json
 {
   "experiment_id": 1,
-  "sensor_set_id": 1,
+  "sensor_package_variant": 1,
   "sensor_frequencies": {
     "soil_moisture": 30,
     "light": 0,
@@ -413,13 +466,13 @@ Mapowanie komend:
 
 ### Model `Sensor`
 
-Model opisuje czujniki i ich przynaleznosc do zestawow.
+Model opisuje typy czujnikow i ich przynaleznosc do wariantow pakietu odczytow.
 
 | Pole | Znaczenie |
 | --- | --- |
 | `code` | Unikalny kod czujnika uzywany do identyfikacji. |
 | `name` | Nazwa czujnika. |
-| `sensor_set_id` | Numer zestawu czujnikow. |
+| `sensor_package_variant` | Numer wariantu pakietu odczytow. |
 | `sensor_type` | Typ czujnika. |
 | `unit` | Jednostka pomiaru. |
 | `is_active` | Czy czujnik jest aktywny. |
@@ -435,6 +488,43 @@ Endpointy:
 | `PUT/PATCH` | `/api/sensors/<id>/` | Edycja czujnika. |
 | `DELETE` | `/api/sensors/<id>/` | Usuniecie czujnika. |
 
+### Model `SensorDevice`
+
+Model opisuje fizyczna plytke Arduino / fizyczny zestaw czujnikow, ktory mozna przydzielic do doniczki.
+
+| Pole | Znaczenie |
+| --- | --- |
+| `code` | Unikalny kod urzadzenia, np. `DEVICE-001`. |
+| `name` | Opcjonalna nazwa opisowa. |
+| `max_sensor_package_variant` | Najwyzszy wariant pakietu odczytow obslugiwany przez urzadzenie. |
+| `is_active` | Czy urzadzenie moze byc przydzielane. |
+| `notes` | Notatki techniczne. |
+| `created_at`, `updated_at` | Daty techniczne. |
+
+### Model `SensorDeviceAssignment`
+
+Model zapisuje przydzial fizycznego urzadzenia do konkretnej doniczki w eksperymencie.
+
+| Pole | Znaczenie |
+| --- | --- |
+| `experiment` | Eksperyment, do ktorego przydzielono urzadzenie. |
+| `device` | Fizyczne urzadzenie `SensorDevice`. |
+| `table_number` | Numer stolu. |
+| `pot_number` | Numer doniczki na stole. |
+| `assigned_from` | Poczatek rezerwacji urzadzenia. |
+| `assigned_to` | Koniec rezerwacji urzadzenia. |
+
+Endpointy urzadzen:
+
+| Metoda | Endpoint | Opis |
+| --- | --- | --- |
+| `GET` | `/api/sensor-devices/` | Lista fizycznych urzadzen. |
+| `POST` | `/api/sensor-devices/` | Dodanie fizycznego urzadzenia. |
+| `GET` | `/api/sensor-devices/<id>/` | Szczegoly urzadzenia. |
+| `PUT/PATCH` | `/api/sensor-devices/<id>/` | Edycja urzadzenia. |
+| `DELETE` | `/api/sensor-devices/<id>/` | Usuniecie urzadzenia. |
+| `GET` | `/api/sensor-device-assignments/` | Lista przydzialow urzadzen do eksperymentow. |
+
 ## Aplikacja `users`
 
 Backend korzysta z domyslnego modelu uzytkownika Django oraz modelu `UserProfile`.
@@ -446,7 +536,7 @@ Endpointy:
 | `GET` | `/api/users/` | Lista uzytkownikow. |
 | `GET` | `/api/users/<id>/` | Szczegoly uzytkownika. |
 
-Uwaga techniczna: model `UserProfile` ma pole `department`, natomiast serializer profilu wskazuje pole `scientific_unit`. To jest niespojnosc, ktora nalezy poprawic przed pelnym wykorzystaniem profili uzytkownikow.
+Profil uzytkownika zawiera pole `department`, czyli jednostke organizacyjna lub naukowa uzytkownika.
 
 ## Uprawnienia i autoryzacja
 
@@ -458,4 +548,5 @@ authentication_classes = []
 ```
 
 Oznacza to, ze API jest otwarte i nie wymaga logowania. Dla wersji produkcyjnej nalezy dodac autoryzacje, ograniczenia uprawnien i ochrone endpointow zapisujacych dane.
+
 

@@ -36,9 +36,39 @@ sequenceDiagram
     Arduino->>ESP: JSON przez port szeregowy
     ESP->>API: POST /api/measurements/
     API->>DB: zapis Measurement
-    UI->>API: GET /api/measurements/
-    API->>UI: lista pomiarow
+    UI->>API: GET /api/experiments/
+    API->>UI: konfiguracja eksperymentu
+    UI->>API: GET /api/measurements/?table_number_max=...&pot_number_max=...&limit=...
+    API->>UI: ograniczona lista pomiarow dla zakresu eksperymentu
 ```
+
+## Model logiczny eksperymentu i pomiarow
+
+Eksperyment okresla zakres doswiadczenia:
+
+```text
+table_count = liczba stolow / stanowisk pomiarowych
+table_configs = lista stolow i liczba doniczek na kazdym stole
+```
+
+Przyklad `table_configs`:
+
+```json
+[
+  { "table_number": 1, "pot_count": 15 },
+  { "table_number": 2, "pot_count": 8 },
+  { "table_number": 3, "pot_count": 20 }
+]
+```
+
+Pomiar z Arduino ma:
+
+```text
+table_number = numer stolu
+pot_number = numer doniczki na stole
+```
+
+Dzieki temu backend i frontend moga pobrac tylko te pomiary, ktore mieszcza sie w zakresie eksperymentu, np. stol `1` z doniczkami `1-15`, stol `2` z doniczkami `1-8` i stol `3` z doniczkami `1-20`.
 
 ## Przeplyw sterowania pompa
 
@@ -64,7 +94,7 @@ sequenceDiagram
 Uzytkownik podczas tworzenia eksperymentu podaje czestotliwosci odczytu dla czujnikow. Backend zapisuje je w polu `sensor_frequencies`. ESP8266 cyklicznie pobiera aktywna konfiguracje endpointem:
 
 ```text
-GET /api/experiments/active-sensor-config/?sensor_set_id=1
+GET /api/experiments/active-sensor-config/?sensor_package_variant=1
 ```
 
 Nastepnie ESP8266 buduje komende tekstowa:
@@ -134,4 +164,5 @@ Arduino odbiera komende przez port szeregowy i aktualizuje interwaly odczytu.
 | `5432` | PostgreSQL. |
 | `5173` | Frontend Vite w trybie developerskim. |
 | `9600` | Predkosc komunikacji Serial w szkicach Arduino/ESP. |
+
 
