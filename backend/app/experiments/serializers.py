@@ -3,7 +3,8 @@ from rest_framework import serializers
 from measurements.models import Measurement
 from measurements.serializers import MeasurementSerializer
 from .models import Experiment
-
+from django.utils import timezone
+from datetime import timedelta
 
 ALLOWED_SENSOR_FREQUENCY_KEYS = {
     'soil_moisture',
@@ -36,18 +37,6 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'is_public'
         ]
         read_only_fields = ['id', 'status', 'created_at']
-
-    def _time_ranges_overlap(self, first_start, first_end, second_start, second_end):
-        if first_start is None or second_start is None:
-            return first_start is None and second_start is None
-
-        if first_end is not None and second_start is not None and first_end <= second_start:
-            return False
-
-        if second_end is not None and first_start is not None and second_end <= first_start:
-            return False
-
-        return True
 
     def validate(self, data):
         instance = getattr(self, 'instance', None)
@@ -140,6 +129,20 @@ class ExperimentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "started_at": "Data rozpoczęcia eksperymentu jest wymagana."
             })
+    
+        
+        if instance is None:
+            max_started_at = timezone.now() + timedelta(hours=24)
+
+            if started_at and started_at < timezone.now():
+                raise serializers.ValidationError({
+                    "started_at": "Nie można utworzyć eksperymentu w przeszłości."
+                })
+
+            if started_at > max_started_at:
+                raise serializers.ValidationError({
+                    "started_at": "Data rozpoczęcia może być ustawiona maksymalnie 1 dzień do przodu."
+                })
 
         if not planned_end_at:
             raise serializers.ValidationError({
@@ -161,29 +164,15 @@ class ExperimentSerializer(serializers.ModelSerializer):
                 "planned_end_at": "Planowana data zakończenia nie może być wcześniejsza niż data rozpoczęcia."
             })
 
-        if sensor_set_id:
-            experiments_for_sensor_set = Experiment.objects.filter(
-                sensor_set_id=sensor_set_id,
+        if instance is None:
+            unfinished_experiment_exists = Experiment.objects.filter(
                 finished_at__isnull=True
-            )
+            ).exists()
 
-            if instance:
-                experiments_for_sensor_set = experiments_for_sensor_set.exclude(pk=instance.pk)
-
-            current_end_at = finished_at or planned_end_at
-
-            for experiment in experiments_for_sensor_set:
-                experiment_end_at = experiment.finished_at or experiment.planned_end_at
-
-                if self._time_ranges_overlap(
-                    started_at,
-                    current_end_at,
-                    experiment.started_at,
-                    experiment_end_at
-                ):
-                    raise serializers.ValidationError({
-                        "sensor_set_id": "Istnieje już eksperyment dla tego zestawu czujników w wybranym terminie."
-                    })
+            if unfinished_experiment_exists:
+                raise serializers.ValidationError({
+                    "non_field_errors": "Istnieje już niezakończony eksperyment. Nie można utworzyć nowego eksperymentu."
+                })
 
         return data
 
@@ -193,6 +182,7 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
         "sensor_set_id",
         "owner",
         "created_at",
+        "started_at",
         'finished_at',
     }
 
@@ -201,6 +191,7 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
             "sensor_set_id",
             "owner",
             "created_at",
+            "started_at",
             'finished_at'
         ]
 
@@ -219,6 +210,9 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
 
             if "created_at" in forbidden_fields:
                 errors["created_at"] = "Nie można edytować daty stworzenia eksperymentu."
+
+            if "started_at" in forbidden_fields:
+                errors["started_at"] = "Nie można edytować daty rozpoczęcia eksperymentu."
 
             if "finished_at" in forbidden_fields:
                 errors["finished_at"] = "Nie można edytować daty zakończenia eksperymentu."
