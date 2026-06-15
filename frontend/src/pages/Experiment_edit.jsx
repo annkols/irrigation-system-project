@@ -13,6 +13,7 @@ function Experiment_edit() {
   const [plantName, setPlantName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [initialStartDate, setInitialStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
@@ -66,8 +67,20 @@ function Experiment_edit() {
           setDescription(data.description || "");
           setIsPublic(data.is_public || false);
       
-          if (data.started_at) setStartDate(data.started_at.split('T')[0]);
-          if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
+          const formatToLocalInput = (isoString) => {
+            if (!isoString) return "";
+            const d = new Date(isoString);
+            const offset = d.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(d.getTime() - offset)).toISOString().slice(0, 16);
+            return localISOTime;
+          };
+
+          if (data.started_at) {
+            const formatted = formatToLocalInput(data.started_at);
+            setStartDate(formatted);
+            setInitialStartDate(formatted);
+          }
+          if (data.planned_end_at) setEndDate(formatToLocalInput(data.planned_end_at));
       
           setSelectedSetup(data.sensor_set_id);
       
@@ -97,6 +110,10 @@ function Experiment_edit() {
   const handleSave = () => {
     setErrors({});
     const localErrors = {};
+
+    const currentTruncatedTime = new Date();
+    currentTruncatedTime.setSeconds(0);
+    currentTruncatedTime.setMilliseconds(0);
 
     if (!name.trim()) {
       localErrors.name = ["This field is required."];
@@ -133,12 +150,50 @@ function Experiment_edit() {
 
     if (!startDate) {
       localErrors.started_at = ["Start date is required."];
+    } else {
+      const startCompare = new Date(startDate);
+      startCompare.setSeconds(0);
+      startCompare.setMilliseconds(0);
+
+      const isStartDateChanged = startDate !== initialStartDate;
+
+      if (isStartDateChanged) {
+        const initialStartCompare = new Date(initialStartDate);
+        if (initialStartCompare < currentTruncatedTime) {
+          localErrors.started_at = ["The experiment has already started. You cannot edit the start date."];
+        } else {
+          if (startCompare < currentTruncatedTime) {
+            localErrors.started_at = ["The start date cannot be set in the past."];
+          }
+          
+          const maxStartDate = new Date(currentTruncatedTime.getTime() + 24 * 60 * 60 * 1000);
+          if (startCompare > maxStartDate) {
+            localErrors.started_at = ["The start date can be set a maximum of 24 hours in advance."];
+          }
+        }
+      }
     }
 
     if (!endDate) {
       localErrors.planned_end_at = ["Planned end date is required."];
-    } else if (startDate && new Date(endDate) < new Date(startDate)) {
-      localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
+    } else {
+      const endCompare = new Date(endDate);
+      endCompare.setSeconds(0);
+      endCompare.setMilliseconds(0);
+
+      if (endCompare < currentTruncatedTime) {
+        localErrors.planned_end_at = ["The planned end date cannot be set in the past."];
+      }
+
+      if (startDate) {
+        const startCompare = new Date(startDate);
+        startCompare.setSeconds(0);
+        startCompare.setMilliseconds(0);
+        
+        if (endCompare < startCompare) {
+          localErrors.planned_end_at = ["The planned end date cannot be earlier than the start date."];
+        }
+      }
     }
 
     if (Object.keys(localErrors).length > 0) {
@@ -154,14 +209,22 @@ function Experiment_edit() {
       ])
     );
 
+    const formatWithSafeSeconds = (dateString) => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      return date.toISOString();
+    };
+
     const updatedExperiment = {
       name,
       description,
       plant_name: plantName,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
-      started_at: startDate || null,
-      planned_end_at: endDate || null,
+      started_at: formatWithSafeSeconds(startDate),
+      planned_end_at: formatWithSafeSeconds(endDate),
       is_public: isPublic
     };
 
@@ -255,7 +318,7 @@ function Experiment_edit() {
             <label htmlFor="start_date">Start date:</label>
             <input
               className={errors.started_at ? "input-error" : ""}
-              type="date"
+              type="datetime-local"
               id="start_date"
               name="start_date"
               value={startDate}
@@ -268,7 +331,7 @@ function Experiment_edit() {
             <label htmlFor="end_date">Planned end date:</label>
             <input
               className={errors.planned_end_at ? "input-error" : ""}
-              type="date"
+              type="datetime-local"
               id="end_date"
               name="end_date"
               value={endDate}

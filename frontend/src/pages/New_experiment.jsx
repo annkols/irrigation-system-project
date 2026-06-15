@@ -62,6 +62,10 @@ function New_experiment() {
     setErrors({});
     const localErrors = {};
 
+    const currentTruncatedTime = new Date();
+    currentTruncatedTime.setSeconds(0);
+    currentTruncatedTime.setMilliseconds(0);
+
     if (!name.trim()) {
       localErrors.name = ["This field is required."];
     } else if (name.length > 100) {
@@ -97,12 +101,41 @@ function New_experiment() {
 
     if (!startDate) {
       localErrors.started_at = ["Start date is required."];
+    } else {
+      const startCompare = new Date(startDate);
+      startCompare.setSeconds(0);
+      startCompare.setMilliseconds(0);
+
+      if (startCompare < currentTruncatedTime) {
+        localErrors.started_at = ["The start date cannot be set in the past."];
+      }
+      
+      const maxStartDate = new Date(currentTruncatedTime.getTime() + 24 * 60 * 60 * 1000);
+      if (startCompare > maxStartDate) {
+        localErrors.started_at = ["The start date can be set a maximum of 24 hours in advance."];
+      }
     }
 
     if (!endDate) {
       localErrors.planned_end_at = ["Planned end date is required."];
-    } else if (startDate && new Date(endDate) < new Date(startDate)) {
-      localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
+    } else {
+      const endCompare = new Date(endDate);
+      endCompare.setSeconds(0);
+      endCompare.setMilliseconds(0);
+
+      if (endCompare < currentTruncatedTime) {
+        localErrors.planned_end_at = ["The planned end date cannot be set in the past."];
+      }
+
+      if (startDate) {
+        const startCompare = new Date(startDate);
+        startCompare.setSeconds(0);
+        startCompare.setMilliseconds(0);
+        
+        if (endCompare < startCompare) {
+          localErrors.planned_end_at = ["The planned end date cannot be earlier than the start date."];
+        }
+      }
     }
 
     if (Object.keys(localErrors).length > 0) {
@@ -117,6 +150,16 @@ function New_experiment() {
         parseInt(frequencies[sensor.key], 10)
       ])
     );
+    const formatWithSafeSeconds = (dateString) => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      return date.toISOString();
+    };
+
+    const formattedStartDate = formatWithSafeSeconds(startDate);
+    const formattedEndDate = formatWithSafeSeconds(endDate);
 
     const newExperiment = {
       name,
@@ -125,8 +168,8 @@ function New_experiment() {
       sensor_set_id: selectedSetup,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
-      started_at: startDate || null,
-      planned_end_at: endDate || null,
+      started_at: formattedStartDate,
+      planned_end_at: formattedEndDate,
       finished_at: null,
       owner: null,
       collaborators: []
@@ -218,7 +261,7 @@ function New_experiment() {
             <label htmlFor="start_date">Start date:</label>
             <input
               className={errors.started_at ? "input-error" : ""}
-              type="date"
+              type="datetime-local"
               id="start_date"
               name="start_date"
               value={startDate}
@@ -231,7 +274,7 @@ function New_experiment() {
             <label htmlFor="end_date">Planned end date:</label>
             <input
               className={errors.planned_end_at ? "input-error" : ""}
-              type="date"
+              type="datetime-local"
               id="end_date"
               name="end_date"
               value={endDate}
