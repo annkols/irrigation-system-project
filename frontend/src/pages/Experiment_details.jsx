@@ -150,6 +150,55 @@ function Experiment_details() {
     );
   };
 
+  const handleDeleteExperiment = () => {
+    toast(
+      ({ closeToast }) => (
+        <div>
+          <p>Are you sure you want to <strong>delete</strong> this experiment permanently?</p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button
+              onClick={async () => {
+                closeToast();
+                try {
+                  const response = await fetch(`${API_BASE_URL}/experiments/${id}/delete/`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+                  
+                  if (!response.ok) {
+                    let errorMsg = 'Failed to delete the experiment.';
+                    try {
+                      const data = await response.json();
+                      errorMsg = data.detail || errorMsg;
+                    } catch (e) {}
+                    toast.error(errorMsg);
+                    return;
+                  }
+
+                  toast.success("Experiment has been successfully deleted!");
+                  navigate('/dashboard');
+                } catch (error) {
+                  console.error("Network error:", error);
+                  toast.error("Server connection error.");
+                }
+              }}
+              style={{ padding: '4px 12px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Delete
+            </button>
+            <button
+              onClick={closeToast}
+              style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false, closeOnClick: false }
+    );
+  };
+
   const latest = measurements.length > 0 ? measurements[0] : null;
 
   const statusMap = {
@@ -233,8 +282,14 @@ function Experiment_details() {
               >
                 edit
               </span>
-              <span className="material-symbols-outlined">settings</span>
-              <span className="material-symbols-outlined">delete</span>
+              {/*<span className="material-symbols-outlined">settings</span>*/}
+              <span 
+                className="material-symbols-outlined"
+                onClick={handleDeleteExperiment}
+                style={{ cursor: 'pointer' }}
+              >
+                delete
+              </span>
             </div>
           </div>
 
