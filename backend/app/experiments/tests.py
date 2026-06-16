@@ -14,7 +14,7 @@ from .models import Experiment
 class ExperimentTests(APITestCase):
     def test_create_experiment_successfully(self):
         url = reverse('experiment-list-create')
-        started_at = timezone.now() + timedelta(hours=1)
+        started_at = timezone.now()
         planned_end_at = started_at + timedelta(days=7)
 
         payload = {
@@ -38,7 +38,7 @@ class ExperimentTests(APITestCase):
 
     def test_create_experiment_with_sensor_frequencies(self):
         url = reverse('experiment-list-create')
-        started_at = timezone.now() + timedelta(hours=1)
+        started_at = timezone.now()
         planned_end_at = started_at + timedelta(days=7)
 
         payload = {
@@ -196,7 +196,7 @@ class ExperimentTests(APITestCase):
     def test_finished_at_cannot_be_before_started_at(self):
         url = reverse('experiment-list-create')
 
-        started_at = timezone.now() + timedelta(hours=1)
+        started_at = timezone.now()
         finished_at = started_at - timedelta(hours=1)
 
         payload = {
@@ -264,7 +264,7 @@ class ExperimentTests(APITestCase):
             "description": "Missing planned end date.",
             "plant_name": "Potato",
             "sensor_set_id": 1,
-            "started_at": (timezone.now() + timedelta(hours=1)).isoformat(),
+            "started_at": timezone.now().isoformat(),
             "planned_end_at": None,
             "finished_at": None,
             "owner": None,
@@ -297,8 +297,8 @@ class ExperimentTests(APITestCase):
             "description": "Second experiment.",
             "plant_name": "Soy",
             "sensor_set_id": 1,
-            "started_at": (started_at + timedelta(minutes=30)).isoformat(),
-            "planned_end_at": (planned_end_at + timedelta(minutes=30)).isoformat(),
+            "started_at": (started_at + timedelta(days=1)).isoformat(),
+            "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
             "finished_at": None,
             "owner": None,
             "collaborators": []
@@ -307,10 +307,10 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertIn("sensor_set_id", response.data)
 
     def test_cannot_create_experiment_for_same_sensor_set_when_dates_overlap(self):
-        started_at = timezone.now() + timedelta(hours=1)
+        started_at = timezone.now() + timedelta(days=1)
         planned_end_at = started_at + timedelta(days=3)
 
         Experiment.objects.create(
@@ -330,8 +330,8 @@ class ExperimentTests(APITestCase):
             "description": "Overlapping scheduled experiment.",
             "plant_name": "Soy",
             "sensor_set_id": 1,
-            "started_at": (started_at + timedelta(minutes=30)).isoformat(),
-            "planned_end_at": (planned_end_at + timedelta(minutes=30)).isoformat(),
+            "started_at": (started_at + timedelta(days=1)).isoformat(),
+            "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
             "finished_at": None,
             "owner": None,
             "collaborators": []
@@ -340,11 +340,11 @@ class ExperimentTests(APITestCase):
         response = self.client.post(url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertIn("sensor_set_id", response.data)
 
-    def test_cannot_create_experiment_when_any_unfinished_experiment_exists_even_dates_do_not_overlap(self):
-        started_at = timezone.now() + timedelta(hours=1)
-        planned_end_at = started_at + timedelta(hours=2)
+    def test_can_create_experiment_for_same_sensor_set_when_dates_do_not_overlap(self):
+        started_at = timezone.now() + timedelta(days=1)
+        planned_end_at = started_at + timedelta(days=2)
 
         Experiment.objects.create(
             name="Potato test",
@@ -364,7 +364,7 @@ class ExperimentTests(APITestCase):
             "plant_name": "Soy",
             "sensor_set_id": 1,
             "started_at": (planned_end_at + timedelta(hours=1)).isoformat(),
-            "planned_end_at": (planned_end_at + timedelta(hours=2)).isoformat(),
+            "planned_end_at": (planned_end_at + timedelta(days=2)).isoformat(),
             "finished_at": None,
             "owner": None,
             "collaborators": []
@@ -372,10 +372,10 @@ class ExperimentTests(APITestCase):
 
         response = self.client.post(url, payload, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["sensor_set_id"], 1)
 
-    def test_cannot_create_scheduled_experiment_when_existing_experiment_has_no_dates(self):
+    def test_can_create_scheduled_experiment_when_existing_same_sensor_set_has_no_dates(self):
         Experiment.objects.create(
             name="Unscheduled potato test",
             description="No dates selected.",
@@ -386,8 +386,8 @@ class ExperimentTests(APITestCase):
             finished_at=None
         )
 
-        started_at = timezone.now() + timedelta(hours=1)
-        planned_end_at = started_at + timedelta(hours=2)
+        started_at = timezone.now() + timedelta(days=30)
+        planned_end_at = started_at + timedelta(days=10)
         url = reverse('experiment-list-create')
 
         payload = {
@@ -404,8 +404,8 @@ class ExperimentTests(APITestCase):
 
         response = self.client.post(url, payload, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["sensor_set_id"], 1)
 
     def test_can_create_finished_experiment_for_same_sensor_set(self):
         started_at = timezone.now() - timedelta(days=2)
@@ -421,7 +421,7 @@ class ExperimentTests(APITestCase):
         )
 
         url = reverse('experiment-list-create')
-        new_started_at = timezone.now() + timedelta(hours=1)
+        new_started_at = timezone.now()
         new_planned_end_at = new_started_at + timedelta(days=7)
 
         payload = {
