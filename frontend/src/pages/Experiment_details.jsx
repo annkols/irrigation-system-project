@@ -259,7 +259,7 @@ function Experiment_details() {
 
         {/* opis */}
         <div className="exp-details-field">
-          <span className="exp-details-field-label">Opis:</span>
+          <span className="exp-details-field-label">Description:</span>
           <p className="exp-details-description">{experiment.description || "-"}</p>
         </div>
 
