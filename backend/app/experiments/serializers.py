@@ -130,24 +130,36 @@ class ExperimentSerializer(serializers.ModelSerializer):
                 "started_at": "Data rozpoczęcia eksperymentu jest wymagana."
             })
     
+        if not planned_end_at:
+            raise serializers.ValidationError({
+                "planned_end_at": "Planowana data zakończenia eksperymentu jest wymagana."
+            })
         
-        if instance is None:
-            max_started_at = timezone.now() + timedelta(hours=24)
+        current_time_truncated = timezone.now().replace(second=0, microsecond=0)
 
-            if started_at and started_at < timezone.now():
+        if instance is None or (instance.started_at and instance.started_at > timezone.now()):
+            
+            if started_at < current_time_truncated:
                 raise serializers.ValidationError({
-                    "started_at": "Nie można utworzyć eksperymentu w przeszłości."
+                    "started_at": "Nie można ustawić daty rozpoczęcia w przeszłości."
                 })
 
+            max_started_at = current_time_truncated + timedelta(hours=24)
             if started_at > max_started_at:
                 raise serializers.ValidationError({
                     "started_at": "Data rozpoczęcia może być ustawiona maksymalnie 1 dzień do przodu."
                 })
 
-        if not planned_end_at:
-            raise serializers.ValidationError({
-                "planned_end_at": "Planowana data zakończenia eksperymentu jest wymagana."
-            })
+            if planned_end_at < current_time_truncated:
+                raise serializers.ValidationError({
+                    "planned_end_at": "Planowana data zakończenia nie może być w przeszłości."
+                })
+
+        elif instance and instance.started_at <= timezone.now():
+            if started_at != instance.started_at:
+                raise serializers.ValidationError({
+                    "started_at": "Eksperyment już się rozpoczął. Nie można zmienić daty rozpoczęcia."
+                })
 
         if finished_at and not started_at:
             raise serializers.ValidationError({
@@ -182,16 +194,17 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
         "sensor_set_id",
         "owner",
         "created_at",
-        "started_at",
         'finished_at',
     }
 
     class Meta(ExperimentSerializer.Meta):
-        read_only_fields = ExperimentSerializer.Meta.read_only_fields + [
+        read_only_fields = [
+            f for f in ExperimentSerializer.Meta.read_only_fields 
+            if f != "started_at"
+        ] + [
             "sensor_set_id",
             "owner",
             "created_at",
-            "started_at",
             'finished_at'
         ]
 
@@ -210,9 +223,6 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
 
             if "created_at" in forbidden_fields:
                 errors["created_at"] = "Nie można edytować daty stworzenia eksperymentu."
-
-            if "started_at" in forbidden_fields:
-                errors["started_at"] = "Nie można edytować daty rozpoczęcia eksperymentu."
 
             if "finished_at" in forbidden_fields:
                 errors["finished_at"] = "Nie można edytować daty zakończenia eksperymentu."
