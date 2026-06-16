@@ -44,10 +44,10 @@ function App() {
 
   const statusMap = {
     all: "ALL",
-    "in-progress": "IN PROGRESS",
+    "in progress": "IN PROGRESS",
     "not started": "NOT STARTED",
     "completed": "COMPLETED",
-    "soon": "SOON ENDING",
+    //"soon": "ENDING SOON",
   };
 
   const filtered = experiments.filter((exp) =>
@@ -247,7 +247,7 @@ function App() {
                 <div className='progress-bar'>
                   <div className='progress' style={{ width: `${progressPercent}%` }} />
                 </div>
-                <span className={"status " + (mainexp?.status?.replace(/\s+/g, '-') || '')}>
+                <span className={"status " + (mainexp?.status?.toLowerCase().replace(/\s+/g, '-') || '')}>
                   {mainexp?.status 
                     ? (statusMap[mainexp.status] || mainexp.status.toUpperCase()) 
                     : "UNKNOWN"}
@@ -356,7 +356,7 @@ function App() {
             <div className='filters'>
               {Object.keys(statusMap).map((key) => (
                 <button key={key} onClick={() => setFilter(key)}
-                  className={`filter-btn filter-${key} ${filter === key ? "active" : ""}`}>
+                  className={`filter-btn filter-${key.replace(/\s+/g, '-')} ${filter === key ? "active" : ""}`}>
                   {statusMap[key]}
                 </button>
               ))}
