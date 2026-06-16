@@ -195,6 +195,12 @@ body {
   color: var(--primary-green);
 }
 
+.pump-command-btn.active:hover{
+  border-color: var(--text-main);
+  color: var(--text-main);
+  background: var(--primary-light);
+}
+
 .pump-command-btn.active {
   background: var(--primary-green);
   border-color: var(--primary-green);
