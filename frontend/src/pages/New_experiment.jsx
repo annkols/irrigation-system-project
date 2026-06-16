@@ -16,6 +16,7 @@ function New_experiment() {
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
+  const [isPublic, setIsPublic] = useState(false);
 
   const sensorSetups = [
       {
@@ -129,7 +130,8 @@ function New_experiment() {
       planned_end_at: endDate || null,
       finished_at: null,
       owner: null,
-      collaborators: []
+      collaborators: [],
+      is_public: isPublic
     };
 
     console.log("Wysylane dane:", newExperiment);
@@ -292,7 +294,13 @@ function New_experiment() {
 
         <div className="is-public">
           <label htmlFor="experiment_public">
-            <input type="checkbox" id="experiment_public" name="experiment_public" value="true" />
+            <input 
+              type="checkbox" 
+              id="experiment_public" 
+              name="experiment_public" 
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+            />
             Make my experiment public and let other users see the data.
           </label>
         </div>
