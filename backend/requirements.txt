@@ -5,3 +5,4 @@ python-dotenv>=1.0
 djangorestframework
 django-cors-headers
 openpyxl
+Pillow>=10.0.0

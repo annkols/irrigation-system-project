@@ -1,25 +1,91 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 
-from .models import UserProfile
+from .models import CustomUserProfile
 
 User = get_user_model()
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserProfile
-        fields = ['scientific_unit']
+        model = CustomUserProfile
+        fields = ["university", "department", "role", "profile_picture"]
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
 
     class Meta:
         model = User
+        fields = ["id", "username", "email", "first_name", "last_name", "profile", "is_active", "is_staff"]
+
+class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, allow_blank=False)
+    last_name = serializers.CharField(required=True, allow_blank=False)
+
+    password = serializers.CharField(write_only=True, required=True)
+    university = serializers.CharField(write_only=True, required=True)
+    department = serializers.CharField(write_only=True, required=True)
+    role = serializers.ChoiceField(choices=CustomUserProfile.Role.choices, write_only=True)
+    profile_picture = serializers.ImageField(required=False, write_only=True)
+
+    class Meta:
+        model = User
         fields = [
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'profile',
+            "username",
+            "email",
+            "password",
+            "first_name",
+            "last_name",
+            "university",
+            "department",
+            "role",
+            "profile_picture",
         ]
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+    
+    def validate_email(self, value):
+        value = value.strip().lower()
+
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "E-mail address has already been assigned to an account."
+            )
+        return value
+
+    # frontend ma lokalnie przechowywać dane podczas rejestracji po stronie klienta - po zebraniu wszystkich danych - wyslac je serwerowi 
+    def create(self, validated_data):
+        university = validated_data.pop("university")
+        department = validated_data.pop("department")
+        role = validated_data.pop("role")
+        profile_picture = validated_data.pop("profile_picture", None)
+
+        password = validated_data.pop("password")
+
+        with transaction.atomic():
+            user = User(
+                **validated_data,
+                is_active=False,
+                is_staff=False,
+                is_superuser=False
+            )
+            user.set_password(password)
+            user.save()
+
+            profile_data = {
+                "user": user,
+                "university": university,
+                "department": department,
+                "role": role,
+                        }
+            
+            if profile_picture:
+                profile_data["profile_picture"] = profile_picture
+
+            CustomUserProfile.objects.create(**profile_data)
+
+        return user
