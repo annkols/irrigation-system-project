@@ -6,6 +6,7 @@ import logo from "./images/logo_cultiva.svg";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const CAMERA_STREAM_URL = import.meta.env.VITE_CAMERA_STREAM_URL;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 const sensorRows = {
@@ -196,7 +197,8 @@ function App() {
 
         {/* left */}
         <div className="card">
-          <div className="image-placeholder" style={{ backgroundImage: `url(${bgImage})` }}>
+          <div className="image-placeholder">
+            <img src={CAMERA_STREAM_URL} alt="Camera stream" className="camera-stream" />
             <div className="card-header">
             {/* dropdown do wybierania eksperymentu, do wyświetlania po lewej stronie, korzystam z css eksportowania */}
               <div className="export-dropdown" style={{ marginTop: 0 }}>

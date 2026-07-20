@@ -7,6 +7,7 @@ import bgImage from "./images/back.jpg";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const CAMERA_STREAM_URL = import.meta.env.VITE_CAMERA_STREAM_URL;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
@@ -373,8 +374,7 @@ function Experiment_details() {
         {/* zdjęcie + odczyty */}
         <div className="exp-details-readings-row">
           <div className="exp-details-img-box">
-            <img src={bgImage} alt="experiment" className="exp-details-img" />
-
+            <img src={CAMERA_STREAM_URL} alt="Camera stream" className="exp-details-img" />
             {/* pump control */}
             <div className="pump-control">
               <div className="pump-control-header">
