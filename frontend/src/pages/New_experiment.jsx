@@ -2,6 +2,8 @@
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import "../App.css";
+import Sidebar from "./Sidebar";
+import TopBar from "./Topbar";
 
 function New_experiment() {
   const navigate = useNavigate();
@@ -177,11 +179,11 @@ function New_experiment() {
   };
 
   return (
-    <div className="app-layout">
-      <aside className="sidebar-placeholder"></aside>
+    <div className="dashboard-page">
+      <Sidebar />
 
-      <div className="main-container">
-        <header className="navbar-placeholder"></header>
+      <div className="dashboard-content">
+        <TopBar />
 
         <main className="content-body">
           {/* Progress bar */}
