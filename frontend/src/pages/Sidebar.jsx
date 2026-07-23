@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import logo from "./images/logo_cultiva.svg";
+import logo from "./images/logo-color.png";
+import name from "./images/name-color.png";
 
 export default function Sidebar() {
 
@@ -42,10 +43,15 @@ export default function Sidebar() {
 
                 <img
                     src={logo}
-                    alt="PlantStalker"
+                    alt="Logo"
+                    style={{ height: "64px", width: "auto" }}
                 />
 
-                <h2>PlantStalker</h2>
+                <img
+                    src={name}
+                    alt="PlantStalker"
+                    style={{ height: "32px", width: "auto" }}
+                />
 
             </div>
 

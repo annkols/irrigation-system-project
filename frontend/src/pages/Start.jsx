@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import arrow from './images/arrow.png';
 import back_img from './images/back.jpg';
-import logo from './images/logo_cultiva.svg';
+import logo from './images/logo-white.png';
+import name from './images/name-white.png';
 
 function Start() {
   const navigate = useNavigate();
@@ -41,14 +42,8 @@ function Start() {
           gap: '12px',
           padding: '20px 40px',
         }}>
-          <img src={logo} alt="Cultiva logo" style={{ height: '40px', width: 'auto' }} />
-          <span style={{
-            fontSize: '22px',
-            fontWeight: 700,
-            fontFamily: 'Inter, sans-serif',
-            color: 'white',
-            letterSpacing: '1px',
-          }}>CULTIVA</span>
+          <img src={logo} alt="PlantStalker logo" style={{ height: '64px', width: 'auto' }} />
+          <img src={name} alt="PlantStalker" style={{ height: '32px', width: 'auto' }} />
         </div>
 
         {/* środkowy blok: tytuł + przyciski */}
@@ -125,7 +120,7 @@ function Start() {
             color: 'rgba(255,255,255,0.7)',
             margin: 0,
           }}>
-            © Katedra Agronomii · Uniwersytet Przyrodniczy w Poznaniu
+            © Department of Agronomy · Poznań University of Life Sciences
           </p>
         </div>
 
@@ -190,7 +185,7 @@ function Start() {
           lineHeight: '1.7',
           margin: 0,
         }}>
-          {' '}Cultiva is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management.
+          {' '}PlantStalker is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management.
         </p>
       </div>
     </>
