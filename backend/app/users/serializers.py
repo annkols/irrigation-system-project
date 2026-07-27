@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 
 from .models import CustomUserProfile
 
@@ -18,6 +19,28 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "profile", "is_active", "is_staff"]
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        email = attrs["email"].strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user is None or not user.check_password(attrs["password"]):
+            raise AuthenticationFailed("Invalid email or password.")
+
+        if not user.is_active:
+            raise PermissionDenied("Account is waiting for administrator approval.")
+
+        attrs["user"] = user
+        return attrs
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True, write_only=True)
 
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)

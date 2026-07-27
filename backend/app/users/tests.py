@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from users.models import CustomUserProfile
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # Create your tests here.
 User = get_user_model()
@@ -131,6 +132,124 @@ class UserTests(APITestCase):
         self.assertEqual(User.objects.count(), 0)
 
 
+class AuthenticationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="active.user",
+            email="active@example.com",
+            password="Z9!vQ2#pL7@xpass",
+            first_name="Active",
+            last_name="User",
+            is_active=True,
+        )
+        CustomUserProfile.objects.create(
+            user=self.user,
+            university="UPP",
+            department="Agronomy",
+            role="student",
+        )
+
+    def login(self):
+        return self.client.post(
+            reverse("auth-login"),
+            {"email": "ACTIVE@example.com", "password": "Z9!vQ2#pL7@xpass"},
+            format="json",
+        )
+
+    def test_login_returns_tokens_and_user(self):
+        response = self.login()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertEqual(response.data["user"]["email"], "active@example.com")
+
+    def test_login_rejects_invalid_credentials(self):
+        response = self.client.post(
+            reverse("auth-login"),
+            {"email": "active@example.com", "password": "wrong-password"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_login_rejects_inactive_account(self):
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+
+        response = self.login()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_current_user_requires_and_accepts_access_token(self):
+        anonymous_response = self.client.get(reverse("auth-me"))
+        self.assertEqual(anonymous_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        login_response = self.login()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {login_response.data['access']}"
+        )
+        response = self.client.get(reverse("auth-me"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.user.pk)
+
+    def test_refresh_rotates_token_and_logout_blacklists_it(self):
+        login_response = self.login()
+        refresh_response = self.client.post(
+            reverse("auth-token-refresh"),
+            {"refresh": login_response.data["refresh"]},
+            format="json",
+        )
+
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", refresh_response.data)
+        self.assertIn("refresh", refresh_response.data)
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {refresh_response.data['access']}"
+        )
+        logout_response = self.client.post(
+            reverse("auth-logout"),
+            {"refresh": refresh_response.data["refresh"]},
+            format="json",
+        )
+        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+
+        rejected_refresh = self.client.post(
+            reverse("auth-token-refresh"),
+            {"refresh": refresh_response.data["refresh"]},
+            format="json",
+        )
+        self.assertEqual(rejected_refresh.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_admin_can_activate_user(self):
+        pending_user = User.objects.create_user(
+            username="pending.user",
+            email="pending@example.com",
+            password="Z9!vQ2#pL7@xpass",
+            is_active=False,
+        )
+        admin = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="AdminPass123!",
+        )
+        admin_access = RefreshToken.for_user(admin).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {admin_access}")
+
+        response = self.client.patch(
+            reverse("user-activate", args=[pending_user.pk]),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        pending_user.refresh_from_db()
+        self.assertTrue(pending_user.is_active)
+
+
+class UserValidationTests(APITestCase):
     def test_email_cannot_be_empty(self):
         url = reverse("user-register")
 
