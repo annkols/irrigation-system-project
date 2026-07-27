@@ -7,7 +7,7 @@ import bgImage from "./images/back.jpg";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const CAMERA_STREAM_URL = import.meta.env.VITE_CAMERA_STREAM_URL;
+const CAMERA_STREAM_URL = `${API_BASE_URL}/camera/stream/`;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
@@ -20,6 +20,7 @@ function Experiment_details() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
+  const [isCapturingFrame, setIsCapturingFrame] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
@@ -239,6 +240,32 @@ function Experiment_details() {
     }
   };
 
+  const captureFrame = async () => {
+    setIsCapturingFrame(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/experiments/${id}/frames/capture/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: "" }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Failed to save frame.");
+      }
+
+      toast.success("Frame saved successfully.");
+    } catch (error) {
+      toast.error(error.message || "Failed to save frame.");
+    } finally {
+      setIsCapturingFrame(false);
+    }
+  };
+
   if (!experiment) return <div style={{ padding: 40 }}>Loading...</div>;
 
   const progressPercent = calculateProgress(experiment);
@@ -253,7 +280,7 @@ function Experiment_details() {
       <header className="header">
         <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="Cultiva logo" className="logo-img" />
-          <h1>CULTIVA</h1>
+          <h1>PlantStalker</h1>
         </div>
         <div className="icons">
           <span className="material-symbols-outlined">settings</span>
@@ -375,6 +402,25 @@ function Experiment_details() {
         <div className="exp-details-readings-row">
           <div className="exp-details-img-box">
             <img src={CAMERA_STREAM_URL} alt="Camera stream" className="exp-details-img" />
+            <div className="camera-frame-actions">
+              <button
+                type="button"
+                className="capture-frame-btn"
+                disabled={isCapturingFrame}
+                onClick={captureFrame}
+              >
+                <span className="material-symbols-outlined">photo_camera</span>
+                {isCapturingFrame ? "Saving..." : "Save frame"}
+              </button>
+              <button
+                type="button"
+                className="saved-frames-btn"
+                onClick={() => navigate(`/experiment/${id}/frames`)}
+              >
+                <span className="material-symbols-outlined">photo_library</span>
+                Saved frames
+              </button>
+            </div>
             {/* pump control */}
             <div className="pump-control">
               <div className="pump-control-header">

@@ -6,7 +6,6 @@ import TopBar from "./Topbar";
 import ExperimentCard from "./ExperimentCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const CAMERA_STREAM_URL = import.meta.env.VITE_CAMERA_STREAM_URL;
 
 export default function Dashboard() {
     const navigate = useNavigate();

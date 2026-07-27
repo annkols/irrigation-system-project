@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'; //strona po zalogowaniu (wczesniej Ap
 import New_experiment from './pages/New_experiment'; //dodawanie nowego eksperymentu
 import Experiment_details from './pages/Experiment_details'; //szczegoly eksperymentu
 import Experiment_edit from './pages/Experiment_edit'; //edycja eksperymentu
+import SavedFrames from './pages/SavedFrames';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/new-experiment" element={<New_experiment />} />
         <Route path="/experiment/:id" element={<Experiment_details />} />
         <Route path="/experiment/:id/edit" element={<Experiment_edit />} />
+        <Route path="/experiment/:id/frames" element={<SavedFrames />} />
       </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>

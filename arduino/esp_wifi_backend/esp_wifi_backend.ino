@@ -1,11 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
+#include <WiFiClientSecureBearSSL.h>
 #include "arduino_secrets.h"
 
 // Dla ESP32 zamien powyzsze include na:
 // #include <WiFi.h>
 // #include <HTTPClient.h>
+// #include <WiFiClientSecure.h>
 
 unsigned long lastCommandCheckAt = 0;
 const unsigned long commandCheckIntervalMs = 5000;
@@ -59,7 +60,8 @@ void sendToBackend(String payload) {
     return;
   }
 
-  WiFiClient client;
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
   HTTPClient http;
 
   http.begin(client, MEASUREMENTS_API_URL);
@@ -84,7 +86,8 @@ void fetchPumpCommand() {
     return;
   }
 
-  WiFiClient client;
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
   HTTPClient http;
 
   http.begin(client, PUMP_COMMAND_API_URL);
@@ -115,7 +118,8 @@ void fetchSensorConfig() {
     return;
   }
 
-  WiFiClient client;
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
   HTTPClient http;
 
   http.begin(client, ACTIVE_SENSOR_CONFIG_API_URL);

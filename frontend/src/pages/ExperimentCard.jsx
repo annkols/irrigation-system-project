@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-const CAMERA_STREAM_URL = import.meta.env.VITE_CAMERA_STREAM_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+const CAMERA_STREAM_URL = `${API_BASE_URL}/camera/stream/`;
 
 export default function ExperimentCard({
 

@@ -12,12 +12,12 @@ System sklada sie z pieciu glownych warstw:
 
 ```mermaid
 flowchart LR
-    S["Czujniki i pompa"] --> A["Arduino Mega"]
-    A -->|"Serial / JSON"| E["ESP8266"]
-    E -->|"HTTP POST / GET"| B["Django REST API"]
-    B --> P["PostgreSQL"]
-    F["React + Vite"] -->|"HTTP / fetch"| B
-    B -->|"JSON"| F
+    S["Czujniki + pompa<br/>- DFRobot SEN0193: wilgotność gleby<br/>- BH1750: natężenie światła<br/>- BME280 5V: ciśnienie, temperatura, wilgotność<br/>- DS18B20: temperatura gleby<br/>- przekaźnik 1 kanał + pompa DP-DIY"] <-->|"czujniki → sygnały pomiarowe<br/>Arduino → przekaźnik → pompa"| A["Mikrokomputer<br/>MEGA 2560 R3<br/>lokalna logika pomiarów i sterowanie pompą"]
+    A <-->|"Serial / JSON<br/>pomiary, konfiguracja, komendy pompy"| E["Moduł Wi-Fi<br/>ESP8266<br/>na tej samej płytce"]
+    E -->|"HTTP POST<br/>pomiary"| B["Backend<br/>Django REST API"]
+    B -->|"HTTP GET<br/>konfiguracja i komendy"| E
+    B <-->|"zapis / odczyt"| P["Baza danych<br/>PostgreSQL"]
+    F["Aplikacja webowa<br/>React + Vite"] <-->|"fetch / HTTP<br/>JSON"| B
 ```
 
 ## Przeplyw danych pomiarowych

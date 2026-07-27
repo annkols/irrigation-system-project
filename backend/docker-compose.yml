@@ -23,6 +23,7 @@ services:
       - .env
     volumes:
       - ./app:/app
+      - ${MEDIA_DIR:-camera_media}:/app/media
     ports:
       - "8000:8000"
     depends_on:
@@ -30,3 +31,4 @@ services:
 
 volumes:
   postgres_data:
+  camera_media:
