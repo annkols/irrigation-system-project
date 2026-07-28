@@ -31,30 +31,26 @@ export default function TopBar() {
     }, []);
 
     const logout = async () => {
-        setLoading(true);
+    setLoading(true);
 
-        const accessToken = localStorage.getItem("access_token");
-        const refreshToken = localStorage.getItem("refresh_token");
+    const accessToken = localStorage.getItem("token");
 
         try {
-            if (accessToken && refreshToken) {
+            if (accessToken) {
                 await fetch(`${API_BASE_URL}/auth/logout/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${accessToken}`
                     },
-                    body: JSON.stringify({ refresh: refreshToken }),
                 });
             }
         } catch (err) {
-            console.error("B³¹d po³¹czenia z serwerem podczas wylogowywania:", err);
+            console.error("B³¹d podczas wylogowywania:", err);
         } finally {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("token");
             setLoading(false);
             setIsMenuOpen(false);
-
             navigate("/");
         }
     };
