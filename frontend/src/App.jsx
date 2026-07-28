@@ -8,17 +8,18 @@ import New_experiment from './pages/New_experiment'; //dodawanie nowego eksperym
 import Experiment_details from './pages/Experiment_details'; //szczegoly eksperymentu
 import Experiment_edit from './pages/Experiment_edit'; //edycja eksperymentu
 import SavedFrames from './pages/SavedFrames';
+import ProtectedRoute from './ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Start />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/new-experiment" element={<New_experiment />} />
-        <Route path="/experiment/:id" element={<Experiment_details />} />
-        <Route path="/experiment/:id/edit" element={<Experiment_edit />} />
-        <Route path="/experiment/:id/frames" element={<SavedFrames />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/new-experiment" element={<ProtectedRoute><New_experiment /></ProtectedRoute>} />
+        <Route path="/experiment/:id" element={<ProtectedRoute><Experiment_details /></ProtectedRoute>} />
+        <Route path="/experiment/:id/edit" element={<ProtectedRoute><Experiment_edit /></ProtectedRoute>} />
+        <Route path="/experiment/:id/frames" element={<ProtectedRoute><SavedFrames /></ProtectedRoute>} />
       </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>

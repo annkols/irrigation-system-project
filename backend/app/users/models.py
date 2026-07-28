@@ -11,7 +11,8 @@ class CustomUser(AbstractUser):
 class CustomUserProfile(models.Model):
     class Role(models.TextChoices):
         STUDENT = "student", "Student"
-        PROFESSOR = "professor", "Professor"
+        DOCTORAL_STUDENT = "doctoral_student", "Doctoral student"
+        ACADEMIC_EMPLOYEE = "academic_employee", "Academic employee"
         ADMINISTRATIVE_WORKER = "administrative_worker", "Administrative worker"
         OTHER = "other", "Other"
 
