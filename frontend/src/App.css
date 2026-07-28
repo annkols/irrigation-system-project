@@ -1919,3 +1919,171 @@ body {
   color: white;
   cursor: pointer;
 }
+/*register*/
+.register-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.register-box {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 500px;
+  background: white;
+  border-radius: 20px;
+  padding: 35px;
+  position: relative;
+  font-family: Inter, sans-serif;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.progress-step {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+.progress-step div {
+  flex: 1;
+  height: 6px;
+  background: #ddd;
+  border-radius: 10px;
+}
+
+.progress-step .active {
+  background: #4caf50;
+}
+
+.register-box h2 {
+  margin-bottom: 25px;
+}
+
+.register-box input,
+.register-box select {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.register-box button {
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.register-box button:hover {
+  background: #43a047;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.buttons button {
+  width: 48%;
+}
+
+
+/*login*/
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+}
+
+.login-box {
+  width: 400px;
+  background: white;
+  border-radius: 20px;
+  padding: 35px;
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  font-family: Inter, sans-serif;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 18px;
+
+  border: none;
+  background: none;
+
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.login-box h2 {
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.login-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-box input {
+  padding: 14px;
+  border: 1px solid #d4d4d4;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.login-box input:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.login-box button[type="submit"] {
+  padding: 14px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #4caf50;
+  color: white;
+
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.login-box button[type="submit"]:hover {
+  background: #43a047;
+}

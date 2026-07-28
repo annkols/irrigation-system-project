@@ -5,11 +5,16 @@ import arrow from './images/arrow.png';
 import back_img from './images/back.jpg';
 import logo from './images/logo-white.png';
 import name from './images/name-white.png';
+import Register from './Register';
+import Login from "./Login";
 
 function Start() {
   const navigate = useNavigate();
   const [hoverSignIn, setHoverSignIn] = React.useState(false);
   const [hoverSignUp, setHoverSignUp] = React.useState(false);
+
+  const [showLogin, setShowLogin] = React.useState(false);
+  const [showRegister, setShowRegister] = React.useState(false);
 
   return (
     <>
@@ -88,7 +93,7 @@ function Start() {
               }}
               onMouseEnter={() => setHoverSignIn(true)}
               onMouseLeave={() => setHoverSignIn(false)}
-              onClick={() => navigate('/dashboard')}
+              onClick={() => setShowLogin(true)}
             >
               Sign in
             </button>
@@ -109,6 +114,7 @@ function Start() {
               }}
               onMouseEnter={() => setHoverSignUp(true)}
               onMouseLeave={() => setHoverSignUp(false)}
+              onClick={() => setShowRegister(true)}
             >
               Sign up
             </button>
@@ -188,6 +194,8 @@ function Start() {
           {' '}PlantStalker is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management.
         </p>
       </div>
+      {showLogin && (<Login onClose={() => setShowLogin(false)} />)}
+      {showRegister && ( <Register onClose={() => setShowRegister(false)}/>)}
     </>
   );
 }
