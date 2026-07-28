@@ -143,7 +143,8 @@ function Register({ onClose }) {
             >
               <option value="">Choose role</option>
               <option value="student">Student</option>
-              <option value="professor">Professor</option>
+              <option value="doctoral_student">Doctoral student</option>
+              <option value="academic_employee">Academic employee</option>
               <option value="administrative_worker">Administrative worker</option>
               <option value="other">Other</option>
             </select>
