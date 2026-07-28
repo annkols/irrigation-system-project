@@ -1,0 +1,40 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env
+        working-directory: ./frontend
+        run: |
+          echo "VITE_API_URL=https://backend.cultiva-greenhouse.pl/api" > .env
+
+      - name: Build docker image
+        working-directory: ./frontend
+        run: docker build -t local/irrigation-system-frontend .
+
+      - name: Save docker image
+        run: docker save local/irrigation-system-frontend -o front-out.tar
+     
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_CONFIG }}" > ~/.ssh/config
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/key
+          chmod 600 ~/.ssh/key ~/.ssh/config
+
+      - name: Copy docker image
+        run: scp -o StrictHostKeyChecking=no front-out.tar remote:/opt/irrigation-system/
+
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no remote "cd /opt/irrigation-system && \
+            docker load -i front-out.tar && \
+            rm front-out.tar && \
+            docker compose up -d"
