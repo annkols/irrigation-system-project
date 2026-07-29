@@ -1,0 +1,36 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build docker image
+        working-directory: ./backend
+        run: docker build -t local/irrigation-system-backend -f Prod.Dockerfile .
+
+      - name: Save docker image
+        run: docker save local/irrigation-system-backend -o backend-out.tar
+     
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_CONFIG }}" > ~/.ssh/config
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/key
+          chmod 600 ~/.ssh/key ~/.ssh/config
+
+      - name: Copy docker image
+        run: scp -o StrictHostKeyChecking=no backend-out.tar remote:/opt/irrigation-system/
+
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no remote "cd /opt/irrigation-system && \
+            docker load -i backend-out.tar && \
+            rm backend-out.tar && \
+            docker compose up -d && \
+            docker compose exec -T backend python manage.py migrate"
