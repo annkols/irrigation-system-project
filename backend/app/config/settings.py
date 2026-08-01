@@ -140,8 +140,10 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CAMERA_JPG_URL = os.environ.get('CAMERA_JPG_URL', '')
-CAMERA_STREAM_URL = os.environ.get('CAMERA_STREAM_URL', '')
+CAMERA_UPLOAD_TOKENS = {
+    sensor_set_id: os.environ.get(f'CAMERA_{sensor_set_id}_UPLOAD_TOKEN', '')
+    for sensor_set_id in (1, 2, 3)
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

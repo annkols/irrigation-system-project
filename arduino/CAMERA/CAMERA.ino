@@ -1,5 +1,7 @@
 #include "esp_camera.h"
 #include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include "esp_http_server.h"
 #include "arduino_secrets.h"
 
@@ -25,6 +27,7 @@
 
 httpd_handle_t camera_httpd = NULL;
 httpd_handle_t stream_httpd = NULL;
+unsigned long lastUploadAt = 0;
 
 static const char* STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=frame";
 static const char* STREAM_BOUNDARY = "\r\n--frame\r\n";
@@ -143,6 +146,45 @@ void startCameraServer() {
   }
 }
 
+void uploadFrameToBackend() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Brak Wi-Fi - pomijam wysylanie klatki");
+    WiFi.reconnect();
+    return;
+  }
+
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Nie udalo sie pobrac klatki do wyslania");
+    return;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  if (!http.begin(client, CAMERA_UPLOAD_URL)) {
+    Serial.println("Nie udalo sie polaczyc z adresem backendu");
+    esp_camera_fb_return(fb);
+    return;
+  }
+
+  http.addHeader("Content-Type", "image/jpeg");
+  http.addHeader("X-Sensor-Set-ID", String(CAMERA_SENSOR_SET_ID));
+  http.addHeader("X-Camera-Token", CAMERA_UPLOAD_TOKEN);
+
+  int statusCode = http.POST(fb->buf, fb->len);
+  Serial.print("Wysylanie klatki - status HTTP: ");
+  Serial.println(statusCode);
+
+  if (statusCode > 0) {
+    Serial.println(http.getString());
+  }
+
+  http.end();
+  esp_camera_fb_return(fb);
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(false);
@@ -229,5 +271,10 @@ void setup() {
 }
 
 void loop() {
-  delay(10000);
+  if (lastUploadAt == 0 || millis() - lastUploadAt >= CAMERA_UPLOAD_INTERVAL_MS) {
+    lastUploadAt = millis();
+    uploadFrameToBackend();
+  }
+
+  delay(1000);
 }

@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const CAMERA_STREAM_URL = `${API_BASE_URL}/camera/stream/`;
 
 export default function ExperimentCard({
 
@@ -59,8 +58,8 @@ export default function ExperimentCard({
             <div className="card-image">
 
                 <img
-                    src={CAMERA_STREAM_URL}
-                    alt="Camera stream"
+                    src={`${API_BASE_URL}/experiments/${experiment.id}/frames/latest/image/`}
+                    alt="Latest camera frame"
                     className="camera-stream"
                 />
 

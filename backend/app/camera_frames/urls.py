@@ -2,23 +2,27 @@ from django.urls import path
 
 from .views import (
     CameraFrameDeleteView,
-    CameraStreamView,
-    CaptureFrameView,
+    CameraFrameUploadView,
     ExperimentFrameListView,
+    LatestExperimentFrameImageView,
 )
 
 
 urlpatterns = [
-    path("camera/stream/", CameraStreamView.as_view(), name="camera-stream"),
+    path(
+        "camera/frames/upload/",
+        CameraFrameUploadView.as_view(),
+        name="camera-frame-upload",
+    ),
+    path(
+        "experiments/<int:experiment_id>/frames/latest/image/",
+        LatestExperimentFrameImageView.as_view(),
+        name="experiment-latest-frame-image",
+    ),
     path(
         "experiments/<int:experiment_id>/frames/",
         ExperimentFrameListView.as_view(),
         name="experiment-frame-list",
-    ),
-    path(
-        "experiments/<int:experiment_id>/frames/capture/",
-        CaptureFrameView.as_view(),
-        name="capture-frame",
     ),
     path(
         "frames/<int:pk>/",

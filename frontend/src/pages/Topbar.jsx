@@ -46,7 +46,7 @@ export default function TopBar() {
                 });
             }
         } catch (err) {
-            console.error("B³¹d podczas wylogowywania:", err);
+            console.error("BÅ‚Ä…d podczas wylogowywania:", err);
         } finally {
             localStorage.removeItem("token");
             setLoading(false);

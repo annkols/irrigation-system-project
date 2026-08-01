@@ -7,7 +7,6 @@ import logoName from "./images/name-color.png";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const CAMERA_STREAM_URL = `${API_BASE_URL}/camera/stream/`;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
@@ -28,7 +27,6 @@ function Experiment_details() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
-  const [isCapturingFrame, setIsCapturingFrame] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
@@ -189,24 +187,6 @@ function Experiment_details() {
       setPumpCommandStatus("Command failed");
     } finally {
       setIsSendingPumpCommand(false);
-    }
-  };
-
-  const captureFrame = async () => {
-    setIsCapturingFrame(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/experiments/${id}/frames/capture/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: "" }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Failed to save frame.");
-      toast.success("Frame saved successfully.");
-    } catch (error) {
-      toast.error(error.message || "Failed to save frame.");
-    } finally {
-      setIsCapturingFrame(false);
     }
   };
 
@@ -412,12 +392,12 @@ function Experiment_details() {
             <div className="exp-tab-camera">
               <h2 className="exp-tab-section-title">Camera view</h2>
               <div className="exp-camera-main">
-                <img src={CAMERA_STREAM_URL} alt="Camera stream" className="exp-camera-stream" />
+                <img
+                  src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/`}
+                  alt="Latest camera frame"
+                  className="exp-camera-stream"
+                />
                 <div className="exp-camera-controls">
-                  <button className="capture-frame-btn" disabled={isCapturingFrame} onClick={captureFrame}>
-                    <span className="material-symbols-outlined">photo_camera</span>
-                    {isCapturingFrame ? "Saving..." : "Save frame"}
-                  </button>
                   <button className="saved-frames-btn" onClick={() => navigate(`/experiment/${id}/frames`)}>
                     <span className="material-symbols-outlined">photo_library</span>
                     Saved frames
