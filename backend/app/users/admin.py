@@ -1,23 +1,29 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm
-from .models import CustomUser, CustomUserProfile
+from .models import UserProfile
+
+User = get_user_model()
 
 
-class CustomUserProfileInline(admin.StackedInline):
-    model = CustomUserProfile
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
     can_delete = False
     extra = 0
 
 
-@admin.register(CustomUser)
-class CustomUserAdmin(UserAdmin):
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class PlantStalkerUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
-    model = CustomUser
+    model = User
 
-    inlines = (CustomUserProfileInline,)
+    inlines = (UserProfileInline,)
 
     list_display = (
         "id",

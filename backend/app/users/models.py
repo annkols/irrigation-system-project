@@ -1,14 +1,10 @@
 # users/models.py
 
-from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 from django.db import models
 
 
-class CustomUser(AbstractUser):
-    email = models.EmailField(unique=True)
-
-
-class CustomUserProfile(models.Model):
+class UserProfile(models.Model):
     class Role(models.TextChoices):
         STUDENT = "student", "Student"
         DOCTORAL_STUDENT = "doctoral_student", "Doctoral student"
@@ -17,14 +13,14 @@ class CustomUserProfile(models.Model):
         OTHER = "other", "Other"
 
     user = models.OneToOneField(
-        CustomUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profile",
     )
 
-    university = models.CharField(max_length=150)
+    university = models.CharField(max_length=150, blank=True)
 
-    department = models.CharField(max_length=150)
+    department = models.CharField(max_length=150, blank=True)
 
     role = models.CharField(
         max_length=30,

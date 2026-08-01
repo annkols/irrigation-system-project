@@ -184,6 +184,3 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'CHECK_REVOKE_TOKEN': True,
 }
-
-# Users
-AUTH_USER_MODEL = "users.CustomUser"

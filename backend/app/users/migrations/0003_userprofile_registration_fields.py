@@ -1,20 +1,20 @@
 from django.db import migrations, models
 
 
-def migrate_professor_role(apps, schema_editor):
-    profile_model = apps.get_model("users", "CustomUserProfile")
-    profile_model.objects.filter(role="professor").update(role="academic_employee")
-
-
 class Migration(migrations.Migration):
     dependencies = [
-        ("users", "0001_initial"),
+        ("users", "0002_rename_scientific_unit_userprofile_department"),
     ]
 
     operations = [
-        migrations.RunPython(migrate_professor_role, migrations.RunPython.noop),
-        migrations.AlterField(
-            model_name="customuserprofile",
+        migrations.AddField(
+            model_name="userprofile",
+            name="university",
+            field=models.CharField(blank=True, default="", max_length=150),
+            preserve_default=False,
+        ),
+        migrations.AddField(
+            model_name="userprofile",
             name="role",
             field=models.CharField(
                 choices=[
@@ -27,5 +27,10 @@ class Migration(migrations.Migration):
                 default="other",
                 max_length=30,
             ),
+        ),
+        migrations.AddField(
+            model_name="userprofile",
+            name="profile_picture",
+            field=models.ImageField(blank=True, upload_to="profile_pictures/"),
         ),
     ]

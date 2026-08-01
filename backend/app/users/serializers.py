@@ -4,13 +4,13 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 
-from .models import CustomUserProfile
+from .models import UserProfile
 
 User = get_user_model()
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomUserProfile
+        model = UserProfile
         fields = ["university", "department", "role", "profile_picture"]
 
 class UserSerializer(serializers.ModelSerializer):
@@ -50,7 +50,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     university = serializers.CharField(write_only=True, required=True)
     department = serializers.CharField(write_only=True, required=True)
-    role = serializers.ChoiceField(choices=CustomUserProfile.Role.choices, write_only=True)
+    role = serializers.ChoiceField(choices=UserProfile.Role.choices, write_only=True)
     profile_picture = serializers.ImageField(required=False, write_only=True)
 
     class Meta:
@@ -109,6 +109,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             if profile_picture:
                 profile_data["profile_picture"] = profile_picture
 
-            CustomUserProfile.objects.create(**profile_data)
+            UserProfile.objects.create(**profile_data)
 
         return user

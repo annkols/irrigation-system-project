@@ -2,7 +2,7 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from users.models import CustomUserProfile
+from users.models import UserProfile
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Create your tests here.
@@ -46,7 +46,7 @@ class UserTests(APITestCase):
             user.check_password("Z9!vQ2#pL7@xpass")
         )
 
-        profile = CustomUserProfile.objects.get(user=user)
+        profile = UserProfile.objects.get(user=user)
 
         self.assertEqual(
             profile.university,
@@ -142,7 +142,7 @@ class AuthenticationTests(APITestCase):
             last_name="User",
             is_active=True,
         )
-        CustomUserProfile.objects.create(
+        UserProfile.objects.create(
             user=self.user,
             university="UPP",
             department="Agronomy",
