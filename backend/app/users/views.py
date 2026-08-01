@@ -1,22 +1,134 @@
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
-from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from django.contrib.auth.models import update_last_login
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
+
 
 # Create your views here.
-from .serializers import UserSerializer
+from .serializers import (
+    LoginSerializer,
+    LogoutSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
+from .permissions import IsSuperUser
 
 User = get_user_model()
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
+    permission_classes = [IsAdminUser]
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
     authentication_classes = []
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+
+        refresh = RefreshToken.for_user(user)
+        update_last_login(None, user)
+
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": UserSerializer(user, context={"request": request}).data,
+        })
+
+
+class TokenRefreshView(SimpleJWTTokenRefreshView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+
+class CurrentUserView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            refresh = RefreshToken(serializer.validated_data["refresh"])
+        except TokenError as error:
+            raise ValidationError({"refresh": "Invalid or expired refresh token."}) from error
+
+        if str(refresh.get("user_id")) != str(request.user.pk):
+            raise ValidationError({"refresh": "Refresh token does not belong to this user."})
+
+        refresh.blacklist()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class UserDeleteView(generics.DestroyAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsSuperUser]
+
+class UserDeactivateView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if user.is_staff or user.is_superuser:
+            return Response(
+                {"detail": "You cannot deactivate admin users."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        return Response({"detail": "User has been deactivated."})
+
+
+class UserActivateView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if user.is_active:
+            return Response({"detail": "User is already active."})
+
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+        return Response({
+            "detail": "User has been activated.",
+            "user": UserSerializer(user, context={"request": request}).data,
+        })
+
+

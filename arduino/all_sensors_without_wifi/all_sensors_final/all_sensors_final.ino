@@ -28,7 +28,7 @@ int dryValue = 502;
 int wetValue = 259;
 
 int moistureLimit = 20;
-int stationNumber = 1;
+int stationNumber = 3;
 int potNumber = 1;
 
 unsigned long soilMoistureIntervalMs = 10000;

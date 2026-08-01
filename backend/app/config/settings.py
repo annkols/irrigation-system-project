@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,7 +28,11 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -44,7 +49,9 @@ INSTALLED_APPS = [
     'sensors',
     'users',
     'pump_control',
+    'camera_frames',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
 ]
 
@@ -94,7 +101,6 @@ DATABASES = {
 }
 
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -132,11 +138,52 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.environ.get('STATIC_ROOT', '/app/static')
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+CAMERA_UPLOAD_TOKENS = {
+    sensor_set_id: os.environ.get(f'CAMERA_{sensor_set_id}_UPLOAD_TOKEN', '')
+    for sensor_set_id in (1, 2, 3)
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173',
+    ).split(',')
+    if origin.strip()
+]
 
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(",")
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(",")
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://localhost:5173',
+    ).split(',')
+    if origin.strip()
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'CHECK_REVOKE_TOKEN': True,
+}
+
+# Users
+AUTH_USER_MODEL = "users.CustomUser"

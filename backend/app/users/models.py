@@ -1,21 +1,44 @@
+# users/models.py
+
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.conf import settings
 
-"""
-{
-  "id": 1,
-}
-"""
 
-# Create your models here.
-class UserProfile(models.Model):
+class CustomUser(AbstractUser):
+    email = models.EmailField(unique=True)
+
+
+class CustomUserProfile(models.Model):
+    class Role(models.TextChoices):
+        STUDENT = "student", "Student"
+        DOCTORAL_STUDENT = "doctoral_student", "Doctoral student"
+        ACADEMIC_EMPLOYEE = "academic_employee", "Academic employee"
+        ADMINISTRATIVE_WORKER = "administrative_worker", "Administrative worker"
+        OTHER = "other", "Other"
+
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
+        CustomUser,
         on_delete=models.CASCADE,
-        related_name='profile'
+        related_name="profile",
     )
 
-    department = models.CharField(max_length=150, blank=True)
+    university = models.CharField(max_length=150)
+
+    department = models.CharField(max_length=150)
+
+    role = models.CharField(
+        max_length=30,
+        choices=Role.choices,
+        default=Role.OTHER,
+    )
+
+    profile_picture = models.ImageField(
+        upload_to="profile_pictures/",
+        blank=True,
+    )
 
     def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name} | {self.department}"
+        return (
+            f"{self.user.first_name} {self.user.last_name}"
+            f" | {self.department}"
+        )

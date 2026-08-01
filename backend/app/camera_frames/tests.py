@@ -1,0 +1,97 @@
+import shutil
+import tempfile
+
+from django.test import override_settings
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework.test import APITestCase
+
+from experiments.models import Experiment
+
+from .models import CameraFrame
+
+
+class CameraFrameApiTests(APITestCase):
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp()
+        self.settings_override = override_settings(
+            MEDIA_ROOT=self.media_root,
+            CAMERA_UPLOAD_TOKENS={1: "camera-test-token"},
+        )
+        self.settings_override.enable()
+        self.experiment = Experiment.objects.create(
+            name="Test experiment",
+            plant_name="Tomato",
+            sensor_set_id=1,
+            started_at=timezone.now(),
+        )
+
+    def tearDown(self):
+        self.settings_override.disable()
+        shutil.rmtree(self.media_root, ignore_errors=True)
+
+    def upload_frame(self, token="camera-test-token", content_type="image/jpeg"):
+        return self.client.generic(
+            "POST",
+            reverse("camera-frame-upload"),
+            b"jpeg-data",
+            content_type=content_type,
+            HTTP_X_SENSOR_SET_ID="1",
+            HTTP_X_CAMERA_TOKEN=token,
+        )
+
+    def test_upload_assigns_frame_to_active_experiment(self):
+        response = self.upload_frame()
+
+        self.assertEqual(response.status_code, 201)
+        frame = CameraFrame.objects.get()
+        self.assertEqual(frame.experiment, self.experiment)
+        self.assertEqual(frame.note, "Automatic camera upload")
+
+        list_response = self.client.get(
+            reverse("experiment-frame-list", args=[self.experiment.pk])
+        )
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(len(list_response.data), 1)
+
+    def test_upload_rejects_invalid_token(self):
+        response = self.upload_frame(token="wrong-token")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_upload_requires_active_experiment(self):
+        self.experiment.finished_at = timezone.now()
+        self.experiment.save(update_fields=["finished_at"])
+
+        response = self.upload_frame()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_upload_rejects_non_jpeg_body(self):
+        response = self.upload_frame(content_type="text/plain")
+
+        self.assertEqual(response.status_code, 415)
+        self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_latest_frame_image_returns_uploaded_jpeg(self):
+        self.upload_frame()
+
+        response = self.client.get(
+            reverse("experiment-latest-frame-image", args=[self.experiment.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), b"jpeg-data")
+        self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_delete_removes_database_record(self):
+        upload_response = self.upload_frame()
+
+        response = self.client.delete(
+            reverse("camera-frame-delete", args=[upload_response.data["id"]])
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(CameraFrame.objects.count(), 0)
