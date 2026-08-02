@@ -52,8 +52,8 @@ float cachedAirTemperature = 0;
 float cachedAirHumidity = 0;
 float cachedPressure = 0;
 
-const int RELAY_ON = HIGH;
-const int RELAY_OFF = LOW;
+const int RELAY_ON = LOW;
+const int RELAY_OFF = HIGH;
 
 bool pumpState = false;
 bool manualPumpMode = false;
