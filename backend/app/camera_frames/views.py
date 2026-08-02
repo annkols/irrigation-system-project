@@ -1,7 +1,5 @@
-from secrets import compare_digest
 from uuid import uuid4
 
-from django.conf import settings
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -13,7 +11,7 @@ from rest_framework.views import APIView
 
 from experiments.models import Experiment
 
-from .models import CameraFrame
+from .models import CameraDevice, CameraFrame
 from .serializers import CameraFrameSerializer
 
 
@@ -33,9 +31,12 @@ class CameraFrameUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        expected_token = settings.CAMERA_UPLOAD_TOKENS.get(sensor_set_id, "")
         supplied_token = request.headers.get("X-Camera-Token", "")
-        if not expected_token or not compare_digest(supplied_token, expected_token):
+        device = CameraDevice.objects.filter(
+            sensor_set_id=sensor_set_id,
+            is_active=True,
+        ).first()
+        if device is None or not device.token_matches(supplied_token):
             return Response(
                 {"detail": "Invalid camera credentials."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -49,11 +50,18 @@ class CameraFrameUploadView(APIView):
             )
 
         content_length = request.META.get("CONTENT_LENGTH")
-        if content_length and int(content_length) > MAX_FRAME_SIZE:
-            return Response(
-                {"detail": "The camera image is too large."},
-                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            )
+        if content_length:
+            try:
+                if int(content_length) > MAX_FRAME_SIZE:
+                    return Response(
+                        {"detail": "The camera image is too large."},
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    )
+            except ValueError:
+                return Response(
+                    {"detail": "Invalid Content-Length header."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         image_bytes = request.body
         if not image_bytes:

@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 
 from experiments.models import Experiment
 
-from .models import CameraFrame
+from .models import CameraDevice, CameraFrame
 
 
 class CameraFrameApiTests(APITestCase):
@@ -16,7 +16,6 @@ class CameraFrameApiTests(APITestCase):
         self.media_root = tempfile.mkdtemp()
         self.settings_override = override_settings(
             MEDIA_ROOT=self.media_root,
-            CAMERA_UPLOAD_TOKENS={1: "camera-test-token"},
         )
         self.settings_override.enable()
         self.experiment = Experiment.objects.create(
@@ -25,6 +24,12 @@ class CameraFrameApiTests(APITestCase):
             sensor_set_id=1,
             started_at=timezone.now(),
         )
+        self.camera_device = CameraDevice.objects.create(
+            name="Test camera",
+            sensor_set_id=1,
+        )
+        self.camera_device.token_hash = CameraDevice.hash_token("camera-test-token")
+        self.camera_device.save(update_fields=["token_hash"])
 
     def tearDown(self):
         self.settings_override.disable()
@@ -56,6 +61,15 @@ class CameraFrameApiTests(APITestCase):
 
     def test_upload_rejects_invalid_token(self):
         response = self.upload_frame(token="wrong-token")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_upload_rejects_inactive_camera(self):
+        self.camera_device.is_active = False
+        self.camera_device.save(update_fields=["is_active"])
+
+        response = self.upload_frame()
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(CameraFrame.objects.count(), 0)

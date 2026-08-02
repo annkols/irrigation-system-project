@@ -1,7 +1,41 @@
+import hashlib
+import secrets
+from hmac import compare_digest
+
 from django.conf import settings
 from django.db import models
 
 from experiments.models import Experiment
+
+
+class CameraDevice(models.Model):
+    name = models.CharField(max_length=100)
+    sensor_set_id = models.PositiveSmallIntegerField(
+        choices=Experiment.SensorSet.choices,
+        unique=True,
+    )
+    token_hash = models.CharField(max_length=64, editable=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @staticmethod
+    def hash_token(token):
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def generate_token(self, save=True):
+        token = secrets.token_urlsafe(32)
+        self.token_hash = self.hash_token(token)
+        if save:
+            self.save(update_fields=["token_hash"])
+        return token
+
+    def token_matches(self, token):
+        if not token or not self.token_hash:
+            return False
+        return compare_digest(self.token_hash, self.hash_token(token))
+
+    def __str__(self):
+        return f"{self.name} - sensor set {self.sensor_set_id}"
 
 
 class CameraFrame(models.Model):

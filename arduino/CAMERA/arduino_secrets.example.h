@@ -4,7 +4,8 @@ const char* WIFI_SSID = "nazwaWifi";
 const char* WIFI_PASSWORD = "hasloDoWifi";
 
 const char* CAMERA_UPLOAD_URL = "https://<BACKEND_HOST>/api/camera/frames/upload/";
-const char* CAMERA_UPLOAD_TOKEN = "ten-sam-sekret-co-CAMERA_3_UPLOAD_TOKEN-na-backendzie";
+// Token jest wyswietlany jednorazowo po utworzeniu kamery w panelu /admin/.
+const char* CAMERA_UPLOAD_TOKEN = "token-skopiowany-z-panelu-admin";
 const int CAMERA_SENSOR_SET_ID = 3;
 const unsigned long CAMERA_UPLOAD_INTERVAL_MS = 60UL * 60UL * 1000UL;
 

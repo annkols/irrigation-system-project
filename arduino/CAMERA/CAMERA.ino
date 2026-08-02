@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include "FS.h"
+#include "SD_MMC.h"
 #include "esp_http_server.h"
 #include "arduino_secrets.h"
 
@@ -28,6 +30,7 @@
 httpd_handle_t camera_httpd = NULL;
 httpd_handle_t stream_httpd = NULL;
 unsigned long lastUploadAt = 0;
+bool sdReady = false;
 
 static const char* STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=frame";
 static const char* STREAM_BOUNDARY = "\r\n--frame\r\n";
@@ -146,43 +149,136 @@ void startCameraServer() {
   }
 }
 
-void uploadFrameToBackend() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Brak Wi-Fi - pomijam wysylanie klatki");
-    WiFi.reconnect();
-    return;
-  }
+void addUploadHeaders(HTTPClient &http) {
+  http.addHeader("Content-Type", "image/jpeg");
+  http.addHeader("X-Sensor-Set-ID", String(CAMERA_SENSOR_SET_ID));
+  http.addHeader("X-Camera-Token", CAMERA_UPLOAD_TOKEN);
+}
 
-  camera_fb_t *fb = esp_camera_fb_get();
-  if (!fb) {
-    Serial.println("Nie udalo sie pobrac klatki do wyslania");
-    return;
-  }
-
+int sendFrameBuffer(uint8_t *data, size_t length) {
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
 
   if (!http.begin(client, CAMERA_UPLOAD_URL)) {
     Serial.println("Nie udalo sie polaczyc z adresem backendu");
-    esp_camera_fb_return(fb);
-    return;
+    return -1;
   }
 
-  http.addHeader("Content-Type", "image/jpeg");
-  http.addHeader("X-Sensor-Set-ID", String(CAMERA_SENSOR_SET_ID));
-  http.addHeader("X-Camera-Token", CAMERA_UPLOAD_TOKEN);
-
-  int statusCode = http.POST(fb->buf, fb->len);
-  Serial.print("Wysylanie klatki - status HTTP: ");
-  Serial.println(statusCode);
+  addUploadHeaders(http);
+  int statusCode = http.POST(data, length);
 
   if (statusCode > 0) {
     Serial.println(http.getString());
   }
 
   http.end();
+  return statusCode;
+}
+
+bool saveFrameToSd(const uint8_t *data, size_t length) {
+  if (!sdReady) {
+    Serial.println("Karta SD jest niedostepna - nie zapisano klatki");
+    return false;
+  }
+
+  char path[48];
+  snprintf(path, sizeof(path), "/pending/frame_%08lx.jpg", (unsigned long)esp_random());
+  File file = SD_MMC.open(path, FILE_WRITE);
+  if (!file) {
+    Serial.println("Nie udalo sie utworzyc pliku na karcie SD");
+    return false;
+  }
+
+  size_t written = file.write(data, length);
+  file.close();
+
+  if (written != length) {
+    SD_MMC.remove(path);
+    Serial.println("Nie udalo sie zapisac calej klatki na karcie SD");
+    return false;
+  }
+
+  Serial.print("Zapisano klatke awaryjnie: ");
+  Serial.println(path);
+  return true;
+}
+
+int sendStoredFrame(File &file) {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  if (!http.begin(client, CAMERA_UPLOAD_URL)) {
+    return -1;
+  }
+
+  addUploadHeaders(http);
+  int statusCode = http.sendRequest("POST", &file, file.size());
+  http.end();
+  return statusCode;
+}
+
+void retryPendingFrames() {
+  if (!sdReady || WiFi.status() != WL_CONNECTED) return;
+
+  File directory = SD_MMC.open("/pending");
+  if (!directory || !directory.isDirectory()) return;
+
+  int sentCount = 0;
+  File file = directory.openNextFile();
+  while (file && sentCount < 3) {
+    if (!file.isDirectory()) {
+      String path = file.path();
+      int statusCode = sendStoredFrame(file);
+      file.close();
+
+      if (statusCode == HTTP_CODE_CREATED) {
+        SD_MMC.remove(path);
+        Serial.print("Wyslano zalegla klatke: ");
+        Serial.println(path);
+        sentCount++;
+      } else {
+        Serial.print("Nie wyslano zaleglej klatki, status: ");
+        Serial.println(statusCode);
+        break;
+      }
+    } else {
+      file.close();
+    }
+    file = directory.openNextFile();
+  }
+
+  directory.close();
+}
+
+void uploadFrameToBackend() {
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Nie udalo sie pobrac klatki do wyslania");
+    return;
+  }
+
+  int statusCode = -1;
+  if (WiFi.status() == WL_CONNECTED) {
+    statusCode = sendFrameBuffer(fb->buf, fb->len);
+  } else {
+    Serial.println("Brak Wi-Fi - zapisuje klatke na karcie SD");
+    WiFi.reconnect();
+  }
+
+  Serial.print("Wysylanie klatki - status HTTP: ");
+  Serial.println(statusCode);
+
+  if (statusCode <= 0 || statusCode >= 500) {
+    saveFrameToSd(fb->buf, fb->len);
+  }
+
   esp_camera_fb_return(fb);
+
+  if (statusCode == HTTP_CODE_CREATED) {
+    retryPendingFrames();
+  }
 }
 
 void setup() {
@@ -244,6 +340,16 @@ void setup() {
   if (s) {
     s->set_vflip(s, 1);
     s->set_hmirror(s, 1);
+  }
+
+  sdReady = SD_MMC.begin("/sdcard", true);
+  if (sdReady && SD_MMC.cardType() != CARD_NONE) {
+    SD_MMC.mkdir("/pending");
+    Serial.print("Karta SD gotowa, pojemnosc MB: ");
+    Serial.println(SD_MMC.cardSize() / (1024 * 1024));
+  } else {
+    sdReady = false;
+    Serial.println("Nie wykryto karty SD - kamera bedzie dzialac bez bufora");
   }
 
   if (!WiFi.config(CAMERA_LOCAL_IP, CAMERA_GATEWAY, CAMERA_SUBNET, CAMERA_PRIMARY_DNS, CAMERA_SECONDARY_DNS)) {
