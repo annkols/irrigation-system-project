@@ -34,6 +34,10 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# The production reverse proxy terminates HTTPS and forwards the original
+# protocol in X-Forwarded-Proto. This keeps generated media URLs on HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
