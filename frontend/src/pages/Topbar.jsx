@@ -10,12 +10,40 @@ export default function TopBar() {
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState(null);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
     const toggleMenu = () => {
         setIsMenuOpen((prev) => !prev);
     };
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const accessToken = localStorage.getItem("token");
+            
+            if (!accessToken || accessToken === "undefined") return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me/`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setUser(data);
+                }
+            } catch (err) {
+                console.error("Error occured while fetching user's data':", err);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -97,6 +125,32 @@ export default function TopBar() {
 
                     {isMenuOpen && (
                         <div className="profile-dropdown">
+                            <div className="user-info">
+                                <span className="user-fullname">
+                                    {user 
+                                        ? (user.first_name && user.last_name 
+                                            ? `${user.first_name} ${user.last_name}` 
+                                            : user.username || user.email)
+                                        : "Loading..."}
+                                </span>
+                                {user?.email && (
+                                    <span className="user-email">
+                                        {user.email}
+                                    </span>
+                                )}
+                            </div>
+
+                            <button 
+                                type="button" 
+                                className="my-account-btn"
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    navigate("/account"); // zmienić ścieżkę jak już dodam
+                                }}
+                            >
+                                My account
+                            </button>
+
                             <button 
                                 type="button"
                                 className="logout-btn" 
