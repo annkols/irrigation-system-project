@@ -7,7 +7,7 @@ import Dashboard from './pages/Dashboard'; //strona po zalogowaniu (wczesniej Ap
 import New_experiment from './pages/New_experiment'; //dodawanie nowego eksperymentu
 import Experiment_details from './pages/Experiment_details'; //szczegoly eksperymentu
 import Experiment_edit from './pages/Experiment_edit'; //edycja eksperymentu
-import Profile from './pages/Profile'; //edycja eksperymentu
+import Profile from './pages/Profile'; //profil uzytkownika
 import SavedFrames from './pages/SavedFrames';
 import ProtectedRoute from './ProtectedRoute';
 
