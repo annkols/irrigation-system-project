@@ -126,6 +126,23 @@ export default function TopBar() {
                     {isMenuOpen && (
                         <div className="profile-dropdown">
                             <div className="user-info">
+
+                                <div className="dropdown-avatar-wrapper">
+                                    {user?.profile?.profile_picture ? (
+                                        <img 
+                                            src={user.profile.profile_picture} 
+                                            alt="Profile" 
+                                            className="dropdown-avatar-img"
+                                        />
+                                    ) : (
+                                        <div className="dropdown-avatar-placeholder">
+                                            <span className="material-symbols-outlined">
+                                                person
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                                
                                 <span className="user-fullname">
                                     {user 
                                         ? (user.first_name && user.last_name 
@@ -145,10 +162,10 @@ export default function TopBar() {
                                 className="my-account-btn"
                                 onClick={() => {
                                     setIsMenuOpen(false);
-                                    navigate("/account"); // zmienić ścieżkę jak już dodam
+                                    navigate("/profile");
                                 }}
                             >
-                                My account
+                                My profile
                             </button>
 
                             <button 
