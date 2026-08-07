@@ -66,12 +66,12 @@ export default function Profile() {
                     <h1>My profile</h1>
 
                     <div className="header-actions">
-                        {/* przycisk edytuj - na przysz³osæ */}
+                        {/* przycisk edytuj - na przyszÅ‚osÄ‡ */}
                         <button className="edit-account-btn">
                             Edit profile
                         </button>
 
-                        {/* przycisk usuñ - na przyszloœæ */}
+                        {/* przycisk usuÅ„ - na przyszloÅ›Ä‡ */}
                         <button className="delete-account-btn">
                             Delete profile
                         </button>
@@ -91,7 +91,7 @@ export default function Profile() {
                         <div className="my-profile-card">
                             <div className="my-profile-card-inner">
                                 
-                                {/* info o u¿ytkowniku */}
+                                {/* info o uÅ¼ytkowniku */}
                                 <div style={{ flex: 1 }}>
                                     <h2 style={{ marginTop: 0 }}>Account Details</h2>
                                     <ul className="my-profile-info-list">
@@ -105,7 +105,7 @@ export default function Profile() {
                                     </ul>
                                 </div>
 
-                                {/* zdjêcie profilowe/placeholder */}
+                                {/* zdjÄ™cie profilowe/placeholder */}
                                 <div className="my-profile-picture-wrapper">
                                     {user?.profile?.profile_picture ? (
                                         <img 
