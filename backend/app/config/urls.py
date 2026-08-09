@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/', include('users.urls')),
     path('api/', include('pump_control.urls')),
     path('api/', include('camera_frames.urls')),
+    path('api/', include('notes.urls')),
 ]
 
 if settings.DEBUG:
