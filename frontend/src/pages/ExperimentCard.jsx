@@ -61,7 +61,15 @@ export default function ExperimentCard({
                     src={`${API_BASE_URL}/experiments/${experiment.id}/frames/latest/image/`}
                     alt="Latest camera frame"
                     className="camera-stream"
+                    onError={e => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling?.classList.add('card-image-placeholder-visible');
+                    }}
                 />
+
+                <div className="card-image-placeholder">
+                    <span className="material-symbols-outlined">photo_camera</span>
+                </div>
 
                 <span className={`status-badge ${getStatusClass(experiment.status)}`}>
 

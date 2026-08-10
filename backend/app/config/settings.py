@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'users',
     'pump_control',
     'camera_frames',
+    'notes',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',

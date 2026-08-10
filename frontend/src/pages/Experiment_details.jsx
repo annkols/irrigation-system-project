@@ -11,10 +11,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 const pumpCommands = ["ON", "OFF", "AUTO"];
 
 const NAV_ITEMS = [
-  { key: 'overview',  label: 'Overview',     icon: 'dashboard'   },
-  { key: 'camera',    label: 'Camera view',  icon: 'videocam'    },
-  { key: 'analytics', label: 'Analytics',    icon: 'bar_chart'   },
-  { key: 'notes',     label: 'Notes',        icon: 'edit_note'   },
+  { key: 'overview',  label: 'Overview',        icon: 'dashboard'   },
+  { key: 'camera',    label: 'Camera view',     icon: 'videocam'    },
+  { key: 'analytics', label: 'Analytics',       icon: 'bar_chart'   },
+  { key: 'notes',     label: 'Notes',           icon: 'edit_note'   },
+  { key: 'history',   label: 'Historical data', icon: 'table_rows'  },
 ];
 
 function Experiment_details() {
@@ -41,6 +42,12 @@ function Experiment_details() {
   });
   const [lastSuccessTime, setLastSuccessTime] = useState(null);
   const [errors, setErrors] = useState({});
+  const [errorTime, setErrorTime] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [noteFormOpen, setNoteFormOpen] = useState(false);
+  const [draftNote, setDraftNote] = useState({ title: '', content: '', imageUrl: null, imageFile: null });
+  const [openNote, setOpenNote] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const columnLabels = {
     moisture_percent: 'Soil moisture',
@@ -76,6 +83,11 @@ function Experiment_details() {
       .then(data => setExperiment(data))
       .catch(err => console.error(err));
 
+    fetch(`${API_BASE_URL}/experiments/${id}/notes/`)
+      .then(res => res.json())
+      .then(data => setNotes(data))
+      .catch(err => console.error(err));
+
     const fetchMeasurements = () => {
       const currentTime = new Date().toLocaleString();
       fetch(`${API_BASE_URL}/measurements/`)
@@ -88,12 +100,14 @@ function Experiment_details() {
           setMeasurements(data);
           setLastSuccessTime(currentTime);
           setErrors(prev => ({ ...prev, measurements: null }));
+          setErrorTime(null);
         })
         .catch(() => {
           const successString = lastSuccessTime ?? "never";
+          setErrorTime(new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }));
           setErrors(prev => ({
             ...prev,
-            measurements: `Failed to fetch measurements at ${currentTime}. Last successful fetch at ${successString}.`
+            measurements: `Failed to fetch sensor data. Last successful fetch: ${successString}.`
           }));
         });
     };
@@ -215,7 +229,7 @@ function Experiment_details() {
 
   return (
     <div className="exp-layout">
-      {/* Left sidebar */}
+
       <aside className="exp-sidebar">
         <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
           <img src={logo} alt="Logo" style={{ height: '64px', width: 'auto' }} />
@@ -249,9 +263,9 @@ function Experiment_details() {
         </nav>
       </aside>
 
-      {/* Main area */}
+     
       <div className="exp-main">
-        {/* Topbar */}
+       
         <div className="exp-topbar">
           <div className="exp-breadcrumb">
             <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>Dashboard</span>
@@ -265,10 +279,10 @@ function Experiment_details() {
           </div>
         </div>
 
-        {/* Tab content */}
+       
         <div className="exp-content">
 
-          {/* ── OVERVIEW ── */}
+         
           {activeTab === 'overview' && (
             <div className="exp-tab-overview">
               <div className="exp-tab-header">
@@ -294,129 +308,132 @@ function Experiment_details() {
                 <span className="exp-status-label">{experiment.is_public ? "Public" : "Private"}</span>
               </div>
 
-              {/* Info grid */}
-              <div className="exp-info-grid">
-                <div className="exp-info-field">
+              {/* Info card: Plant type, Description, Collaborators */}
+              <div className="exp-overview-card">
+                <div className="exp-overview-field">
                   <span className="exp-info-label">Plant type</span>
                   <span>{experiment.plant_name || "-"}</span>
                 </div>
-                <div className="exp-info-field">
+                <div className="exp-overview-field">
                   <span className="exp-info-label">Description</span>
-                  <p className="exp-info-desc">{experiment.description || "-"}</p>
+                  <p className="exp-info-desc" style={{ margin: 0 }}>{experiment.description || "-"}</p>
                 </div>
-
                 {experiment.tags?.length > 0 && (
-                  <div className="exp-info-field">
+                  <div className="exp-overview-field">
                     <span className="exp-info-label">Tags</span>
                     <div className="exp-details-tags">
                       {experiment.tags.map((tag, i) => <span key={i} className="exp-tag">{tag}</span>)}
                     </div>
                   </div>
                 )}
+                <div className="exp-overview-field exp-overview-field--last">
+                  <span className="exp-info-label">Collaborators</span>
+                  <div className="exp-collaborators">
+                    {experiment.collaborators?.length > 0
+                      ? experiment.collaborators.map((c, i) => <span key={i} className="collab-chip">{c}</span>)
+                      : <span style={{ color: '#888', fontSize: '14px' }}>None</span>
+                    }
+                  </div>
+                </div>
               </div>
 
-              {/* Dates row */}
-              <div className="exp-dates-row">
-                <div className="exp-date-field">
-                  <span className="exp-info-label">Start date</span>
-                  <span>{formatDate(experiment.started_at)}</span>
-                </div>
-                <div className="exp-date-field">
-                  <span className="exp-info-label">Planned end date</span>
-                  <span>{formatDate(experiment.planned_end_at)}</span>
-                </div>
-                <div className="exp-date-field">
-                  <span className="exp-info-label">End date</span>
-                  <span>{formatDate(experiment.finished_at)}</span>
+              {/* Dates card */}
+              <div className="exp-overview-card exp-overview-card--dates">
+                <div className="exp-dates-row">
+                  <div className="exp-date-field">
+                    <span className="exp-info-label">Start date</span>
+                    <span>{formatDate(experiment.started_at)}</span>
+                  </div>
+                  <div className="exp-date-field">
+                    <span className="exp-info-label">Planned end date</span>
+                    <span>{formatDate(experiment.planned_end_at)}</span>
+                  </div>
+                  <div className="exp-date-field">
+                    <span className="exp-info-label">End date</span>
+                    <span>{formatDate(experiment.finished_at)}</span>
+                  </div>
                 </div>
                 {experiment.started_at && !experiment.finished_at && (
-                  <button className="end-experiment-btn" onClick={handleEndExperiment}>
+                  <button className="end-experiment-btn end-experiment-btn--new" onClick={handleEndExperiment}>
                     <span className="material-symbols-outlined">check</span>
                     END EXPERIMENT
                   </button>
                 )}
               </div>
 
-              {/* Collaborators */}
-              <div className="exp-info-field">
-                <span className="exp-info-label">Collaborators</span>
-                <div className="exp-collaborators">
-                  {experiment.collaborators?.length > 0
-                    ? experiment.collaborators.map((c, i) => <span key={i} className="collab-chip">{c}</span>)
-                    : <span style={{ color: '#888', fontSize: '14px' }}>None</span>
-                  }
+              {/* Experiment Alerts */}
+              <div className="exp-alerts-section">
+                <div className="exp-alerts-header">
+                  <div className="exp-alerts-title-row">
+                    <span className="exp-alerts-title">Experiment Alerts</span>
+                    {errors.measurements && <span className="exp-alerts-badge">1 Critical</span>}
+                  </div>
+                  <span className="exp-alerts-view-all">View All Notifications</span>
                 </div>
-              </div>
 
-              {/* Measurement error */}
-              {errors.measurements && (
-                <span className="error-text">{errors.measurements}</span>
-              )}
-
-              {/* Sensor readings */}
-              <div className="exp-readings-card">
-                <div className="exp-readings-header">
-                  <span className="exp-readings-title">Last reading</span>
-                  <span className="exp-readings-time">{nowDateTime}</span>
-                </div>
-                <div className="stats">
-                  <div className="row"><span>Temperature inside</span><span>{latest?.air_temperature ?? "-"} °C</span></div>
-                  <div className="row"><span>Soil moisture</span><span>{latest?.moisture_percent ?? "-"} %</span></div>
-                  <div className="row"><span>Air humidity</span><span>{latest?.air_humidity ?? "-"} %</span></div>
-                  <div className="row"><span>Light intensity</span><span>{latest?.light_lux ?? "-"} lx</span></div>
-                  <div className="row"><span>Soil temperature</span><span>{latest?.soil_temperature ?? "-"} °C</span></div>
-                  <div className="row"><span>Pressure</span><span>{latest?.pressure_hpa ?? "-"} hPa</span></div>
-                  <div className="row"><span>Pump</span><span>{latest ? (latest.pump_on ? "ON" : "OFF") : "-"}</span></div>
-                </div>
-              </div>
-
-              {/* Export */}
-              <div className="export-dropdown">
-                <button className="export-btn" onClick={() => setExportOpen(!exportOpen)}>
-                  <span className="material-symbols-outlined">download</span>
-                  EXPORT RAW MEASUREMENTS
-                  <span className="material-symbols-outlined">expand_more</span>
-                </button>
-                {exportOpen && (
-                  <div className="export-menu">
-                    <button onClick={() => handleExportClick('csv')}>CSV</button>
-                    <button onClick={() => handleExportClick('excel')}>Excel</button>
+                {errors.measurements ? (
+                  <div className="exp-alert-item">
+                    <div className="exp-alert-icon exp-alert-icon--critical">
+                      <span className="material-symbols-outlined">error</span>
+                    </div>
+                    <div className="exp-alert-content">
+                      <span className="exp-alert-name">Measurement Fetch Failed</span>
+                      <span className="exp-alert-desc">{errors.measurements}</span>
+                    </div>
+                    {errorTime && <span className="exp-alert-time">{errorTime}</span>}
+                  </div>
+                ) : (
+                  <div className="exp-alert-item">
+                    <div className="exp-alert-icon exp-alert-icon--ok">
+                      <span className="material-symbols-outlined">check_circle</span>
+                    </div>
+                    <div className="exp-alert-content">
+                      <span className="exp-alert-name">All systems normal</span>
+                      <span className="exp-alert-desc">Sensors reporting as expected.</span>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* ── CAMERA VIEW ── */}
-          {activeTab === 'camera' && (
-            <div className="exp-tab-camera">
-              <h2 className="exp-tab-section-title">Camera view</h2>
-              <div className="exp-camera-main">
-                <img
-                  src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/`}
-                  alt="Latest camera frame"
-                  className="exp-camera-stream"
-                />
-                <div className="exp-camera-controls">
-                  <button className="saved-frames-btn" onClick={() => navigate(`/experiment/${id}/frames`)}>
-                    <span className="material-symbols-outlined">photo_library</span>
-                    Saved frames
-                  </button>
+              {/* Sensor readings */}
+              <div className="exp-sensors-section">
+                <div className="exp-sensors-header">
+                  <span className="exp-sensors-title">Live Sensors</span>
+                  <span className="exp-sensors-time">Updated: {nowDateTime}</span>
+                </div>
+                <div className="exp-sensors-grid">
+                  {[
+                    { icon: 'device_thermostat', label: 'Temp Inside',     value: latest?.air_temperature,  unit: '°C'  },
+                    { icon: 'water_drop',        label: 'Soil Moisture',   value: latest?.moisture_percent, unit: '%'   },
+                    { icon: 'cloud',             label: 'Air Humidity',    value: latest?.air_humidity,     unit: '%'   },
+                    { icon: 'light_mode',        label: 'Light Intensity', value: latest?.light_lux,        unit: 'lx'  },
+                    { icon: 'thermostat',        label: 'Soil Temp',       value: latest?.soil_temperature, unit: '°C'  },
+                    { icon: 'speed',             label: 'Pressure',        value: latest?.pressure_hpa,     unit: 'hPa' },
+                  ].map(({ icon, label, value, unit }) => (
+                    <div key={label} className="exp-sensor-card">
+                      <span className="material-symbols-outlined exp-sensor-icon">{icon}</span>
+                      <span className="exp-sensor-label">{label}</span>
+                      <span className="exp-sensor-value">
+                        {value ?? '-'}{value != null && <span className="exp-sensor-unit">{unit}</span>}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="pump-control" style={{ maxWidth: 320, marginTop: 24 }}>
-                <div className="pump-control-header">
-                  <span>Pump control</span>
-                  <span className="pump-control-state">
-                    {latest ? (latest.pump_on ? "RUNNING" : "STOPPED") : "NO DATA"}
+              {/* Pump control */}
+              <div className="exp-pump-control">
+                <div className="exp-pump-header">
+                  <span className="exp-pump-label">PUMP CONTROL</span>
+                  <span className={`exp-pump-status ${latest?.pump_on ? 'running' : 'stopped'}`}>
+                    STATUS: {latest ? (latest.pump_on ? 'RUNNING' : 'STOPPED') : 'NO DATA'}
                   </span>
                 </div>
-                <div className="pump-command-buttons">
+                <div className="exp-pump-buttons">
                   {pumpCommands.map(cmd => (
                     <button
                       key={cmd}
-                      className={`pump-command-btn ${selectedPumpCommand === cmd ? 'active' : ''}`}
+                      className={`exp-pump-btn ${selectedPumpCommand === cmd ? 'active' : ''}`}
                       disabled={isSendingPumpCommand}
                       onClick={() => sendPumpCommand(cmd)}
                     >{cmd}</button>
@@ -428,6 +445,37 @@ function Experiment_details() {
                   </p>
                 )}
               </div>
+
+            </div>
+          )}
+
+          {/* ── CAMERA VIEW ── */}
+          {activeTab === 'camera' && (
+            <div className="exp-tab-camera">
+              <h2 className="exp-tab-section-title">Camera view</h2>
+              <div className="exp-camera-main">
+                <div className="exp-camera-frame-wrap">
+                  <img
+                    src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/`}
+                    alt="Latest camera frame"
+                    className="exp-camera-stream"
+                    onError={e => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
+                    }}
+                  />
+                  <div className="exp-camera-placeholder">
+                    <span className="material-symbols-outlined">photo_camera</span>
+                    <span>No camera feed available</span>
+                  </div>
+                </div>
+                <div className="exp-camera-controls">
+                  <button className="saved-frames-btn" onClick={() => navigate(`/experiment/${id}/frames`)}>
+                    <span className="material-symbols-outlined">photo_library</span>
+                    Saved frames
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -438,14 +486,230 @@ function Experiment_details() {
             </div>
           )}
 
+          {/* ── HISTORICAL DATA ── */}
+          {activeTab === 'history' && (
+            <div className="exp-tab-history">
+              <div className="exp-tab-header">
+                <h2 className="exp-tab-title">Historical data</h2>
+                <div className="export-dropdown">
+                  <button className="export-btn" onClick={() => setExportOpen(!exportOpen)}>
+                    <span className="material-symbols-outlined">download</span>
+                    Export
+                    <span className="material-symbols-outlined">expand_more</span>
+                  </button>
+                  {exportOpen && (
+                    <div className="export-menu">
+                      <button onClick={() => handleExportClick('csv')}>CSV</button>
+                      <button onClick={() => handleExportClick('excel')}>Excel</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {measurements.length === 0 ? (
+                <div className="exp-empty-state">
+                  <span className="material-symbols-outlined">table_rows</span>
+                  <p>No measurements recorded yet.</p>
+                </div>
+              ) : (
+                <div className="exp-history-table-wrap">
+                  <table className="exp-history-table">
+                    <thead>
+                      <tr>
+                        <th>Date & time</th>
+                        <th>Air temp. (°C)</th>
+                        <th>Soil moisture (%)</th>
+                        <th>Air humidity (%)</th>
+                        <th>Light (lx)</th>
+                        <th>Soil temp. (°C)</th>
+                        <th>Pressure (hPa)</th>
+                        <th>Pump</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {measurements.map((m, i) => (
+                        <tr key={i}>
+                          <td>{m.timestamp ? new Date(m.timestamp).toLocaleString('pl-PL') : '-'}</td>
+                          <td>{m.air_temperature ?? '-'}</td>
+                          <td>{m.moisture_percent ?? '-'}</td>
+                          <td>{m.air_humidity ?? '-'}</td>
+                          <td>{m.light_lux ?? '-'}</td>
+                          <td>{m.soil_temperature ?? '-'}</td>
+                          <td>{m.pressure_hpa ?? '-'}</td>
+                          <td>{m.pump_on != null ? (m.pump_on ? 'ON' : 'OFF') : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── NOTES ── */}
           {activeTab === 'notes' && (
             <div className="exp-tab-notes">
-              <h2 className="exp-tab-section-title">Notes</h2>
-              <textarea
-                className="exp-notes-textarea"
-                placeholder="Add your notes about this experiment here..."
-              />
+              {openNote ? (
+                <>
+                  <button className="note-back-btn" onClick={() => { setOpenNote(null); setLightboxOpen(false); }}>
+                    <span className="material-symbols-outlined">arrow_back</span>
+                    Timeline Observations
+                  </button>
+
+                  <div className="note-detail-card">
+                    <span className="note-date">
+                      {new Date(openNote.created_at || openNote.createdAt).toLocaleString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })}
+                    </span>
+                    <h2 className="note-detail-title">{openNote.title}</h2>
+                    {openNote.content && <p className="note-detail-content">{openNote.content}</p>}
+                    {(openNote.image_url || openNote.imageUrl) && (
+                      <img
+                        src={openNote.image_url || openNote.imageUrl}
+                        alt="Note attachment"
+                        className="note-detail-image"
+                        onClick={() => setLightboxOpen(true)}
+                        title="Click to enlarge"
+                      />
+                    )}
+                    <div className="note-detail-actions">
+                      <button className="note-delete-inline-btn" onClick={async () => {
+                        try {
+                          await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, { method: 'DELETE' });
+                        } catch {}
+                        setNotes(prev => prev.filter(n => n.id !== openNote.id));
+                        setOpenNote(null);
+                      }}>
+                        <span className="material-symbols-outlined">delete</span>
+                        Delete note
+                      </button>
+                    </div>
+                  </div>
+
+                  {lightboxOpen && (
+                    <div className="note-lightbox" onClick={() => setLightboxOpen(false)}>
+                      <img src={openNote.image_url || openNote.imageUrl} alt="Full size" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="notes-header">
+                    <button className="notes-new-btn" onClick={() => setNoteFormOpen(true)}>
+                      <span className="material-symbols-outlined">add</span>
+                      New Note
+                    </button>
+                  </div>
+
+                  <div className="notes-timeline-header">
+                    <span className="notes-timeline-title">Timeline Observations</span>
+                  </div>
+
+                  <div className="notes-list">
+                    {notes.length === 0 ? (
+                      <div className="notes-empty">
+                        <span className="material-symbols-outlined">edit_note</span>
+                        <p>No notes yet. Click "+ New Note" to add your first observation.</p>
+                      </div>
+                    ) : (
+                      notes.map(note => (
+                        <div key={note.id} className="note-card" onClick={() => setOpenNote(note)}>
+                          <div className="note-card-main">
+                            <span className="note-date">
+                              {new Date(note.created_at || note.createdAt).toLocaleString('en-US', {
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
+                            <h3 className="note-title">{note.title}</h3>
+                            {note.content && <p className="note-content">{note.content}</p>}
+                          </div>
+                          {(note.image_url || note.imageUrl) && (
+                            <img src={note.image_url || note.imageUrl} alt="Note attachment" className="note-image" />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+
+              {noteFormOpen && (
+                <div className="note-modal-overlay" onClick={() => setNoteFormOpen(false)}>
+                  <div className="note-modal" onClick={e => e.stopPropagation()}>
+                    <h3 className="note-modal-title">New Observation</h3>
+                    <input
+                      className="note-input"
+                      type="text"
+                      placeholder="Title"
+                      value={draftNote.title}
+                      onChange={e => setDraftNote(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                    <textarea
+                      className="note-textarea"
+                      placeholder="Describe your observation..."
+                      value={draftNote.content}
+                      onChange={e => setDraftNote(prev => ({ ...prev, content: e.target.value }))}
+                    />
+                    <label className="note-image-upload">
+                      <span className="material-symbols-outlined">add_photo_alternate</span>
+                      {draftNote.imageUrl ? 'Change image' : 'Add image'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (file) setDraftNote(prev => ({
+                            ...prev,
+                            imageFile: file,
+                            imageUrl: URL.createObjectURL(file),
+                          }));
+                        }}
+                      />
+                    </label>
+                    {draftNote.imageUrl && (
+                      <img src={draftNote.imageUrl} alt="Preview" className="note-image-preview" />
+                    )}
+                    <div className="note-modal-actions">
+                      <button className="note-cancel-btn" onClick={() => {
+                        setNoteFormOpen(false);
+                        setDraftNote({ title: '', content: '', imageUrl: null });
+                      }}>Cancel</button>
+                      <button
+                        className="note-save-btn"
+                        disabled={!draftNote.title.trim()}
+                        onClick={async () => {
+                          const formData = new FormData();
+                          formData.append('title', draftNote.title);
+                          formData.append('content', draftNote.content);
+                          if (draftNote.imageFile) formData.append('image', draftNote.imageFile);
+                          try {
+                            const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
+                              method: 'POST',
+                              body: formData,
+                            });
+                            if (res.ok) {
+                              const saved = await res.json();
+                              setNotes(prev => [saved, ...prev]);
+                            } else {
+                              const errBody = await res.json().catch(() => ({}));
+                              console.error('Note save error:', res.status, errBody);
+                              toast.error(`Failed to save note (${res.status}).`);
+                            }
+                          } catch {
+                            toast.error('Server connection error.');
+                          }
+                          setNoteFormOpen(false);
+                          setDraftNote({ title: '', content: '', imageUrl: null, imageFile: null });
+                        }}
+                      >Save Note</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
