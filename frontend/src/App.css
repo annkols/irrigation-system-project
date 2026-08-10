@@ -2159,6 +2159,33 @@ body {
   width: 48%;
 }
 
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field input {
+  margin-bottom: 0;
+  padding-right: 70px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  background: none !important;
+  color: #4caf50 !important;
+  font-size: 13px !important;
+}
+
+.form-error {
+  margin: -8px 0 5px;
+  color: #d32f2f;
+  font-size: 13px;
+}
+
 /*login*/
 .login-overlay {
   position: fixed;
@@ -2218,7 +2245,34 @@ body {
 .login-box button[type="submit"]:hover {
   background: #43a047;
 }
+.login-password-field {
+  position: relative;
+  width: 100%;
+}
 
+.login-password-field .password-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 70px;
+}
+
+.login-password-field .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: #4caf50;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.login-password-field .password-toggle:hover {
+  background: none;
+  color: #43a047;
+}
 /* ===== Experiment Details — tabbed layout ===== */
 
 .exp-layout {
