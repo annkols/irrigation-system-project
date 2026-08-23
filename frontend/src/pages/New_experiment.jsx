@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -167,7 +168,9 @@ function New_experiment() {
         const data = await res.json();
         if (res.ok) {
           toast.success("Experiment created!");
-          navigate('/dashboard');
+          setTimeout(() => {
+            navigate(`/dashboard`);
+          }, 3000);
         } else {
           setErrors(data);
         }
@@ -180,6 +183,11 @@ function New_experiment() {
 
   return (
     <div className="dashboard-page">
+    <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        toastClassName="custom-toast"
+      />
       <Sidebar />
 
       <div className="dashboard-content">

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css'
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -64,6 +66,11 @@ export default function Dashboard() {
 
     return (
         <div className="dashboard-page">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          toastClassName="custom-toast"
+        />
             <Sidebar />
 
             <div className="dashboard-content">

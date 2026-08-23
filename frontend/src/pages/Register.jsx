@@ -144,7 +144,7 @@ function Register({ onClose }) {
 
       if (response.ok) {
         toast.success("Registration request sent.");
-        onClose();
+        setTimeout(onClose, 0)
       } else {
         console.error("Registration errors:", data);
 

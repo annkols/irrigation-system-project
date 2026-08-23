@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -229,6 +230,11 @@ function Experiment_details() {
 
   return (
     <div className="exp-layout">
+      <ToastContainer
+         position="top-right"
+        autoClose={3000}
+        toastClassName="custom-toast"
+      />
 
       <aside className="exp-sidebar">
         <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>

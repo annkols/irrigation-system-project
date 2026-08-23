@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import './App.css';
 import Start from './pages/Start'; //strona przed logowaniem
 import Dashboard from './pages/Dashboard'; //strona po zalogowaniu (wczesniej App.jsx)
 import New_experiment from './pages/New_experiment'; //dodawanie nowego eksperymentu
