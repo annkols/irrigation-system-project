@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "react-toastify";
 import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -142,12 +143,12 @@ function Register({ onClose }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Registration request sent.");
-        onClose();
+        toast.success("Registration request sent.");
+        setTimeout(onClose, 0)
       } else {
         console.error("Registration errors:", data);
 
-        alert(
+        toast.error(
           data.detail ||
             data.password?.[0] ||
             data.email?.[0] ||
@@ -157,7 +158,7 @@ function Register({ onClose }) {
       }
     } catch (err) {
       console.error(err);
-      alert("Server error.");
+      toast.error("Server error.");
     }
   };
 
