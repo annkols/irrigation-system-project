@@ -11,6 +11,7 @@ import Experiment_edit from './pages/Experiment_edit'; //edycja eksperymentu
 import Profile from './pages/Profile'; //profil uzytkownika
 import SavedFrames from './pages/SavedFrames';
 import ProtectedRoute from './ProtectedRoute';
+import PeopleSearch from './pages/PeopleSearch';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/experiment/:id/edit" element={<ProtectedRoute><Experiment_edit /></ProtectedRoute>} />
         <Route path="/experiment/:id/frames" element={<ProtectedRoute><SavedFrames /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/search-people" element={<ProtectedRoute><PeopleSearch /></ProtectedRoute>} />
       </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>
