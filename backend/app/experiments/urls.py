@@ -3,6 +3,7 @@ from .views import (
     ActiveExperimentSensorConfigView,
     ExperimentDetailView,
     ExperimentListCreateView,
+    PublicExperimentSearchView,
     ExperimentStatusListView,
     ExperimentWithMeasurementsDetailView,
     ExperimentWithMeasurementsListView,
@@ -13,6 +14,7 @@ from .views import (
 
 urlpatterns = [
     path('experiments/', ExperimentListCreateView.as_view(), name='experiment-list-create'),
+    path('experiments/search/', PublicExperimentSearchView.as_view(), name='experiment-public-search'),
     path('experiments/active-sensor-config/', ActiveExperimentSensorConfigView.as_view(), name='experiment-active-sensor-config'),
     path('experiments/<int:pk>/', ExperimentDetailView.as_view(), name='experiment-detail'),
     path("experiments/<int:pk>/edit/", ExperimentUpdateView.as_view(), name="experiment-edit"),

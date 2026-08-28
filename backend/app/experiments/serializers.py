@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from measurements.models import Measurement
 from measurements.serializers import MeasurementSerializer
-from .models import Experiment
+from .models import Experiment, Keyword
 
 
 ALLOWED_SENSOR_FREQUENCY_KEYS = {
@@ -14,8 +14,43 @@ ALLOWED_SENSOR_FREQUENCY_KEYS = {
     'pressure',
 }
 
+
+class KeywordListField(serializers.Field):
+    default_error_messages = {
+        "not_a_list": "Słowa kluczowe muszą być listą.",
+        "empty": "Podaj co najmniej jedno słowo kluczowe.",
+        "blank": "Słowo kluczowe nie może być puste.",
+        "too_long": "Słowo kluczowe może mieć maksymalnie 50 znaków.",
+        "too_many": "Można podać maksymalnie 15 słów kluczowych.",
+    }
+
+    def to_representation(self, value):
+        return list(value.order_by("name").values_list("name", flat=True))
+
+    def to_internal_value(self, data):
+        if not isinstance(data, list):
+            self.fail("not_a_list")
+        if not data:
+            self.fail("empty")
+        if len(data) > 15:
+            self.fail("too_many")
+
+        normalized = []
+        for value in data:
+            if not isinstance(value, str) or not value.strip():
+                self.fail("blank")
+            keyword = " ".join(value.split()).casefold()
+            if len(keyword) > 50:
+                self.fail("too_long")
+            if keyword not in normalized:
+                normalized.append(keyword)
+
+        return normalized
+
 # CREATE/READ EXPERIMENT
 class ExperimentSerializer(serializers.ModelSerializer):
+    keywords = KeywordListField(required=True)
+
     class Meta:
         model = Experiment
         fields = [
@@ -23,6 +58,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'plant_name',
+            'keywords',
             'owner',
             'collaborators',
             'sensor_set_id',
@@ -36,6 +72,26 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'is_public'
         ]
         read_only_fields = ['id', 'status', 'created_at']
+
+    def _set_keywords(self, experiment, keyword_names):
+        keywords = [
+            Keyword.objects.get_or_create(name=name)[0]
+            for name in keyword_names
+        ]
+        experiment.keywords.set(keywords)
+
+    def create(self, validated_data):
+        keyword_names = validated_data.pop("keywords")
+        experiment = super().create(validated_data)
+        self._set_keywords(experiment, keyword_names)
+        return experiment
+
+    def update(self, instance, validated_data):
+        keyword_names = validated_data.pop("keywords", None)
+        experiment = super().update(instance, validated_data)
+        if keyword_names is not None:
+            self._set_keywords(experiment, keyword_names)
+        return experiment
 
     def _time_ranges_overlap(self, first_start, first_end, second_start, second_end):
         if first_start is None or second_start is None:
