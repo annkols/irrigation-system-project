@@ -8,7 +8,7 @@ from rest_framework import status
 
 
 from measurements.models import Measurement
-from .models import Experiment
+from .models import Experiment, Keyword
 
 # Create your tests here.
 class ExperimentTests(APITestCase):
@@ -21,6 +21,7 @@ class ExperimentTests(APITestCase):
             "name": "Potato test",
             "description": "Testing potato irrigation.",
             "plant_name": "Potato",
+            "keywords": ["irrigation", "potato"],
             "sensor_set_id": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
@@ -35,6 +36,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.data["name"], "Potato test")
         self.assertEqual(response.data["plant_name"], "Potato")
         self.assertEqual(response.data["sensor_set_id"], 1)
+        self.assertEqual(response.data["keywords"], ["irrigation", "potato"])
 
     def test_create_experiment_with_sensor_frequencies(self):
         url = reverse('experiment-list-create')
@@ -45,6 +47,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Testing per-sensor frequencies.",
             "plant_name": "Soy",
+            "keywords": ["soy", "sensors"],
             "sensor_set_id": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
@@ -74,6 +77,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Invalid sensor frequency.",
             "plant_name": "Soy",
+            "keywords": ["soy"],
             "sensor_set_id": 1,
             "started_at": None,
             "finished_at": None,
@@ -296,6 +300,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Second experiment.",
             "plant_name": "Soy",
+            "keywords": ["soy"],
             "sensor_set_id": 1,
             "started_at": (started_at + timedelta(days=1)).isoformat(),
             "planned_end_at": (planned_end_at + timedelta(days=1)).isoformat(),
@@ -362,6 +367,7 @@ class ExperimentTests(APITestCase):
             "name": "Soy test",
             "description": "Later scheduled experiment.",
             "plant_name": "Soy",
+            "keywords": ["soy"],
             "sensor_set_id": 1,
             "started_at": (planned_end_at + timedelta(hours=1)).isoformat(),
             "planned_end_at": (planned_end_at + timedelta(days=2)).isoformat(),
@@ -394,6 +400,7 @@ class ExperimentTests(APITestCase):
             "name": "Scheduled soy test",
             "description": "Scheduled experiment.",
             "plant_name": "Soy",
+            "keywords": ["soy"],
             "sensor_set_id": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
@@ -406,6 +413,74 @@ class ExperimentTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["sensor_set_id"], 1)
+
+    def test_keywords_are_required_when_creating_experiment(self):
+        started_at = timezone.now() + timedelta(days=1)
+        payload = {
+            "name": "Barley test",
+            "description": "Experiment without keywords.",
+            "plant_name": "Barley",
+            "sensor_set_id": 1,
+            "started_at": started_at.isoformat(),
+            "planned_end_at": (started_at + timedelta(days=7)).isoformat(),
+            "owner": None,
+            "collaborators": [],
+        }
+
+        response = self.client.post(
+            reverse('experiment-list-create'), payload, format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("keywords", response.data)
+
+    def test_keywords_are_normalized_and_duplicates_removed(self):
+        started_at = timezone.now() + timedelta(days=1)
+        payload = {
+            "name": "Barley salinity test",
+            "description": "Keyword normalization.",
+            "plant_name": "Barley",
+            "keywords": [" Salinity ", "salinity", "Water   stress"],
+            "sensor_set_id": 1,
+            "started_at": started_at.isoformat(),
+            "planned_end_at": (started_at + timedelta(days=7)).isoformat(),
+            "owner": None,
+            "collaborators": [],
+        }
+
+        response = self.client.post(
+            reverse('experiment-list-create'), payload, format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["keywords"], ["salinity", "water stress"])
+        self.assertEqual(Keyword.objects.count(), 2)
+
+    def test_public_search_filters_by_keywords_and_hides_private_experiments(self):
+        public_experiment = Experiment.objects.create(
+            name="Public barley test",
+            description="Visible experiment.",
+            plant_name="Barley",
+            sensor_set_id=1,
+            is_public=True,
+        )
+        private_experiment = Experiment.objects.create(
+            name="Private barley test",
+            description="Hidden experiment.",
+            plant_name="Barley",
+            sensor_set_id=2,
+            is_public=False,
+        )
+        keyword = Keyword.objects.create(name="salinity")
+        public_experiment.keywords.add(keyword)
+        private_experiment.keywords.add(keyword)
+
+        response = self.client.get(
+            reverse('experiment-public-search'), {"keywords": "salinity"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [public_experiment.id])
 
     def test_can_create_finished_experiment_for_same_sensor_set(self):
         started_at = timezone.now() - timedelta(days=2)
@@ -428,6 +503,7 @@ class ExperimentTests(APITestCase):
             "name": "New potato test",
             "description": "New experiment.",
             "plant_name": "Potato",
+            "keywords": ["potato"],
             "sensor_set_id": 1,
             "started_at": new_started_at.isoformat(),
             "planned_end_at": new_planned_end_at.isoformat(),
@@ -462,6 +538,7 @@ class ExperimentTests(APITestCase):
             "name": "New soy test",
             "description": "Same date range as completed experiment.",
             "plant_name": "Soy",
+            "keywords": ["soy"],
             "sensor_set_id": 1,
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),

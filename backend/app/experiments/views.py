@@ -1,11 +1,9 @@
-from django.shortcuts import render
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from django.utils import timezone
-from rest_framework import status
 
 from .models import Experiment
 from .serializers import (
@@ -23,6 +21,35 @@ class ExperimentListCreateView(generics.ListCreateAPIView):
     serializer_class = ExperimentSerializer
     permission_classes = [AllowAny]
     authentication_classes = []
+
+
+class PublicExperimentSearchView(generics.ListAPIView):
+    serializer_class = ExperimentSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get_queryset(self):
+        queryset = Experiment.objects.filter(is_public=True).order_by('-created_at')
+        search = self.request.query_params.get('search', '').strip()
+        keyword_param = self.request.query_params.get('keywords', '')
+        keywords = [
+            " ".join(value.split()).casefold()
+            for value in keyword_param.split(',')
+            if value.strip()
+        ]
+
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search)
+                | Q(description__icontains=search)
+                | Q(plant_name__icontains=search)
+                | Q(keywords__name__icontains=search)
+            )
+
+        if keywords:
+            queryset = queryset.filter(keywords__name__in=keywords)
+
+        return queryset.distinct()
 
 
 class ExperimentDetailView(generics.RetrieveAPIView):

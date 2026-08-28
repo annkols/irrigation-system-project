@@ -3,7 +3,16 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 
-# Create your models here.
+class Keyword(models.Model):
+    name = models.CharField(max_length=50, unique=True, db_index=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Experiment(models.Model):
     class SensorSet(models.IntegerChoices):
         SET_1 = 1, "Sensor set 1"
@@ -13,6 +22,11 @@ class Experiment(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     plant_name = models.CharField(max_length=100, blank=True)
+    keywords = models.ManyToManyField(
+        Keyword,
+        related_name="experiments",
+        blank=True,
+    )
 
     # FK do userów eksperyment ---> 1 user (owner)
     owner = models.ForeignKey(
