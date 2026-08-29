@@ -567,12 +567,55 @@ body {
   accent-color: var(--primary-green);
 }
 
+.keyword-input-wrapper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.keyword-input-wrapper input {
+  flex: 1;
+}
+
+.keywords-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.exp-keyword {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--action-bg);
+  border: 1px solid var(--back);
+  color: var(--text-main);
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.btn-remove-tag {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  font-size: 16px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
 .btn-back{
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: 44px;
   border-radius: 10px;
   padding: 0 28px;
   font-size: 10px;
@@ -591,7 +634,7 @@ body {
   background: var(--primary-green);
   color: var(--text-on-dark);
   width: 140px;
-  height: 36px;
+  height: 44px;
   border-radius: 10px;
   padding: 0 28px;
   font-size: 10px;

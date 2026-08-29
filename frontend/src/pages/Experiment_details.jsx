@@ -332,14 +332,18 @@ function Experiment_details() {
                   <span className="exp-info-label">Description</span>
                   <p className="exp-info-desc" style={{ margin: 0 }}>{experiment.description || "-"}</p>
                 </div>
-                {experiment.tags?.length > 0 && (
-                  <div className="exp-overview-field">
-                    <span className="exp-info-label">Tags</span>
-                    <div className="exp-details-tags">
-                      {experiment.tags.map((tag, i) => <span key={i} className="exp-tag">{tag}</span>)}
-                    </div>
+                <div className="exp-overview-field">
+                  <span className="exp-info-label">Keywords</span>
+                  <div className="exp-details-keywords">
+                    {experiment.keywords?.length > 0 ? (
+                      experiment.keywords.map((keyword, i) => (
+                        <span key={i} className="exp-keyword">{keyword}</span>
+                      ))
+                    ) : (
+                      <span className="exp-no-keywords">This experiment does not have keywords</span>
+                    )}
                   </div>
-                )}
+                </div>
                 <div className="exp-overview-field exp-overview-field--last">
                   <span className="exp-info-label">Collaborators</span>
                   <div className="exp-collaborators">
