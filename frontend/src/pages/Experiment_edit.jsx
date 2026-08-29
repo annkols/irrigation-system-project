@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
@@ -204,7 +203,7 @@ function Experiment_edit() {
           const data = await res.json();
           if (res.ok) {
             navigate(`/experiment/${id}`, { 
-              state: { successMessage: "Experiment updated successfully!" } 
+              state: { message: "Experiment updated successfully!" } 
             });
           } else {
             setErrors(data);
@@ -222,11 +221,6 @@ function Experiment_edit() {
 
   return (
     <>
-    <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
       <header className="header">
         <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="Cultiva logo" className="logo-img" />

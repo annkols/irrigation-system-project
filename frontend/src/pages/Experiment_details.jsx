@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -23,6 +22,7 @@ function Experiment_details() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasShownToast = useRef(false);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [experiment, setExperiment] = useState(null);
@@ -120,11 +120,18 @@ function Experiment_details() {
   }, [id, lastSuccessTime]);
 
   useEffect(() => {
-    if (location.state?.message) {
-      toast.success(location.state.message);
-      window.history.replaceState({}, document.title);
+    const message = location.state?.message || location.state?.successMessage;
+
+    if (message && !hasShownToast.current) {
+      // Oznaczamy, że toast dla tego przejścia został już wyświetlony
+      hasShownToast.current = true;
+  
+      // Wyświetlamy powiadomienie
+      toast.success(message);
+     // Czyścimy stan w React Routerze (bez przeładowania strony)
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location]);
+  }, [location, navigate]);
 
   const handleEndExperiment = () => {
     toast(
@@ -238,11 +245,6 @@ function Experiment_details() {
 
   return (
     <div className="exp-layout">
-      <ToastContainer
-         position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
 
       <aside className="exp-sidebar">
         <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>

@@ -1,7 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast} from "react-toastify";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -195,7 +194,7 @@ function New_experiment() {
           toast.success("Experiment created!");
           setTimeout(() => {
             navigate(`/dashboard`);
-          }, 3000);
+          }, 0);
         } else {
           setErrors(data);
         }
@@ -208,11 +207,6 @@ function New_experiment() {
 
   return (
     <div className="dashboard-page">
-    <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
       <Sidebar />
 
       <div className="dashboard-content">
