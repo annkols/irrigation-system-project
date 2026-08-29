@@ -178,10 +178,9 @@ function Experiment_edit() {
         .then(async (res) => {
           const data = await res.json();
           if (res.ok) {
-            toast.success("Experiment updated successfully!");
-            setTimeout(() => {
-              navigate(`/experiment/${id}`);
-            }, 3000);
+            navigate(`/experiment/${id}`, { 
+              state: { successMessage: "Experiment updated successfully!" } 
+            });
           } else {
             setErrors(data);
           }

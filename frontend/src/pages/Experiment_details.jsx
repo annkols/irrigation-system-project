@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import "../App.css";
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
 function Experiment_details() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [experiment, setExperiment] = useState(null);
@@ -117,6 +118,13 @@ function Experiment_details() {
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
   }, [id, lastSuccessTime]);
+
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.success(location.state.message);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleEndExperiment = () => {
     toast(
