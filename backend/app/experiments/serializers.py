@@ -2,7 +2,15 @@ from rest_framework import serializers
 
 from measurements.models import Measurement
 from measurements.serializers import MeasurementSerializer
-from .models import Experiment, Keyword
+from .models import (
+    Experiment,
+    ExperimentalFactor,
+    FactorLevel,
+    Keyword,
+    Pot,
+    PotHardwareAssignment,
+    Treatment,
+)
 
 
 ALLOWED_SENSOR_FREQUENCY_KEYS = {
@@ -50,6 +58,7 @@ class KeywordListField(serializers.Field):
 # CREATE/READ EXPERIMENT
 class ExperimentSerializer(serializers.ModelSerializer):
     keywords = KeywordListField(required=True)
+    pot_numbers = serializers.SerializerMethodField()
 
     class Meta:
         model = Experiment
@@ -69,7 +78,8 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'planned_end_at',
             'finished_at',
             'status',
-            'is_public'
+            'is_public',
+            'pot_numbers',
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
@@ -79,6 +89,13 @@ class ExperimentSerializer(serializers.ModelSerializer):
             for name in keyword_names
         ]
         experiment.keywords.set(keywords)
+
+    def get_pot_numbers(self, obj):
+        return list(
+            obj.pots.filter(is_monitored=True)
+            .order_by("position")
+            .values_list("position", flat=True)
+        )
 
     def create(self, validated_data):
         keyword_names = validated_data.pop("keywords")
@@ -302,3 +319,137 @@ class ExperimentWithMeasurementsSerializer(ExperimentSerializer):
             measurements = measurements.filter(created_at__lte=obj.finished_at)
 
         return MeasurementSerializer(measurements, many=True).data
+
+
+class FactorLevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FactorLevel
+        fields = ["id", "label", "value", "is_reference", "position"]
+
+
+class ExperimentalFactorSerializer(serializers.ModelSerializer):
+    levels = FactorLevelSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ExperimentalFactor
+        fields = ["id", "name", "unit", "position", "levels"]
+
+
+class PotHardwareAssignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PotHardwareAssignment
+        fields = ["id", "component_type", "component_identifier"]
+
+
+class PotSerializer(serializers.ModelSerializer):
+    hardware_assignments = PotHardwareAssignmentSerializer(many=True, read_only=True)
+    treatment_name = serializers.CharField(source="treatment.name", read_only=True)
+    treatment_levels = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pot
+        fields = [
+            "id",
+            "label",
+            "replicate_number",
+            "position",
+            "is_monitored",
+            "treatment",
+            "treatment_name",
+            "treatment_levels",
+            "hardware_assignments",
+        ]
+
+    def get_treatment_levels(self, obj):
+        links = obj.treatment.treatmentfactorlevel_set.select_related("factor", "level")
+        return [
+            {
+                "factor": link.factor.name,
+                "level": link.level.label,
+                "is_reference": link.level.is_reference,
+            }
+            for link in links.order_by("factor__position", "factor_id")
+        ]
+
+
+class TreatmentSerializer(serializers.ModelSerializer):
+    levels = FactorLevelSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Treatment
+        fields = ["id", "name", "position", "levels"]
+
+
+class FactorLevelDefinitionSerializer(serializers.Serializer):
+    label = serializers.CharField(max_length=100)
+    value = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    is_reference = serializers.BooleanField(default=False)
+
+
+class FactorDefinitionSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    unit = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    levels = FactorLevelDefinitionSerializer(many=True, min_length=2)
+
+    def validate_levels(self, levels):
+        labels = [level["label"].strip().casefold() for level in levels]
+        if len(labels) != len(set(labels)):
+            raise serializers.ValidationError("Poziomy jednego czynnika muszą mieć różne nazwy.")
+        if sum(level.get("is_reference", False) for level in levels) != 1:
+            raise serializers.ValidationError(
+                "Każdy czynnik musi mieć dokładnie jeden poziom odniesienia."
+            )
+        return levels
+
+
+class PotAssignmentDefinitionSerializer(serializers.Serializer):
+    label = serializers.CharField(max_length=30)
+    is_monitored = serializers.BooleanField(default=False)
+    soil_moisture = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    soil_temperature = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    pump = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
+class CameraAssignmentDefinitionSerializer(serializers.Serializer):
+    camera_id = serializers.IntegerField(min_value=1)
+    pot_label = serializers.CharField(max_length=30)
+
+
+class ExperimentDesignWriteSerializer(serializers.Serializer):
+    factors = FactorDefinitionSerializer(many=True, min_length=1)
+    repetitions = serializers.IntegerField(min_value=1, max_value=50)
+    selected_combinations = serializers.ListField(
+        child=serializers.DictField(child=serializers.CharField(max_length=100)),
+        required=False,
+    )
+    pot_assignments = PotAssignmentDefinitionSerializer(many=True, required=False)
+    camera_assignments = CameraAssignmentDefinitionSerializer(many=True, required=False)
+
+    def validate_factors(self, factors):
+        names = [factor["name"].strip().casefold() for factor in factors]
+        if len(names) != len(set(names)):
+            raise serializers.ValidationError("Czynniki muszą mieć różne nazwy.")
+        return factors
+
+
+class ExperimentDesignReadSerializer(serializers.ModelSerializer):
+    factors = ExperimentalFactorSerializer(many=True, read_only=True)
+    treatments = TreatmentSerializer(many=True, read_only=True)
+    pots = PotSerializer(many=True, read_only=True)
+    camera_assignments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Experiment
+        fields = ["id", "sensor_set_id", "factors", "treatments", "pots", "camera_assignments"]
+
+    def get_camera_assignments(self, obj):
+        return [
+            {
+                "id": assignment.id,
+                "camera_id": assignment.camera_id,
+                "camera_name": assignment.camera.name,
+                "pot_id": assignment.pot_id,
+                "pot_label": assignment.pot.label,
+            }
+            for assignment in obj.camera_assignments.select_related("camera", "pot")
+        ]

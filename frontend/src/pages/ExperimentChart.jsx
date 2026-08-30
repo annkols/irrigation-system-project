@@ -1,37 +1,35 @@
 import React, { useMemo, useState } from "react";
 
-import measurements from "./measurements.json";
-
 import {ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend} from "recharts";
 
 const sensors = [
   {
-    key: "temp",
+    key: "air_temperature",
     label: "Temperature inside (°C)",
     color: "#36d45d"
   },
   {
-    key: "soilTemp",
+    key: "soil_temperature",
     label: "Soil temperature (°C)",
     color: "#22c7d6"
   },
   {
-    key: "humidity",
+    key: "air_humidity",
     label: "Air humidity (%)",
     color: "#2962ff"
   },
   {
-    key: "moisture",
+    key: "moisture_percent",
     label: "Soil moisture (%)",
     color: "#ff7b00"
   },
   {
-    key: "light",
+    key: "light_lux",
     label: "Light intensity (lx)",
     color: "#a855f7"
   },
   {
-    key: "pressure",
+    key: "pressure_hpa",
     label: "Pressure (hPa)",
     color: "#8b4513"
   },
@@ -42,34 +40,18 @@ const sensors = [
   }
 ];
 
-const sensorSetKeys = {
-  1: ["moisture", "temp", "humidity","pumpLine"],
-  2: ["moisture", "temp", "humidity", "light", "pumpLine"],
-  3: ["moisture", "temp", "humidity","light", "pressure", "soilTemp", "pumpLine"]
-};
-
-const getAvailableSensors = (sensorSetId) => {
-  const allowedKeys =
-    sensorSetKeys[Number(sensorSetId)] ||
-    sensors.map((s) => s.key);
-
-  return sensors.filter((sensor) =>
-    allowedKeys.includes(sensor.key)
-  );
-};
-
-export default function ExperimentChart({sensorSetId}) {
-  const availableSensors = getAvailableSensors(sensorSetId);
+export default function ExperimentChart({ measurements = [] }) {
+  const availableSensors = sensors;
 
   const [leftSensor, setLeftSensor] =
-    useState("temp");
+    useState("air_temperature");
 
   const [rightSensor, setRightSensor] =
-    useState("humidity");
+    useState("air_humidity");
 
     const [startDate, setStartDate] = useState(() =>
       measurements.length
-        ? new Date(measurements[0].timestamp)
+        ? new Date(measurements[measurements.length - 1].created_at)
             .toISOString()
             .slice(0, 16)
         : ""
@@ -88,13 +70,13 @@ export default function ExperimentChart({sensorSetId}) {
 
       ...m,
 
-      time: new Date(m.timestamp),
+      time: new Date(m.created_at),
 
       pumpLine: m.pumpOn ? 5 : 0
 
     }));
 
-  }, []);
+  }, [measurements]);
 
   const filteredData = useMemo(() => {
 
@@ -104,7 +86,7 @@ export default function ExperimentChart({sensorSetId}) {
 
       data = data.filter(
         (d) =>
-          new Date(d.timestamp) >=
+          new Date(d.created_at) >=
           new Date(startDate)
       );
     }
@@ -113,7 +95,7 @@ export default function ExperimentChart({sensorSetId}) {
 
       data = data.filter(
         (d) =>
-          new Date(d.timestamp) <=
+          new Date(d.created_at) <=
           new Date(endDate)
       );
     }

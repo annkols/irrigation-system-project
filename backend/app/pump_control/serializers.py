@@ -11,6 +11,8 @@ class PumpCommandSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'command',
+            'station_number',
+            'pot_number',
             'arduino_command',
             'created_at',
         ]

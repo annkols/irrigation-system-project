@@ -93,6 +93,10 @@ class MeasurementExportCSVView(APIView):
         if experiment.planned_end_at:
             queryset = queryset.filter(created_at__lte=experiment.planned_end_at)
 
+        pot_number = request.query_params.get('pot_number')
+        if pot_number:
+            queryset = queryset.filter(pot_number=pot_number)
+
         export_format = request.query_params.get('export_format', 'csv')
 
         ALL_COLUMNS = {

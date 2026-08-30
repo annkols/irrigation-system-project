@@ -2,9 +2,16 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
 import "../App.css";
-import logo from "./images/logo_cultiva.svg";
+import Sidebar from "./Sidebar";
+import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const parseHours = (value) => Number(String(value).trim().replace(",", "."));
+const hoursToSeconds = (value) => Math.max(1, Math.round(parseHours(value) * 3600));
+const secondsToHours = (value) => {
+  const hours = Number(value || 3600) / 3600;
+  return String(Number(hours.toFixed(4))).replace(".", ",");
+};
 
 function Experiment_edit() {
   const navigate = useNavigate();
@@ -22,39 +29,14 @@ function Experiment_edit() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
 
-  const sensorSetups = [
-      {
-        id: 1,
-        title: 'BASIC',
-        sensors: [
-          { key: 'soil_moisture', label: 'soil moisture' },
-          { key: 'air_temperature', label: 'air temperature' },
-          { key: 'air_humidity', label: 'air humidity' }
-        ]
-      },
-      {
-        id: 2,
-        title: 'EXTENDED',
-        sensors: [
-          { key: 'soil_moisture', label: 'soil moisture' },
-          { key: 'air_temperature', label: 'air temperature' },
-          { key: 'air_humidity', label: 'air humidity' },
-          { key: 'light', label: 'light' }
-        ]
-      },
-      {
-        id: 3,
-        title: 'FULL',
-        sensors: [
-          { key: 'air_humidity', label: 'air humidity' },
-          { key: 'light', label: 'light' },
-          { key: 'soil_moisture', label: 'soil moisture' },
-          { key: 'pressure', label: 'pressure' },
-          { key: 'soil_temperature', label: 'soil temperature' },
-          { key: 'air_temperature', label: 'air temperature' }
-        ]
-      }
-    ];
+  const sensors = [
+    { key: 'air_temperature', label: 'air temperature (shared)' },
+    { key: 'air_humidity', label: 'air humidity (shared)' },
+    { key: 'pressure', label: 'pressure (shared)' },
+    { key: 'light', label: 'light intensity (shared)' },
+    { key: 'soil_moisture', label: 'soil moisture (per pot)' },
+    { key: 'soil_temperature', label: 'soil temperature (per pot)' },
+  ];
 
     useEffect(() => {
       fetch(`${API_BASE_URL}/experiments/${id}/`)
@@ -74,13 +56,11 @@ function Experiment_edit() {
       
           setSelectedSetup(data.sensor_set_id);
       
-          if (data.sensor_frequencies) {
-            const stringFreqs = {};
-            Object.entries(data.sensor_frequencies).forEach(([key, val]) => {
-              stringFreqs[key] = String(val);
-            });
-            setFrequencies(stringFreqs);
-          }
+          const fallbackFrequency = data.measurement_frequency_seconds || 3600;
+          setFrequencies(Object.fromEntries(sensors.map((sensor) => [
+            sensor.key,
+            secondsToHours(data.sensor_frequencies?.[sensor.key] || fallbackFrequency),
+          ])));
           setIsLoading(false);
         })
         .catch((err) => {
@@ -139,19 +119,18 @@ function Experiment_edit() {
     }
 
     if (!selectedSetup) {
-      localErrors.sensor_set_id = ["Please select a sensor setup."];
+      localErrors.sensor_set_id = ["Hardware set ID is missing."];
     } else {
-      const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
-      const invalidSensors = currentSetup.sensors.some(sensor => {
+      const invalidSensors = sensors.some(sensor => {
         const val = frequencies[sensor.key];
-        const numVal = parseInt(val, 10);
+        const numVal = parseHours(val);
         const isEmpty = !val || val.trim() === "";
-        const isNotInteger = Number(val) !== numVal;
-        const isOutOfRange = numVal <= 0 || numVal > 300;
-        return isEmpty || isNotInteger || isOutOfRange;
+        const isNotNumber = !Number.isFinite(numVal);
+        const isOutOfRange = numVal <= 0;
+        return isEmpty || isNotNumber || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = ["Frequencies must be whole numbers between 1 and 300 seconds."];
+        localErrors.sensor_set_id = ["Frequencies must be positive numbers of hours, for example 1 or 0,3."];
       }
     }
 
@@ -170,11 +149,10 @@ function Experiment_edit() {
       return;
     }
 
-    const currentSetup = sensorSetups.find(s => s.id === selectedSetup);
     const sensorFrequencies = Object.fromEntries(
-      currentSetup.sensors.map(sensor => [
+      sensors.map(sensor => [
         sensor.key,
-        parseInt(frequencies[sensor.key], 10)
+        hoursToSeconds(frequencies[sensor.key])
       ])
     );
 
@@ -220,20 +198,11 @@ function Experiment_edit() {
     }
 
   return (
-    <>
-      <header className="header">
-        <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
-          <img src={logo} alt="Cultiva logo" className="logo-img" />
-          <h1>CULTIVA</h1>
-        </div>
-        <div className="icons">
-          <span className="material-symbols-outlined">settings</span>
-          <span className="material-symbols-outlined">account_circle</span>
-          <span className="material-symbols-outlined">more_vert</span>
-        </div>
-      </header>
-
-      <div className="form">
+    <div className="dashboard-page">
+      <Sidebar />
+      <div className="dashboard-content">
+        <TopBar />
+      <div className="form edit-experiment-form">
         <div className="new-exp-form">
           <h2>Edit experiment</h2>
         </div>
@@ -338,50 +307,25 @@ function Experiment_edit() {
         </div>
 
         <div className="form-section">
-          <p>Select available setups of sensors you would like to use, all setups include a water pump:</p>
-
-          <div className="setup-container" style={{ opacity: 0.85 }}>
-          {sensorSetups.map((setup) => {
-            const isSelected = selectedSetup === setup.id;
-            return (
-              <div
-                key={setup.id}
-                className={`setup-card ${isSelected ? 'selected' : 'disabled-card'}`}
-                onClick={null} 
-                style={{ cursor: 'not-allowed' }}
-              >
-                <h3>{setup.title}</h3>
-                {isSelected && (
-                  <div className="setup-details" onClick={(e) => e.stopPropagation()}>
-                    <p style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.8 }}>
-                      Set reading frequency for each sensor (seconds):
-                    </p>
-                    {setup.sensors.map((sensor) => (
-                      <div key={sensor.key} className="sensor-freq-row">
-                        <span className="sensor-name">{sensor.label}</span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="300"
-                          step="1"
-                          placeholder="seconds"
-                          className={errors.sensor_set_id && (!frequencies[sensor.key] || frequencies[sensor.key] <= 0 || frequencies[sensor.key] > 300) ? "input-error" : ""}
-                          value={frequencies[sensor.key] || ""}
-                          onKeyDown={(e) => {
-                            if (["e", "E", ".", ","].includes(e.key)) {
-                              e.preventDefault();
-                            }
-                          }}
-                          onChange={(e) => handleFreqChange(sensor.key, e.target.value)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          <p>Hardware set ID: <strong>{selectedSetup}</strong>. Reading frequency in hours:</p>
+          <div className="frequency-grid">
+            {sensors.map((sensor) => (
+              <label key={sensor.key}>
+                <span>{sensor.label}</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="e.g. 0,3"
+                  className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "input-error" : ""}
+                  value={frequencies[sensor.key] || ""}
+                  onKeyDown={(e) => {
+                    if (["e", "E"].includes(e.key)) e.preventDefault();
+                  }}
+                  onChange={(e) => handleFreqChange(sensor.key, e.target.value)}
+                />
+              </label>
+            ))}
+          </div>
           {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
         </div>
 
@@ -410,7 +354,8 @@ function Experiment_edit() {
           <span>SAVE CHANGES</span>
         </button>
       </div>
-    </>
+      </div>
+    </div>
   );
 }
 

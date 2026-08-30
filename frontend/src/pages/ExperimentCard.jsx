@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -6,11 +6,30 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 export default function ExperimentCard({
 
     experiment,
-    latest
+    measurements = []
 
 }) {
 
     const navigate = useNavigate();
+    const potNumbers = useMemo(() => {
+        const fromPlan = experiment.pot_numbers || [];
+        const fromMeasurements = measurements.map((measurement) => measurement.pot_number);
+        const available = fromPlan.length ? fromPlan : fromMeasurements;
+        return [...new Set(available)].sort((a, b) => a - b);
+    }, [experiment.pot_numbers, measurements]);
+    const [selectedPot, setSelectedPot] = useState(null);
+
+    useEffect(() => {
+        if (potNumbers.length && !potNumbers.includes(selectedPot)) setSelectedPot(potNumbers[0]);
+    }, [potNumbers, selectedPot]);
+
+    const latest = measurements.find((measurement) => measurement.pot_number === selectedPot) || null;
+    const latestShared = measurements.find((measurement) => (
+        measurement.air_temperature != null
+        || measurement.air_humidity != null
+        || measurement.pressure_hpa != null
+        || measurement.light_lux != null
+    )) || null;
     const getStatusClass = (status) => {
 
         switch (status?.toLowerCase()) {
@@ -89,6 +108,19 @@ export default function ExperimentCard({
 
                 <div className="card-divider"></div>
 
+                <div className="pot-selector pot-selector--card" onClick={(event) => event.stopPropagation()}>
+                    <label htmlFor={`dashboard-pot-${experiment.id}`}>Pot</label>
+                    <select
+                        id={`dashboard-pot-${experiment.id}`}
+                        value={selectedPot ?? ""}
+                        onChange={(event) => setSelectedPot(Number(event.target.value))}
+                        disabled={!potNumbers.length}
+                    >
+                        {!potNumbers.length && <option value="">No pots</option>}
+                        {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                    </select>
+                </div>
+
                 <div className="card-stats">
 
                     <div>
@@ -101,7 +133,7 @@ export default function ExperimentCard({
 
                         <strong>
 
-                            {latest?.air_temperature ?? "-"}°C
+                            {latestShared?.air_temperature ?? "-"}°C
 
                         </strong>
 
@@ -117,7 +149,7 @@ export default function ExperimentCard({
 
                         <strong>
 
-                            {latest?.air_humidity ?? "-"}%
+                            {latestShared?.air_humidity ?? "-"}%
 
                         </strong>
 

@@ -7,12 +7,10 @@ from django.db import models
 
 from experiments.models import Experiment
 
-
 class CameraDevice(models.Model):
     name = models.CharField(max_length=100)
     sensor_set_id = models.PositiveSmallIntegerField(
-        choices=Experiment.SensorSet.choices,
-        unique=True,
+        db_index=True,
     )
     token_hash = models.CharField(max_length=64, editable=False)
     is_active = models.BooleanField(default=True)

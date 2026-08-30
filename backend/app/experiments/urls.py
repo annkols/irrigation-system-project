@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ActiveExperimentSensorConfigView,
     ExperimentDetailView,
+    ExperimentDesignView,
     ExperimentListCreateView,
     PublicExperimentSearchView,
     ExperimentStatusListView,
@@ -17,6 +18,7 @@ urlpatterns = [
     path('experiments/search/', PublicExperimentSearchView.as_view(), name='experiment-public-search'),
     path('experiments/active-sensor-config/', ActiveExperimentSensorConfigView.as_view(), name='experiment-active-sensor-config'),
     path('experiments/<int:pk>/', ExperimentDetailView.as_view(), name='experiment-detail'),
+    path('experiments/<int:pk>/design/', ExperimentDesignView.as_view(), name='experiment-design'),
     path("experiments/<int:pk>/edit/", ExperimentUpdateView.as_view(), name="experiment-edit"),
     path('experiments/<int:pk>/delete/', ExperimentDeleteView.as_view(), name='experiment-delete'),
     path('experiments/<int:pk>/end/', ExperimentEndView.as_view(), name='experiment-end'),

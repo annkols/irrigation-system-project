@@ -46,12 +46,7 @@ export default function Dashboard() {
                 m => m.station_number === experiment.sensor_set_id
             );
 
-            const latest =
-                experimentMeasurements.length > 0
-                    ? experimentMeasurements[0]
-                    : null;
-
-            return { experiment, latest };
+            return { experiment, measurements: experimentMeasurements };
         });
     }, [experiments, measurements]);
 
@@ -110,11 +105,11 @@ function ExperimentSection({ title, cards }) {
             <h2 className="section-title">{title}</h2>
 
             <div className="dashboard-grid">
-                {cards.map(({ experiment, latest }) => (
+                {cards.map(({ experiment, measurements }) => (
                     <ExperimentCard
                         key={experiment.id}
                         experiment={experiment}
-                        latest={latest}
+                        measurements={measurements}
                     />
                 ))}
             </div>
