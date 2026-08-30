@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
 import "../App.css";
 import logo from "./images/logo_cultiva.svg";
 
@@ -15,6 +14,8 @@ function Experiment_edit() {
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [keywords, setKeywords] = useState([]);
+  const [keywordInput, setKeywordInput] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
@@ -66,6 +67,7 @@ function Experiment_edit() {
           setPlantName(data.plant_name || "");
           setDescription(data.description || "");
           setIsPublic(data.is_public || false);
+          setKeywords(data.keywords || []);
       
           if (data.started_at) setStartDate(data.started_at.split('T')[0]);
           if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
@@ -87,6 +89,19 @@ function Experiment_edit() {
           navigate('/dashboard');
         });
     }, [id, navigate]);
+
+
+  const handleAddKeyword = () => {
+    const trimmed = keywordInput.trim();
+    if (trimmed && !keywords.includes(trimmed)) {
+      setKeywords([...keywords, trimmed]);
+      setKeywordInput("");
+    }
+  };
+
+  const handleRemoveKeyword = (indexToRemove) => {
+    setKeywords(keywords.filter((_, index) => index !== indexToRemove));
+  };
 
   const handleFreqChange = (sensor, value) => {
       setFrequencies(prev => ({
@@ -113,6 +128,14 @@ function Experiment_edit() {
 
     if (description.length > 2000) {
       localErrors.description = ["Ensure the description has no more than 2000 characters."];
+    }
+
+    if (!keywords || keywords.length === 0) {
+      localErrors.keywords = ["At least one keyword is required."];
+    } else if (keywords.length > 15) {
+      localErrors.keywords = ["Ensure there are no more than 15 keywords."];
+    } else if (keywords.some(kw => kw.length > 50)) {
+      localErrors.keywords = ["Ensure each keyword has no more than 50 characters."];
     }
 
     if (!selectedSetup) {
@@ -159,6 +182,7 @@ function Experiment_edit() {
       name,
       description,
       plant_name: plantName,
+      keywords,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
@@ -178,10 +202,9 @@ function Experiment_edit() {
         .then(async (res) => {
           const data = await res.json();
           if (res.ok) {
-            toast.success("Experiment updated successfully!");
-            setTimeout(() => {
-              navigate(`/experiment/${id}`);
-            }, 3000);
+            navigate(`/experiment/${id}`, { 
+              state: { message: "Experiment updated successfully!" } 
+            });
           } else {
             setErrors(data);
           }
@@ -198,11 +221,6 @@ function Experiment_edit() {
 
   return (
     <>
-    <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
       <header className="header">
         <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <img src={logo} alt="Cultiva logo" className="logo-img" />
@@ -255,7 +273,40 @@ function Experiment_edit() {
         </div>
 
         <div className="form-section">
-          <p>Tags:</p>
+          <p>Keywords:</p>
+          <div className="keyword-input-wrapper">
+            <input
+              type="text"
+              className={errors.keywords ? "input-error" : ""}
+              placeholder="Add a keyword"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
+            />
+            <button type="button" className="btn-create" onClick={handleAddKeyword}>
+              ADD
+            </button>
+          </div>
+
+          <div className="keywords-tags-container">
+            {keywords.map((kw, index) => (
+              <span key={index} className="exp-keyword">
+                {kw}
+                <button 
+                  type="button" 
+                  className="btn-remove-tag"
+                  onClick={() => handleRemoveKeyword(index)}
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+          </div>
+          {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
         </div>
 
         <div className="dates-choices">

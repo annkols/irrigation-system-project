@@ -1,7 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast} from "react-toastify";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -14,6 +13,8 @@ function New_experiment() {
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [keywords, setKeywords] = useState([]);
+  const [keywordInput, setKeywordInput] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
@@ -55,6 +56,20 @@ function New_experiment() {
     }
   ];
 
+  //dodawania keyworda
+  const handleAddKeyword = () => {
+    const trimmed = keywordInput.trim();
+    if (trimmed && !keywords.includes(trimmed)) {
+      setKeywords([...keywords, trimmed]);
+      setKeywordInput("");
+    }
+  };
+
+  //usuwanie keyworda
+  const handleRemoveKeyword = (indexToRemove) => {
+    setKeywords(keywords.filter((_, index) => index !== indexToRemove));
+  };
+
   const nextStep = () => {
   setErrors({});
   const localErrors = {};
@@ -85,6 +100,14 @@ function New_experiment() {
       localErrors.planned_end_at = ["Planned end date is required."];
     } else if (startDate && new Date(endDate) < new Date(startDate)) {
       localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
+    }
+
+    if (!keywords || keywords.length === 0) {
+      localErrors.keywords = ["At least one keyword is required."];
+    } else if (keywords.length > 15) {
+      localErrors.keywords = ["Ensure there are no more than 15 keywords."];
+    } else if (keywords.some(kw => kw.length > 50)) {
+      localErrors.keywords = ["Ensure each keyword has no more than 50 characters."];
     }
   }
 
@@ -144,6 +167,7 @@ function New_experiment() {
       name,
       description,
       plant_name: plantName,
+      keywords,
       sensor_set_id: selectedSetup,
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
@@ -170,7 +194,7 @@ function New_experiment() {
           toast.success("Experiment created!");
           setTimeout(() => {
             navigate(`/dashboard`);
-          }, 3000);
+          }, 0);
         } else {
           setErrors(data);
         }
@@ -183,11 +207,6 @@ function New_experiment() {
 
   return (
     <div className="dashboard-page">
-    <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
       <Sidebar />
 
       <div className="dashboard-content">
@@ -274,7 +293,35 @@ function New_experiment() {
                 </div>
 
                 <div className="form-section">
-                  <p>Tags:</p>
+                  <p>Keywords:</p>
+                  <div className="keyword-input-wrapper">
+                    <input
+                      type="text"
+                      className={errors.keywords ? "input-error" : ""}
+                      placeholder="Add a keyword"
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                    />
+                    <button type="button" className="btn-create" onClick={handleAddKeyword}>
+                      ADD
+                    </button>
+                  </div>
+  
+                  <div className="keywords-tags-container">
+                    {keywords.map((kw, index) => (
+                      <span key={index} className="exp-keyword">
+                        {kw}
+                        <button 
+                          type="button" 
+                          className="btn-remove-tag"
+                          onClick={() => handleRemoveKeyword(index)}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
                 </div>
 
                 <div className="form-navigation">

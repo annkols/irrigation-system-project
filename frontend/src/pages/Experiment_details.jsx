@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { toast } from "react-toastify";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -22,6 +21,8 @@ const NAV_ITEMS = [
 function Experiment_details() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasShownToast = useRef(false);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [experiment, setExperiment] = useState(null);
@@ -117,6 +118,20 @@ function Experiment_details() {
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
   }, [id, lastSuccessTime]);
+
+  useEffect(() => {
+    const message = location.state?.message || location.state?.successMessage;
+
+    if (message && !hasShownToast.current) {
+      // Oznaczamy, że toast dla tego przejścia został już wyświetlony
+      hasShownToast.current = true;
+  
+      // Wyświetlamy powiadomienie
+      toast.success(message);
+     // Czyścimy stan w React Routerze (bez przeładowania strony)
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const handleEndExperiment = () => {
     toast(
@@ -230,11 +245,6 @@ function Experiment_details() {
 
   return (
     <div className="exp-layout">
-      <ToastContainer
-         position="top-right"
-        autoClose={3000}
-        toastClassName="custom-toast"
-      />
 
       <aside className="exp-sidebar">
         <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
@@ -324,14 +334,18 @@ function Experiment_details() {
                   <span className="exp-info-label">Description</span>
                   <p className="exp-info-desc" style={{ margin: 0 }}>{experiment.description || "-"}</p>
                 </div>
-                {experiment.tags?.length > 0 && (
-                  <div className="exp-overview-field">
-                    <span className="exp-info-label">Tags</span>
-                    <div className="exp-details-tags">
-                      {experiment.tags.map((tag, i) => <span key={i} className="exp-tag">{tag}</span>)}
-                    </div>
+                <div className="exp-overview-field">
+                  <span className="exp-info-label">Keywords</span>
+                  <div className="exp-details-keywords">
+                    {experiment.keywords?.length > 0 ? (
+                      experiment.keywords.map((keyword, i) => (
+                        <span key={i} className="exp-keyword">{keyword}</span>
+                      ))
+                    ) : (
+                      <span className="exp-no-keywords">This experiment does not have keywords</span>
+                    )}
                   </div>
-                )}
+                </div>
                 <div className="exp-overview-field exp-overview-field--last">
                   <span className="exp-info-label">Collaborators</span>
                   <div className="exp-collaborators">
