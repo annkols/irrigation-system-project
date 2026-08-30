@@ -249,6 +249,75 @@ class AuthenticationTests(APITestCase):
         self.assertTrue(pending_user.is_active)
 
 
+class UserSearchTests(APITestCase):
+    def setUp(self):
+        self.requesting_user = User.objects.create_user(
+            username="searching.user",
+            email="searching@example.com",
+            password="SearchPass123!",
+            is_active=True,
+        )
+        self.anna = User.objects.create_user(
+            username="anna.kowalska",
+            email="anna.private@example.com",
+            password="SearchPass123!",
+            first_name="Anna",
+            last_name="Kowalska",
+            is_active=True,
+        )
+        UserProfile.objects.create(
+            user=self.anna,
+            university="Uniwersytet Przyrodniczy w Poznaniu",
+            department="Katedra Agronomii",
+            role="academic_employee",
+        )
+        self.inactive_user = User.objects.create_user(
+            username="anna.inactive",
+            email="inactive@example.com",
+            password="SearchPass123!",
+            first_name="Anna",
+            last_name="Nieaktywna",
+            is_active=False,
+        )
+
+    def test_search_requires_authentication(self):
+        response = self.client.get(reverse("user-search"), {"q": "Anna"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_search_returns_active_user_without_private_fields(self):
+        self.client.force_authenticate(user=self.requesting_user)
+
+        response = self.client.get(reverse("user-search"), {"q": "Anna Kowalska"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.anna.id)
+        self.assertNotIn("email", response.data[0])
+        self.assertNotIn("is_active", response.data[0])
+        self.assertNotIn("is_staff", response.data[0])
+
+    def test_search_uses_profile_fields_and_hides_inactive_users(self):
+        self.client.force_authenticate(user=self.requesting_user)
+
+        response = self.client.get(reverse("user-search"), {"q": "Agronomii"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([user["id"] for user in response.data], [self.anna.id])
+
+        inactive_response = self.client.get(reverse("user-search"), {"q": "Nieaktywna"})
+        self.assertEqual(inactive_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(inactive_response.data, [])
+
+    def test_search_requires_at_least_two_characters(self):
+        self.client.force_authenticate(user=self.requesting_user)
+
+        response = self.client.get(reverse("user-search"), {"q": "A"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("q", response.data)
+
+
 class UserValidationTests(APITestCase):
     def test_email_cannot_be_empty(self):
         url = reverse("user-register")
