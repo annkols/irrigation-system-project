@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework import generics, status
@@ -17,6 +18,7 @@ from .serializers import (
     LoginSerializer,
     LogoutSerializer,
     RegisterSerializer,
+    UserSearchSerializer,
     UserSerializer,
 )
 from .permissions import IsSuperUser
@@ -32,6 +34,36 @@ class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
+
+
+class UserSearchView(generics.ListAPIView):
+    serializer_class = UserSearchSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        query = self.request.query_params.get("q", "").strip()
+
+        if len(query) < 2:
+            raise ValidationError({
+                "q": "Wpisz co najmniej 2 znaki, aby wyszukać użytkownika."
+            })
+
+        queryset = User.objects.filter(is_active=True).select_related("profile")
+        searchable_fields = (
+            "username__icontains",
+            "first_name__icontains",
+            "last_name__icontains",
+            "profile__university__icontains",
+            "profile__department__icontains",
+        )
+
+        for term in query.split():
+            term_filter = Q()
+            for field in searchable_fields:
+                term_filter |= Q(**{field: term})
+            queryset = queryset.filter(term_filter)
+
+        return queryset.order_by("first_name", "last_name", "username")[:20]
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
