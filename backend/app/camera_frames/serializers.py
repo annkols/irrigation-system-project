@@ -11,6 +11,7 @@ class CameraFrameSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "experiment",
+            "camera",
             "image_url",
             "captured_at",
             "captured_by",

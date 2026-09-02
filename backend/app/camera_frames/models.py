@@ -42,6 +42,13 @@ class CameraFrame(models.Model):
         on_delete=models.CASCADE,
         related_name="camera_frames",
     )
+    camera = models.ForeignKey(
+        CameraDevice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="frames",
+    )
     image = models.ImageField(upload_to="camera_frames/%Y/%m/%d/")
     captured_at = models.DateTimeField(auto_now_add=True)
     captured_by = models.ForeignKey(

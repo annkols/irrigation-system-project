@@ -6,41 +6,48 @@ const sensors = [
   {
     key: "air_temperature",
     label: "Temperature inside (°C)",
-    color: "#36d45d"
+    color: "#36d45d",
+    scope: "shared"
   },
   {
     key: "soil_temperature",
     label: "Soil temperature (°C)",
-    color: "#22c7d6"
+    color: "#22c7d6",
+    scope: "pot"
   },
   {
     key: "air_humidity",
     label: "Air humidity (%)",
-    color: "#2962ff"
+    color: "#2962ff",
+    scope: "shared"
   },
   {
     key: "moisture_percent",
     label: "Soil moisture (%)",
-    color: "#ff7b00"
+    color: "#ff7b00",
+    scope: "pot"
   },
   {
     key: "light_lux",
     label: "Light intensity (lx)",
-    color: "#a855f7"
+    color: "#a855f7",
+    scope: "shared"
   },
   {
     key: "pressure_hpa",
     label: "Pressure (hPa)",
-    color: "#8b4513"
+    color: "#8b4513",
+    scope: "shared"
   },
   {
     key: "pumpLine",
     label: "Pump",
-    color: "#ff007a"
+    color: "#ff007a",
+    scope: "pot"
   }
 ];
 
-export default function ExperimentChart({ measurements = [] }) {
+export default function ExperimentChart({ measurements = [], selectedPot = null }) {
   const availableSensors = sensors;
 
   const [leftSensor, setLeftSensor] =
@@ -66,17 +73,26 @@ export default function ExperimentChart({ measurements = [] }) {
 
   const allData = useMemo(() => {
 
-    return measurements.map((m) => ({
+    return measurements.map((m) => {
+
+      const belongsToSelectedPot = m.pot_number === selectedPot;
+
+      return {
 
       ...m,
 
       time: new Date(m.created_at),
 
-      pumpLine: m.pumpOn ? 5 : 0
+      moisture_percent: belongsToSelectedPot ? m.moisture_percent : null,
 
-    }));
+      soil_temperature: belongsToSelectedPot ? m.soil_temperature : null,
 
-  }, [measurements]);
+      pumpLine: belongsToSelectedPot ? (m.pump_on ? 5 : 0) : null
+
+      };
+    });
+
+  }, [measurements, selectedPot]);
 
   const filteredData = useMemo(() => {
 
@@ -149,7 +165,7 @@ export default function ExperimentChart({ measurements = [] }) {
                 value={sensor.key}
                 disabled={sensor.key === rightSensor}
               >
-                {sensor.label}
+                {sensor.label} ({sensor.scope === "shared" ? "shared" : `P${selectedPot ?? "-"}`})
               </option>
 
             ))}
@@ -177,7 +193,7 @@ export default function ExperimentChart({ measurements = [] }) {
                 disabled={sensor.key === leftSensor
                 }
               >
-                {sensor.label}
+                {sensor.label} ({sensor.scope === "shared" ? "shared" : `P${selectedPot ?? "-"}`})
               </option>
 
             ))}
@@ -274,6 +290,7 @@ export default function ExperimentChart({ measurements = [] }) {
             <Line
               yAxisId="left"
               dataKey={leftSensor}
+              connectNulls
               name={leftConfig.label}
               stroke={leftConfig.color}
               strokeWidth={3}
@@ -288,6 +305,7 @@ export default function ExperimentChart({ measurements = [] }) {
             <Line
               yAxisId="right"
               dataKey={rightSensor}
+              connectNulls
               name={rightConfig.label}
               stroke={rightConfig.color}
               strokeWidth={3}

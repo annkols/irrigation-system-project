@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from experiments.models import Experiment
+from experiments.models import Experiment, ExperimentCameraAssignment, Pot, Treatment
 
 from .models import CameraDevice, CameraFrame
 
@@ -51,6 +51,7 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         frame = CameraFrame.objects.get()
         self.assertEqual(frame.experiment, self.experiment)
+        self.assertEqual(frame.camera, self.camera_device)
         self.assertEqual(frame.note, "Automatic camera upload")
 
         list_response = self.client.get(
@@ -64,6 +65,18 @@ class CameraFrameApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_upload_accepts_second_camera_in_the_same_sensor_set(self):
+        other_camera = CameraDevice.objects.create(
+            name="Other camera",
+            sensor_set_id=1,
+            token_hash=CameraDevice.hash_token("other-token"),
+        )
+
+        response = self.upload_frame(token="other-token")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(CameraFrame.objects.get().camera, other_camera)
 
     def test_upload_rejects_inactive_camera(self):
         self.camera_device.is_active = False
@@ -99,6 +112,33 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"jpeg-data")
         self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_latest_frame_image_can_be_selected_by_pot(self):
+        treatment = Treatment.objects.create(
+            experiment=self.experiment,
+            name="Control",
+        )
+        pot = Pot.objects.create(
+            experiment=self.experiment,
+            treatment=treatment,
+            label="P1",
+            replicate_number=1,
+            position=1,
+        )
+        ExperimentCameraAssignment.objects.create(
+            experiment=self.experiment,
+            pot=pot,
+            camera=self.camera_device,
+        )
+        self.upload_frame()
+
+        response = self.client.get(
+            reverse("experiment-latest-frame-image", args=[self.experiment.pk]),
+            {"pot_number": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), b"jpeg-data")
 
     def test_delete_removes_database_record(self):
         upload_response = self.upload_frame()

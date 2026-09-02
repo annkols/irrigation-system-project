@@ -31,6 +31,7 @@ function Experiment_details() {
   const [experiment, setExperiment] = useState(null);
   const [design, setDesign] = useState(null);
   const [selectedPot, setSelectedPot] = useState(null);
+  const [selectedCameraPot, setSelectedCameraPot] = useState(null);
   const [measurements, setMeasurements] = useState([]);
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
@@ -132,17 +133,34 @@ function Experiment_details() {
   }, [id]);
 
   const potNumbers = useMemo(() => {
-    const planned = design?.pots?.filter((pot) => pot.is_monitored).map((pot) => pot.position) || [];
+    const planned = design?.pots?.map((pot) => pot.position) || [];
     const measured = measurements
       .filter((measurement) => !experiment || measurement.station_number === experiment.sensor_set_id)
       .map((measurement) => measurement.pot_number);
-    const available = design?.pots?.length ? planned : measured;
+    const available = planned.length ? planned : measured;
     return [...new Set(available)].sort((a, b) => a - b);
   }, [design, experiment, measurements]);
+
+  const cameraPotNumbers = useMemo(() => {
+    if (!design?.camera_assignments?.length) return [];
+    const potsById = new Map(design.pots.map((pot) => [pot.id, pot.position]));
+    return [...new Set(
+      design.camera_assignments
+        .map((assignment) => potsById.get(assignment.pot_id))
+        .filter((position) => position != null)
+    )].sort((a, b) => a - b);
+  }, [design]);
 
   useEffect(() => {
     if (potNumbers.length && !potNumbers.includes(selectedPot)) setSelectedPot(potNumbers[0]);
   }, [potNumbers, selectedPot]);
+
+  useEffect(() => {
+    if (cameraPotNumbers.length && !cameraPotNumbers.includes(selectedCameraPot)) {
+      setSelectedCameraPot(cameraPotNumbers[0]);
+    }
+    if (!cameraPotNumbers.length && selectedCameraPot !== null) setSelectedCameraPot(null);
+  }, [cameraPotNumbers, selectedCameraPot]);
 
   const selectedMeasurements = useMemo(() => measurements.filter((measurement) => (
     experiment
@@ -582,18 +600,37 @@ function Experiment_details() {
           {activeTab === 'camera' && (
             <div className="exp-tab-camera">
               <h2 className="exp-tab-section-title">Camera view</h2>
+              <div className="pot-selector pot-selector--section">
+                <label htmlFor="camera-pot-select">Pot</label>
+                <select
+                  id="camera-pot-select"
+                  value={selectedCameraPot ?? ""}
+                  disabled={!cameraPotNumbers.length}
+                  onChange={(e) => setSelectedCameraPot(Number(e.target.value))}
+                >
+                  {!cameraPotNumbers.length && <option value="">No camera assigned</option>}
+                  {cameraPotNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                </select>
+              </div>
               <div className="exp-camera-main">
                 <div className="exp-camera-frame-wrap">
-                  <img
-                    src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/`}
-                    alt="Latest camera frame"
-                    className="exp-camera-stream"
-                    onError={e => {
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
-                    }}
-                  />
-                  <div className="exp-camera-placeholder">
+                  {selectedCameraPot != null && (
+                    <img
+                      key={selectedCameraPot}
+                      src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/?pot_number=${selectedCameraPot}`}
+                      alt={`Latest camera frame for pot P${selectedCameraPot}`}
+                      className="exp-camera-stream"
+                      onLoad={e => {
+                        e.target.style.display = '';
+                        e.target.nextElementSibling?.classList.remove('exp-camera-placeholder-visible');
+                      }}
+                      onError={e => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
+                      }}
+                    />
+                  )}
+                  <div className={`exp-camera-placeholder ${selectedCameraPot == null ? 'exp-camera-placeholder-visible' : ''}`}>
                     <span className="material-symbols-outlined">photo_camera</span>
                     <span>No camera feed available</span>
                   </div>
@@ -617,7 +654,7 @@ function Experiment_details() {
                   {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                 </select>
               </div>
-              <ExperimentChart measurements={selectedMeasurements} />
+              <ExperimentChart measurements={stationMeasurements} selectedPot={selectedPot} />
             </div>
           )}
 
