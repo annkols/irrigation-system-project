@@ -21,6 +21,14 @@ const cartesian = (lists) => lists.reduce(
   (rows, items) => rows.flatMap((row) => items.map((item) => [...row, item])),
   [[]],
 );
+const apiErrorMessage = (error) => {
+  if (typeof error === "string") return error;
+  if (Array.isArray(error)) return error.map(apiErrorMessage).filter(Boolean).join(" ");
+  if (error && typeof error === "object") {
+    return Object.values(error).map(apiErrorMessage).filter(Boolean).join(" ");
+  }
+  return "An unexpected error occurred. Please try again.";
+};
 
 function New_experiment() {
   const navigate = useNavigate();
@@ -151,7 +159,7 @@ function New_experiment() {
       navigate("/dashboard");
     } catch (error) {
       if (experimentId) await fetch(`${api}/experiments/${experimentId}/delete/`, { method: "DELETE" });
-      setErrors({ server: typeof error === "object" ? JSON.stringify(error) : String(error) });
+      setErrors({ server: apiErrorMessage(error) });
       toast.error("The experiment could not be created.");
     } finally {
       setSaving(false);
