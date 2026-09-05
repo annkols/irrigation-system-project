@@ -1,17 +1,28 @@
 from rest_framework.test import APITestCase
+from rest_framework import status
 
 from datetime import timedelta
 
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
-
+from django.contrib.auth import get_user_model
 
 from measurements.models import Measurement
-from .models import Experiment, Keyword
+from .models import Experiment, Keyword, ExperimentCollaborator
+
+User = get_user_model()
 
 # Create your tests here.
 class ExperimentTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="testuser@example.com",
+            password="password12345",
+        )
+        self.client.force_authenticate(user=self.user)
+
     def test_create_experiment_successfully(self):
         url = reverse('experiment-list-create')
         started_at = timezone.now()
@@ -26,7 +37,6 @@ class ExperimentTests(APITestCase):
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
-            "owner": None,
             "collaborators": []
         }
 
@@ -52,7 +62,6 @@ class ExperimentTests(APITestCase):
             "started_at": started_at.isoformat(),
             "planned_end_at": planned_end_at.isoformat(),
             "finished_at": None,
-            "owner": None,
             "collaborators": [],
             "sensor_frequencies": {
                 "soil_moisture": 30,
@@ -81,7 +90,6 @@ class ExperimentTests(APITestCase):
             "sensor_set_id": 1,
             "started_at": None,
             "finished_at": None,
-            "owner": None,
             "collaborators": [],
             "sensor_frequencies": {
                 "soil_moisture": 0
@@ -565,7 +573,8 @@ class ExperimentTests(APITestCase):
             plant_name="Potato",
             sensor_set_id=1,
             started_at=None,
-            finished_at=None
+            finished_at=None,
+            owner=self.user,
         )
 
         url = reverse('experiment-delete', kwargs={"pk": experiment.pk})
@@ -690,3 +699,184 @@ class ExperimentTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["measurements"]), 1)
+
+# EXPERIMENT/COLLABORATORS TESTS
+
+def test_owner_can_view_experiment_collaborators(self):
+    owner = User.objects.create_user(
+        username="owner",
+        email="owner@example.com",
+        password="testpass123",
+    )
+
+    collaborator = User.objects.create_user(
+        username="collaborator",
+        email="collaborator@example.com",
+        password="testpass123",
+    )
+
+    experiment = Experiment.objects.create(
+        name="Potato test",
+        plant_name="Potato",
+        sensor_set_id=1,
+        owner=owner,
+        started_at=timezone.now(),
+        planned_end_at=timezone.now() + timedelta(days=1),
+        finished_at=None,
+    )
+
+    membership = ExperimentCollaborator.objects.create(
+        experiment=experiment,
+        user=collaborator,
+    )
+
+    self.client.force_authenticate(user=owner)
+
+    url = reverse(
+        "experiments-collaborators",
+        kwargs={"pk": experiment.pk},
+    )
+
+    response = self.client.get(url)
+
+    self.assertEqual(
+        response.status_code,
+        status.HTTP_200_OK,
+    )
+
+    self.assertEqual(len(response.data), 1)
+
+    self.assertEqual(
+        response.data[0]["id"],
+        membership.id,
+    )
+
+    self.assertEqual(
+        response.data[0]["user"]["id"],
+        collaborator.id,
+    )
+
+
+def test_collaborator_can_view_experiment_collaborators(self):
+    owner = User.objects.create_user(
+        username="owner",
+        email="owner@example.com",
+        password="testpass123",
+    )
+
+    collaborator = User.objects.create_user(
+        username="collaborator",
+        email="collaborator@example.com",
+        password="testpass123",
+    )
+
+    experiment = Experiment.objects.create(
+        name="Potato test",
+        plant_name="Potato",
+        sensor_set_id=1,
+        owner=owner,
+        started_at=timezone.now(),
+        planned_end_at=timezone.now() + timedelta(days=1),
+        finished_at=None,
+    )
+
+    membership = ExperimentCollaborator.objects.create(
+        experiment=experiment,
+        user=collaborator,
+    )
+
+    self.client.force_authenticate(user=collaborator)
+
+    url = reverse(
+        "experiments-collaborators",
+        kwargs={"pk": experiment.pk},
+    )
+
+    response = self.client.get(url)
+
+    self.assertEqual(
+        response.status_code,
+        status.HTTP_200_OK,
+    )
+
+    self.assertEqual(len(response.data), 1)
+
+    self.assertEqual(
+        response.data[0]["id"],
+        membership.id,
+    )
+
+    self.assertEqual(
+        response.data[0]["user"]["id"],
+        collaborator.id,
+    )
+
+
+def test_non_collaborator_cannot_view_experiment_collaborators(self):
+    owner = User.objects.create_user(
+        username="owner",
+        email="owner@example.com",
+        password="testpass123",
+    )
+
+    outsider = User.objects.create_user(
+        username="outsider",
+        email="outsider@example.com",
+        password="testpass123",
+    )
+
+    experiment = Experiment.objects.create(
+        name="Potato test",
+        plant_name="Potato",
+        sensor_set_id=1,
+        owner=owner,
+        started_at=timezone.now(),
+        planned_end_at=timezone.now() + timedelta(days=1),
+        finished_at=None,
+    )
+
+    self.client.force_authenticate(user=outsider)
+
+    url = reverse(
+        "experiments-collaborators",
+        kwargs={"pk": experiment.pk},
+    )
+
+    response = self.client.get(url)
+
+    self.assertEqual(
+        response.status_code,
+        status.HTTP_403_FORBIDDEN,
+    )
+
+
+def test_unauthenticated_user_cannot_view_experiment_collaborators(self):
+    self.client.force_authenticate(user=None)
+
+    owner = User.objects.create_user(
+        username="owner",
+        email="owner@example.com",
+        password="testpass123",
+    )
+
+    experiment = Experiment.objects.create(
+        name="Potato test",
+        plant_name="Potato",
+        sensor_set_id=1,
+        owner=owner,
+        started_at=timezone.now(),
+        planned_end_at=timezone.now() + timedelta(days=1),
+        finished_at=None,
+    )
+
+    url = reverse(
+        "experiments-collaborators",
+        kwargs={"pk": experiment.pk},
+    )
+
+    response = self.client.get(url)
+
+    self.assertEqual(
+        response.status_code,
+        status.HTTP_401_UNAUTHORIZED,
+    )

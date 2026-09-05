@@ -12,6 +12,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
 
+from .permissions import CanViewUsers, CanChangeUsers
 
 # Create your views here.
 from .serializers import (
@@ -28,12 +29,12 @@ User = get_user_model()
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewUsers]
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewUsers]
 
 
 class UserSearchView(generics.ListAPIView):
@@ -51,6 +52,7 @@ class UserSearchView(generics.ListAPIView):
         queryset = User.objects.filter(is_active=True).select_related("profile")
         searchable_fields = (
             "username__icontains",
+            "email__icontains",
             "first_name__icontains",
             "last_name__icontains",
             "profile__university__icontains",
@@ -127,12 +129,18 @@ class UserDeleteView(generics.DestroyAPIView):
 
 class UserDeactivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanChangeUsers]
 
+    http_method_names = [
+        "patch",
+        "head",
+        "options",
+    ]
+    
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
 
-        if user.is_staff or user.is_superuser:
+        if ((user.is_staff or user.is_superuser) and not request.user.is_superuser):
             return Response(
                 {"detail": "You cannot deactivate admin users."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -147,10 +155,22 @@ class UserDeactivateView(generics.UpdateAPIView):
 class UserActivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanChangeUsers]
+
+    http_method_names = [
+        "patch",
+        "head",
+        "options",
+    ]
 
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
+
+        if ((user.is_staff or user.is_superuser) and not request.user.is_superuser):
+            return Response({
+                "detail": "Only a superuser can activate an administrator account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if user.is_active:
             return Response({"detail": "User is already active."})

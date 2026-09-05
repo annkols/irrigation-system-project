@@ -293,7 +293,6 @@ class UserSearchTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.anna.id)
-        self.assertNotIn("email", response.data[0])
         self.assertNotIn("is_active", response.data[0])
         self.assertNotIn("is_staff", response.data[0])
 

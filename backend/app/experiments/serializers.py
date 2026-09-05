@@ -1,9 +1,14 @@
 from rest_framework import serializers
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
+
+from users.serializers import UserSearchSerializer
 from measurements.models import Measurement
 from measurements.serializers import MeasurementSerializer
-from .models import Experiment, Keyword
+from .models import Experiment, Keyword, ExperimentCollaborator
 
+User = get_user_model()
 
 ALLOWED_SENSOR_FREQUENCY_KEYS = {
     'soil_moisture',
@@ -14,7 +19,7 @@ ALLOWED_SENSOR_FREQUENCY_KEYS = {
     'pressure',
 }
 
-
+# KEYWORDS
 class KeywordListField(serializers.Field):
     default_error_messages = {
         "not_a_list": "Słowa kluczowe muszą być listą.",
@@ -47,12 +52,67 @@ class KeywordListField(serializers.Field):
 
         return normalized
 
+# MODEL THROUGH USERS -> EXPERIMENTS
+class CollaboratorAssignmentSerializer(serializers.Serializer):
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=User.objects.filter(is_active=True),
+    )
+
+    can_edit_experiment = serializers.BooleanField(default=False)
+    can_end_experiment = serializers.BooleanField(default=False)
+
+
+class ExperimentCollaboratorSerializer(serializers.ModelSerializer):
+    user = UserSearchSerializer(read_only=True)
+
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=User.objects.filter(is_active=True),
+        write_only=True,
+    )
+
+    class Meta:
+        model = ExperimentCollaborator
+
+        fields = [
+            "id",
+            "user",
+            "user_id",
+            "can_edit_experiment",
+            "can_end_experiment",
+            "added_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "user",
+            "added_at",
+        ]
+
+
+class ExperimentCollaboratorPermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExperimentCollaborator
+
+        fields = [
+            "can_edit_experiment",
+            "can_end_experiment",
+        ]
+
 # CREATE/READ EXPERIMENT
 class ExperimentSerializer(serializers.ModelSerializer):
     keywords = KeywordListField(required=True)
 
+    initial_collaborators = CollaboratorAssignmentSerializer(
+        many=True,
+        write_only=True,
+        required=False,
+    )
+
     class Meta:
         model = Experiment
+
         fields = [
             'id',
             'name',
@@ -60,7 +120,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'plant_name',
             'keywords',
             'owner',
-            'collaborators',
+            "initial_collaborators",
             'sensor_set_id',
             'measurement_frequency_seconds',
             'sensor_frequencies',
@@ -71,7 +131,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'status',
             'is_public'
         ]
-        read_only_fields = ['id', 'status', 'created_at']
+        read_only_fields = ['id', 'owner', 'status', 'created_at']
 
     def _set_keywords(self, experiment, keyword_names):
         keywords = [
@@ -82,8 +142,29 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         keyword_names = validated_data.pop("keywords")
-        experiment = super().create(validated_data)
-        self._set_keywords(experiment, keyword_names)
+        initial_collaborators = validated_data.pop(
+            "initial_collaborators",
+            [],
+        )
+
+        with transaction.atomic():
+            experiment = Experiment.objects.create(**validated_data)
+
+            self._set_keywords(
+                experiment,
+                keyword_names,
+            )
+
+            ExperimentCollaborator.objects.bulk_create([
+                ExperimentCollaborator(
+                    experiment=experiment,
+                    user=item["user"],
+                    can_edit_experiment=item["can_edit_experiment"],
+                    can_end_experiment=item["can_end_experiment"],
+                )
+                for item in initial_collaborators
+            ])
+
         return experiment
 
     def update(self, instance, validated_data):
@@ -107,20 +188,6 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         instance = getattr(self, 'instance', None)
-
-        owner = data.get('owner', getattr(instance, 'owner', None))
-
-        if 'collaborators' in data:
-            collaborators = data.get('collaborators', [])
-        elif instance:
-            collaborators = list(instance.collaborators.all())
-        else:
-            collaborators = []
-
-        if owner and owner in collaborators:
-            raise serializers.ValidationError({
-                "collaborators": "Właściciel eksperymentu nie może zostać dodany jako uczestnik."
-            })
 
         name = data.get('name')
         if name is not None and not name.strip():
@@ -243,41 +310,78 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate_initial_collaborators(self, collaborators):
+        if len(collaborators) > 50:
+            raise serializers.ValidationError(
+                "Eksperyment może mieć maksymalnie 50 współpracowników."
+            )
+
+        user_ids = [
+            collaborator["user"].id
+            for collaborator in collaborators
+        ]
+
+        if len(user_ids) != len(set(user_ids)):
+            raise serializers.ValidationError(
+                "Ten sam użytkownik nie może zostać dodany więcej niż raz."
+            )
+
+        request = self.context.get("request")
+
+        if (
+            request
+            and request.user.is_authenticated
+            and request.user.id in user_ids
+        ):
+            raise serializers.ValidationError(
+                "Właściciel eksperymentu nie może być współpracownikiem."
+            )
+
+        return collaborators
+
 # UPDATE EXPERIMENT
 class ExperimentUpdateSerializer(ExperimentSerializer):
     NONCHANGEABLE_FIELDS = {
         "sensor_set_id",
         "owner",
         "created_at",
-        'finished_at',
+        "finished_at",
     }
 
+    initial_collaborators = None
+
     class Meta(ExperimentSerializer.Meta):
+        fields = [
+            field
+            for field in ExperimentSerializer.Meta.fields
+            if field != "initial_collaborators"
+        ]
+
         read_only_fields = ExperimentSerializer.Meta.read_only_fields + [
             "sensor_set_id",
-            "owner",
-            "created_at",
-            'finished_at'
+            "finished_at",
         ]
 
     def validate(self, data):
-        forbidden_fields = self.NONCHANGEABLE_FIELDS.intersection(self.initial_data.keys())
-        
+        forbidden_fields = (
+            self.NONCHANGEABLE_FIELDS
+            .intersection(self.initial_data.keys())
+        )
 
         if forbidden_fields:
             errors = {}
 
             if "sensor_set_id" in forbidden_fields:
-                errors["sensor_set_id"] = "Nie można edytować zestawu sensorów."
+                errors["sensor_set_id"] = ("Nie można edytować zestawu sensorów.")
 
             if "owner" in forbidden_fields:
-                errors["owner"] = "Nie można zmienić właściciela eksperymentu."
+                errors["owner"] = ("Nie można zmienić właściciela eksperymentu.")
 
             if "created_at" in forbidden_fields:
-                errors["created_at"] = "Nie można edytować daty stworzenia eksperymentu."
+                errors["created_at"] = ("Nie można edytować daty stworzenia eksperymentu.")
 
             if "finished_at" in forbidden_fields:
-                errors["finished_at"] = "Nie można edytować daty zakończenia eksperymentu."
+                errors["finished_at"] = ("Nie można edytować daty zakończenia eksperymentu.")
 
             raise serializers.ValidationError(errors)
 
