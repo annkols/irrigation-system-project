@@ -12,9 +12,10 @@ from .models import Experiment, Keyword, ExperimentCollaborator
 
 User = get_user_model()
 
-# Create your tests here.
+
 class ExperimentTests(APITestCase):
 
+    # LOG-IN DATA
     def setUp(self):
         self.user = User.objects.create_user(
             username="testuser",
@@ -23,6 +24,7 @@ class ExperimentTests(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
 
+    # POPRAWNIE SKONFIGUROWANY EKSPERYMENT -> 201
     def test_create_experiment_successfully(self):
         url = reverse('experiment-list-create')
         started_at = timezone.now()
@@ -48,6 +50,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.data["sensor_set_id"], 1)
         self.assertEqual(response.data["keywords"], ["irrigation", "potato"])
 
+    
     def test_create_experiment_with_sensor_frequencies(self):
         url = reverse('experiment-list-create')
         started_at = timezone.now()
