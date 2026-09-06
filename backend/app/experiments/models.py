@@ -12,6 +12,33 @@ class Keyword(models.Model):
     def __str__(self):
         return self.name
 
+# MODEL COLLABORATORA
+class ExperimentCollaborator(models.Model):
+    experiment = models.ForeignKey(
+        "Experiment",
+        on_delete=models.CASCADE,
+        related_name="collaborator_memberships",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="experiment_memberships",
+    )
+
+    can_edit_experiment = models.BooleanField(default=False)
+    can_end_experiment = models.BooleanField(default=False)
+
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["experiment", "user"],
+                name="unique_experiment_collaborator",
+            )
+        ]
+
 
 class Experiment(models.Model):
     class SensorSet(models.IntegerChoices):
@@ -31,7 +58,7 @@ class Experiment(models.Model):
     # FK do userów eksperyment ---> 1 user (owner)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="owned_experiments",
         null=True,
         blank=True
@@ -40,8 +67,9 @@ class Experiment(models.Model):
     # FK do userów eksperyment ---> wielu userów (collab)
     collaborators = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        through="ExperimentCollaborator",
         related_name="collaborated_experiments",
-        blank=True
+        blank=True,
     )
 
     sensor_set_id = models.PositiveSmallIntegerField(
