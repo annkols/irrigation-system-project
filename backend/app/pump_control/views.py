@@ -13,13 +13,30 @@ class PumpCommandListCreateView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        station_number = self.request.query_params.get('station_number')
+        pot_number = self.request.query_params.get('pot_number')
+        if station_number:
+            queryset = queryset.filter(station_number=station_number)
+        if pot_number:
+            queryset = queryset.filter(pot_number=pot_number)
+        return queryset
+
 
 class PumpCommandLatestView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
     def get(self, request):
-        latest_command = PumpCommand.objects.first()
+        queryset = PumpCommand.objects.all()
+        station_number = request.query_params.get('station_number')
+        pot_number = request.query_params.get('pot_number')
+        if station_number:
+            queryset = queryset.filter(station_number=station_number)
+        if pot_number:
+            queryset = queryset.filter(pot_number=pot_number)
+        latest_command = queryset.first()
 
         if not latest_command:
             return Response(

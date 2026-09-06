@@ -1,3 +1,5 @@
+from itertools import product
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -9,11 +11,25 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Experiment, ExperimentCollaborator
+from camera_frames.models import CameraDevice
+
+from .models import (
+    Experiment,
+    ExperimentCollaborator,
+    ExperimentCameraAssignment,
+    ExperimentalFactor,
+    FactorLevel,
+    Pot,
+    PotHardwareAssignment,
+    Treatment,
+    TreatmentFactorLevel,
+)
 from .serializers import (
     ALLOWED_SENSOR_FREQUENCY_KEYS,
     ExperimentSerializer,
     ExperimentWithMeasurementsSerializer,
+    ExperimentDesignReadSerializer,
+    ExperimentDesignWriteSerializer,
     ExperimentUpdateSerializer,
     ExperimentCollaboratorSerializer,
     ExperimentCollaboratorPermissionSerializer,
@@ -29,7 +45,7 @@ from .permissions import (
 
 # Create your views here.
 class ExperimentListCreateView(generics.ListCreateAPIView):
-    queryset = Experiment.objects.all().order_by('-created_at')
+    queryset = Experiment.objects.prefetch_related('pots').all().order_by('-created_at')
     serializer_class = ExperimentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -72,6 +88,201 @@ class ExperimentDetailView(generics.RetrieveAPIView):
     permission_classes = [CanViewExperiment]
 
 
+class ExperimentDesignView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permissions = [IsAuthenticated]
+        permissions.append(CanViewExperiment if self.request.method == "GET" else CanEditExperiment)
+        return [permission() for permission in permissions]
+
+    def get_experiment(self, pk):
+        try:
+            return Experiment.objects.prefetch_related(
+                "factors__levels",
+                "treatments__levels",
+                "pots__hardware_assignments",
+                "camera_assignments__camera",
+                "camera_assignments__pot",
+            ).get(pk=pk)
+        except Experiment.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        experiment = self.get_experiment(pk)
+        if not experiment:
+            return Response({"detail": "Nie znaleziono eksperymentu."}, status=404)
+        self.check_object_permissions(request, experiment)
+        return Response(ExperimentDesignReadSerializer(experiment).data)
+
+    @transaction.atomic
+    def put(self, request, pk):
+        experiment = self.get_experiment(pk)
+        if not experiment:
+            return Response({"detail": "Nie znaleziono eksperymentu."}, status=404)
+        self.check_object_permissions(request, experiment)
+
+        serializer = ExperimentDesignWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        factor_definitions = data["factors"]
+        repetitions = data["repetitions"]
+        possible_pot_count = repetitions
+        for factor in factor_definitions:
+            possible_pot_count *= len(factor["levels"])
+        if possible_pot_count > 500:
+            raise ValidationError({
+                "factors": "Plan może zawierać maksymalnie 500 doniczek."
+            })
+
+        # Projekt można zapisać ponownie przed rozpoczęciem doświadczenia.
+        # Usuwamy wyłącznie jego plan; sam eksperyment i dane opisowe pozostają.
+        experiment.treatments.all().delete()
+        experiment.factors.all().delete()
+
+        ordered_levels = []
+        for factor_position, factor_data in enumerate(factor_definitions, start=1):
+            factor = ExperimentalFactor.objects.create(
+                experiment=experiment,
+                name=factor_data["name"].strip(),
+                unit=factor_data.get("unit", "").strip(),
+                position=factor_position,
+            )
+            factor_levels = []
+            for level_position, level_data in enumerate(factor_data["levels"], start=1):
+                level = FactorLevel.objects.create(
+                    factor=factor,
+                    label=level_data["label"].strip(),
+                    value=level_data.get("value", "").strip(),
+                    is_reference=level_data.get("is_reference", False),
+                    position=level_position,
+                )
+                factor_levels.append(level)
+            ordered_levels.append(factor_levels)
+
+        combinations = list(product(*ordered_levels))
+        selected = data.get("selected_combinations")
+        if selected is not None:
+            selected_keys = {
+                tuple(
+                    combination.get(factor["name"], "").strip().casefold()
+                    for factor in factor_definitions
+                )
+                for combination in selected
+            }
+            invalid = [key for key in selected_keys if "" in key]
+            available_keys = {
+                tuple(level.label.casefold() for level in combination)
+                for combination in combinations
+            }
+            if invalid or not selected_keys.issubset(available_keys):
+                raise ValidationError({
+                    "selected_combinations": "Wybrano nieistniejącą kombinację poziomów."
+                })
+            combinations = [
+                combination
+                for combination in combinations
+                if tuple(level.label.casefold() for level in combination) in selected_keys
+            ]
+
+        if not combinations:
+            raise ValidationError({
+                "selected_combinations": "Wybierz co najmniej jedną kombinację."
+            })
+
+        total_pots = len(combinations) * repetitions
+        if total_pots > 500:
+            raise ValidationError({"repetitions": "Plan może zawierać maksymalnie 500 doniczek."})
+
+        pots_by_label = {}
+        pot_position = 1
+        for treatment_position, combination in enumerate(combinations, start=1):
+            treatment_name = " | ".join(
+                f"{level.factor.name}: {level.label}" for level in combination
+            )
+            treatment = Treatment.objects.create(
+                experiment=experiment,
+                name=treatment_name,
+                position=treatment_position,
+            )
+            TreatmentFactorLevel.objects.bulk_create([
+                TreatmentFactorLevel(
+                    treatment=treatment,
+                    factor=level.factor,
+                    level=level,
+                )
+                for level in combination
+            ])
+            for replicate_number in range(1, repetitions + 1):
+                label = f"P{pot_position}"
+                pot = Pot.objects.create(
+                    experiment=experiment,
+                    treatment=treatment,
+                    label=label,
+                    replicate_number=replicate_number,
+                    position=pot_position,
+                )
+                pots_by_label[label.casefold()] = pot
+                pot_position += 1
+
+        used_components = set()
+        component_fields = {
+            "soil_moisture": PotHardwareAssignment.ComponentType.SOIL_MOISTURE,
+            "soil_temperature": PotHardwareAssignment.ComponentType.SOIL_TEMPERATURE,
+            "pump": PotHardwareAssignment.ComponentType.PUMP,
+        }
+        for assignment_data in data.get("pot_assignments", []):
+            pot = pots_by_label.get(assignment_data["label"].casefold())
+            if not pot:
+                raise ValidationError({"pot_assignments": "Przypisano sprzęt do nieistniejącej doniczki."})
+            pot.is_monitored = assignment_data.get("is_monitored", False)
+            pot.save(update_fields=["is_monitored"])
+            for field, component_type in component_fields.items():
+                identifier = assignment_data.get(field, "").strip()
+                if not identifier:
+                    continue
+                component_key = (component_type, identifier.casefold())
+                if component_key in used_components:
+                    raise ValidationError({
+                        "pot_assignments": f"Element {identifier} został przypisany więcej niż raz."
+                    })
+                used_components.add(component_key)
+                PotHardwareAssignment.objects.create(
+                    pot=pot,
+                    component_type=component_type,
+                    component_identifier=identifier,
+                )
+
+        used_camera_ids = set()
+        for assignment_data in data.get("camera_assignments", []):
+            camera_id = assignment_data["camera_id"]
+            if camera_id in used_camera_ids:
+                raise ValidationError({"camera_assignments": "Jedna kamera nie może obserwować dwóch doniczek."})
+            used_camera_ids.add(camera_id)
+            pot = pots_by_label.get(assignment_data["pot_label"].casefold())
+            if not pot:
+                raise ValidationError({"camera_assignments": "Przypisano kamerę do nieistniejącej doniczki."})
+            try:
+                camera = CameraDevice.objects.get(
+                    pk=camera_id,
+                    sensor_set_id=experiment.sensor_set_id,
+                    is_active=True,
+                )
+            except CameraDevice.DoesNotExist:
+                raise ValidationError({
+                    "camera_assignments": "Kamera nie istnieje, jest nieaktywna albo należy do innego zestawu."
+                })
+            ExperimentCameraAssignment.objects.create(
+                experiment=experiment,
+                pot=pot,
+                camera=camera,
+            )
+
+        refreshed = self.get_experiment(pk)
+        return Response(ExperimentDesignReadSerializer(refreshed).data)
+
+
 class ExperimentStatusListView(generics.ListAPIView):
     serializer_class = ExperimentSerializer
     permission_classes = [AllowAny]
@@ -102,8 +313,6 @@ class ExperimentStatusListView(generics.ListAPIView):
         })
     
 class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
-    queryset = Experiment.objects.all()
-    serializer_class = ExperimentUpdateSerializer
     queryset = Experiment.objects.all()
     serializer_class = ExperimentUpdateSerializer
 

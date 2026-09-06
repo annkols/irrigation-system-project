@@ -13,11 +13,6 @@ from django.db import models
 
 # Create your models here.
 class Sensor(models.Model):
-    class SensorSet(models.IntegerChoices):
-        SET_1 = 1, "Sensor set 1"
-        SET_2 = 2, "Sensor set 2"
-        SET_3 = 3, "Sensor set 3"
-
     class SensorType(models.TextChoices):
         SOIL_MOISTURE = "moisture_content", "Moisture content"
         OUT_TEMPERATURE = "out_temperature", "Outdoor temperature"

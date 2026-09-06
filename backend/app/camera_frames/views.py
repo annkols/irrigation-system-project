@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from experiments.models import Experiment
+from experiments.models import Experiment, ExperimentCameraAssignment
 
 from .models import CameraDevice, CameraFrame
 from .serializers import CameraFrameSerializer
@@ -32,11 +32,15 @@ class CameraFrameUploadView(APIView):
             )
 
         supplied_token = request.headers.get("X-Camera-Token", "")
-        device = CameraDevice.objects.filter(
+        devices = CameraDevice.objects.filter(
             sensor_set_id=sensor_set_id,
             is_active=True,
-        ).first()
-        if device is None or not device.token_matches(supplied_token):
+        )
+        device = next(
+            (candidate for candidate in devices if candidate.token_matches(supplied_token)),
+            None,
+        )
+        if device is None:
             return Response(
                 {"detail": "Invalid camera credentials."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -90,7 +94,11 @@ class CameraFrameUploadView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        frame = CameraFrame(experiment=experiment, note="Automatic camera upload")
+        frame = CameraFrame(
+            experiment=experiment,
+            camera=device,
+            note="Automatic camera upload",
+        )
         frame.image.save(f"{uuid4()}.jpg", ContentFile(image_bytes), save=True)
         serializer = CameraFrameSerializer(frame, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -102,7 +110,28 @@ class LatestExperimentFrameImageView(APIView):
 
     def get(self, request, experiment_id):
         get_object_or_404(Experiment, pk=experiment_id)
-        frame = CameraFrame.objects.filter(experiment_id=experiment_id).first()
+        frames = CameraFrame.objects.filter(experiment_id=experiment_id)
+        pot_number = request.query_params.get("pot_number")
+        if pot_number:
+            try:
+                pot_number = int(pot_number)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "pot_number must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            assignment = ExperimentCameraAssignment.objects.filter(
+                experiment_id=experiment_id,
+                pot__position=pot_number,
+            ).first()
+            if assignment is None:
+                return Response(
+                    {"detail": "No camera is assigned to this pot."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            frames = frames.filter(camera_id=assignment.camera_id)
+
+        frame = frames.first()
         if frame is None:
             return Response(
                 {"detail": "No camera frame has been uploaded for this experiment."},

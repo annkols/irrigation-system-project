@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from "react-toastify";
 import "../App.css";
@@ -25,7 +25,13 @@ function Experiment_details() {
   const hasShownToast = useRef(false);
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebar-collapsed") === "true"
+  );
   const [experiment, setExperiment] = useState(null);
+  const [design, setDesign] = useState(null);
+  const [selectedPot, setSelectedPot] = useState(null);
+  const [selectedCameraPot, setSelectedCameraPot] = useState(null);
   const [measurements, setMeasurements] = useState([]);
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
@@ -73,7 +79,7 @@ function Experiment_details() {
       .map(([key]) => key)
       .join(',');
     window.open(
-      `${API_BASE_URL}/experiments/${id}/export-csv/?export_format=${exportFormat}&columns=${cols}`,
+      `${API_BASE_URL}/experiments/${id}/export-csv/?export_format=${exportFormat}&columns=${cols}&pot_number=${selectedPot ?? ""}`,
       '_blank'
     );
     setExportModalOpen(false);
@@ -118,6 +124,70 @@ function Experiment_details() {
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
   }, [id, lastSuccessTime]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/experiments/${id}/design/`)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error("Design unavailable")))
+      .then(data => setDesign(data))
+      .catch(() => setDesign(null));
+  }, [id]);
+
+  const potNumbers = useMemo(() => {
+    const planned = design?.pots?.map((pot) => pot.position) || [];
+    const measured = measurements
+      .filter((measurement) => !experiment || measurement.station_number === experiment.sensor_set_id)
+      .map((measurement) => measurement.pot_number);
+    const available = planned.length ? planned : measured;
+    return [...new Set(available)].sort((a, b) => a - b);
+  }, [design, experiment, measurements]);
+
+  const cameraPotNumbers = useMemo(() => {
+    if (!design?.camera_assignments?.length) return [];
+    const potsById = new Map(design.pots.map((pot) => [pot.id, pot.position]));
+    return [...new Set(
+      design.camera_assignments
+        .map((assignment) => potsById.get(assignment.pot_id))
+        .filter((position) => position != null)
+    )].sort((a, b) => a - b);
+  }, [design]);
+
+  useEffect(() => {
+    if (potNumbers.length && !potNumbers.includes(selectedPot)) setSelectedPot(potNumbers[0]);
+  }, [potNumbers, selectedPot]);
+
+  useEffect(() => {
+    if (cameraPotNumbers.length && !cameraPotNumbers.includes(selectedCameraPot)) {
+      setSelectedCameraPot(cameraPotNumbers[0]);
+    }
+    if (!cameraPotNumbers.length && selectedCameraPot !== null) setSelectedCameraPot(null);
+  }, [cameraPotNumbers, selectedCameraPot]);
+
+  const selectedMeasurements = useMemo(() => measurements.filter((measurement) => (
+    experiment
+    && measurement.station_number === experiment.sensor_set_id
+    && measurement.pot_number === selectedPot
+  )), [experiment, measurements, selectedPot]);
+
+  const stationMeasurements = useMemo(() => measurements.filter((measurement) => (
+    experiment && measurement.station_number === experiment.sensor_set_id
+  )), [experiment, measurements]);
+
+  useEffect(() => {
+    setSelectedPumpCommand(null);
+    setPumpCommandStatus("");
+    if (!experiment || selectedPot == null) return undefined;
+
+    const controller = new AbortController();
+    fetch(`${API_BASE_URL}/pump-control/latest/?station_number=${experiment.sensor_set_id}&pot_number=${selectedPot}`, {
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => setSelectedPumpCommand(data?.command || null))
+      .catch((error) => {
+        if (error.name !== "AbortError") setSelectedPumpCommand(null);
+      });
+    return () => controller.abort();
+  }, [experiment, selectedPot]);
 
   useEffect(() => {
     const message = location.state?.message || location.state?.successMessage;
@@ -208,7 +278,11 @@ function Experiment_details() {
       const response = await fetch(`${API_BASE_URL}/pump-control/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command }),
+        body: JSON.stringify({
+          command,
+          station_number: experiment.sensor_set_id,
+          pot_number: selectedPot,
+        }),
       });
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
@@ -237,7 +311,13 @@ function Experiment_details() {
 
   if (!experiment) return <div style={{ padding: 40 }}>Loading...</div>;
 
-  const latest = measurements.length > 0 ? measurements[0] : null;
+  const latest = selectedMeasurements.length > 0 ? selectedMeasurements[0] : null;
+  const latestShared = stationMeasurements.find((measurement) => (
+    measurement.air_temperature != null
+    || measurement.air_humidity != null
+    || measurement.pressure_hpa != null
+    || measurement.light_lux != null
+  )) || null;
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
@@ -246,10 +326,23 @@ function Experiment_details() {
   return (
     <div className="exp-layout">
 
-      <aside className="exp-sidebar">
+      <aside className={`exp-sidebar ${sidebarCollapsed ? "exp-sidebar--collapsed" : ""}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-button exp-sidebar-collapse-button"
+          onClick={() => setSidebarCollapsed((current) => {
+            const next = !current;
+            localStorage.setItem("sidebar-collapsed", String(next));
+            return next;
+          })}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
+        </button>
         <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
-          <img src={logo} alt="Logo" style={{ height: '64px', width: 'auto' }} />
-          <img src={logoName} alt="PlantStalker" style={{ height: '32px', width: 'auto' }} />
+          <img src={logo} alt="Logo" className="exp-sidebar-logo-mark" />
+          <img src={logoName} alt="PlantStalker" className="exp-sidebar-logo-text" />
         </div>
 
         <div className="exp-sidebar-meta">
@@ -273,7 +366,7 @@ function Experiment_details() {
               onClick={() => setActiveTab(item.key)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
-              {item.label}
+              <span className="exp-nav-item-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -357,6 +450,32 @@ function Experiment_details() {
                 </div>
               </div>
 
+              {design?.pots?.length > 0 && (
+                <div className="exp-overview-card experiment-layout-card">
+                  <div className="exp-overview-field exp-overview-field--last">
+                    <span className="exp-info-label">Experimental layout</span>
+                    <p className="exp-info-desc">
+                      {design.factors.length} factor(s), {design.treatments.length} treatment combination(s), {design.pots.length} pot(s)
+                    </p>
+                    <div className="pot-grid">
+                      {design.pots.map((pot) => (
+                        <div className={`pot-card ${pot.is_monitored ? "monitored" : ""}`} key={pot.id}>
+                          <strong>{pot.label}</strong>
+                          <small>rep. {pot.replicate_number}</small>
+                          {pot.treatment_levels.map((item) => (
+                            <span key={item.factor}>{item.factor}: {item.level}</span>
+                          ))}
+                          <small>{pot.is_monitored ? "monitored" : "manual"}</small>
+                          {pot.hardware_assignments.map((item) => (
+                            <small key={item.id}>{item.component_type}: {item.component_identifier}</small>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Dates card */}
               <div className="exp-overview-card exp-overview-card--dates">
                 <div className="exp-dates-row">
@@ -418,17 +537,25 @@ function Experiment_details() {
               {/* Sensor readings */}
               <div className="exp-sensors-section">
                 <div className="exp-sensors-header">
-                  <span className="exp-sensors-title">Live Sensors</span>
+                  <div>
+                    <span className="exp-sensors-title">Live Sensors</span>
+                    <div className="pot-selector">
+                      <label htmlFor="live-pot-select">Pot</label>
+                      <select id="live-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
+                        {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                      </select>
+                    </div>
+                  </div>
                   <span className="exp-sensors-time">Updated: {nowDateTime}</span>
                 </div>
                 <div className="exp-sensors-grid">
                   {[
-                    { icon: 'device_thermostat', label: 'Temp Inside',     value: latest?.air_temperature,  unit: '°C'  },
+                    { icon: 'device_thermostat', label: 'Temp Inside',     value: latestShared?.air_temperature,  unit: '°C'  },
                     { icon: 'water_drop',        label: 'Soil Moisture',   value: latest?.moisture_percent, unit: '%'   },
-                    { icon: 'cloud',             label: 'Air Humidity',    value: latest?.air_humidity,     unit: '%'   },
-                    { icon: 'light_mode',        label: 'Light Intensity', value: latest?.light_lux,        unit: 'lx'  },
+                    { icon: 'cloud',             label: 'Air Humidity',    value: latestShared?.air_humidity,     unit: '%'   },
+                    { icon: 'light_mode',        label: 'Light Intensity', value: latestShared?.light_lux,        unit: 'lx'  },
                     { icon: 'thermostat',        label: 'Soil Temp',       value: latest?.soil_temperature, unit: '°C'  },
-                    { icon: 'speed',             label: 'Pressure',        value: latest?.pressure_hpa,     unit: 'hPa' },
+                    { icon: 'speed',             label: 'Pressure',        value: latestShared?.pressure_hpa,     unit: 'hPa' },
                   ].map(({ icon, label, value, unit }) => (
                     <div key={label} className="exp-sensor-card">
                       <span className="material-symbols-outlined exp-sensor-icon">{icon}</span>
@@ -444,7 +571,7 @@ function Experiment_details() {
               {/* Pump control */}
               <div className="exp-pump-control">
                 <div className="exp-pump-header">
-                  <span className="exp-pump-label">PUMP CONTROL</span>
+                  <span className="exp-pump-label">PUMP CONTROL {selectedPot != null ? `— P${selectedPot}` : ""}</span>
                   <span className={`exp-pump-status ${latest?.pump_on ? 'running' : 'stopped'}`}>
                     STATUS: {latest ? (latest.pump_on ? 'RUNNING' : 'STOPPED') : 'NO DATA'}
                   </span>
@@ -454,7 +581,7 @@ function Experiment_details() {
                     <button
                       key={cmd}
                       className={`exp-pump-btn ${selectedPumpCommand === cmd ? 'active' : ''}`}
-                      disabled={isSendingPumpCommand}
+                      disabled={isSendingPumpCommand || selectedPot == null}
                       onClick={() => sendPumpCommand(cmd)}
                     >{cmd}</button>
                   ))}
@@ -473,18 +600,37 @@ function Experiment_details() {
           {activeTab === 'camera' && (
             <div className="exp-tab-camera">
               <h2 className="exp-tab-section-title">Camera view</h2>
+              <div className="pot-selector pot-selector--section">
+                <label htmlFor="camera-pot-select">Pot</label>
+                <select
+                  id="camera-pot-select"
+                  value={selectedCameraPot ?? ""}
+                  disabled={!cameraPotNumbers.length}
+                  onChange={(e) => setSelectedCameraPot(Number(e.target.value))}
+                >
+                  {!cameraPotNumbers.length && <option value="">No camera assigned</option>}
+                  {cameraPotNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                </select>
+              </div>
               <div className="exp-camera-main">
                 <div className="exp-camera-frame-wrap">
-                  <img
-                    src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/`}
-                    alt="Latest camera frame"
-                    className="exp-camera-stream"
-                    onError={e => {
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
-                    }}
-                  />
-                  <div className="exp-camera-placeholder">
+                  {selectedCameraPot != null && (
+                    <img
+                      key={selectedCameraPot}
+                      src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/?pot_number=${selectedCameraPot}`}
+                      alt={`Latest camera frame for pot P${selectedCameraPot}`}
+                      className="exp-camera-stream"
+                      onLoad={e => {
+                        e.target.style.display = '';
+                        e.target.nextElementSibling?.classList.remove('exp-camera-placeholder-visible');
+                      }}
+                      onError={e => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
+                      }}
+                    />
+                  )}
+                  <div className={`exp-camera-placeholder ${selectedCameraPot == null ? 'exp-camera-placeholder-visible' : ''}`}>
                     <span className="material-symbols-outlined">photo_camera</span>
                     <span>No camera feed available</span>
                   </div>
@@ -502,7 +648,13 @@ function Experiment_details() {
           {/* ── ANALYTICS ── */}
           {activeTab === 'analytics' && (
             <div className="exp-tab-analytics">
-              <ExperimentChart sensorSetId={experiment?.sensor_set_id} />
+              <div className="pot-selector pot-selector--section">
+                <label htmlFor="analytics-pot-select">Pot</label>
+                <select id="analytics-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
+                  {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                </select>
+              </div>
+              <ExperimentChart measurements={stationMeasurements} selectedPot={selectedPot} />
             </div>
           )}
 
@@ -510,7 +662,15 @@ function Experiment_details() {
           {activeTab === 'history' && (
             <div className="exp-tab-history">
               <div className="exp-tab-header">
-                <h2 className="exp-tab-title">Historical data</h2>
+                <div>
+                  <h2 className="exp-tab-title">Historical data</h2>
+                  <div className="pot-selector">
+                    <label htmlFor="history-pot-select">Pot</label>
+                    <select id="history-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
+                      {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
+                    </select>
+                  </div>
+                </div>
                 <div className="export-dropdown">
                   <button className="export-btn" onClick={() => setExportOpen(!exportOpen)}>
                     <span className="material-symbols-outlined">download</span>
@@ -526,7 +686,7 @@ function Experiment_details() {
                 </div>
               </div>
 
-              {measurements.length === 0 ? (
+              {selectedMeasurements.length === 0 ? (
                 <div className="exp-empty-state">
                   <span className="material-symbols-outlined">table_rows</span>
                   <p>No measurements recorded yet.</p>
@@ -547,9 +707,9 @@ function Experiment_details() {
                       </tr>
                     </thead>
                     <tbody>
-                      {measurements.map((m, i) => (
+                      {selectedMeasurements.map((m, i) => (
                         <tr key={i}>
-                          <td>{m.timestamp ? new Date(m.timestamp).toLocaleString('pl-PL') : '-'}</td>
+                          <td>{m.created_at ? new Date(m.created_at).toLocaleString('pl-PL') : '-'}</td>
                           <td>{m.air_temperature ?? '-'}</td>
                           <td>{m.moisture_percent ?? '-'}</td>
                           <td>{m.air_humidity ?? '-'}</td>

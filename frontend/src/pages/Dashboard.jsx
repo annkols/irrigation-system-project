@@ -17,22 +17,38 @@ export default function Dashboard() {
 
     const fetchData = useCallback(async () => {
         try {
+            const token = localStorage.getItem("token");
+            const headers = token
+                ? { Authorization: `Bearer ${token}` }
+                : {};
+
             const [expRes, measRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/experiments/`),
-                fetch(`${API_BASE_URL}/measurements/`)
+                fetch(`${API_BASE_URL}/experiments/`, { headers }),
+                fetch(`${API_BASE_URL}/measurements/`, { headers })
             ]);
+
+            if (expRes.status === 401) {
+                localStorage.removeItem("token");
+                navigate("/login");
+                return;
+            }
+
+            if (!expRes.ok || !measRes.ok) {
+                throw new Error("Could not load dashboard data.");
+            }
 
             const expData = await expRes.json();
             const measData = await measRes.json();
 
-            setExperiments(expData);
-            setMeasurements(measData);
+            setExperiments(Array.isArray(expData) ? expData : []);
+            setMeasurements(Array.isArray(measData) ? measData : []);
         } catch (err) {
             console.error(err);
+            toast.error("Could not load dashboard data.");
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         fetchData();
@@ -46,12 +62,7 @@ export default function Dashboard() {
                 m => m.station_number === experiment.sensor_set_id
             );
 
-            const latest =
-                experimentMeasurements.length > 0
-                    ? experimentMeasurements[0]
-                    : null;
-
-            return { experiment, latest };
+            return { experiment, measurements: experimentMeasurements };
         });
     }, [experiments, measurements]);
 
@@ -110,11 +121,11 @@ function ExperimentSection({ title, cards }) {
             <h2 className="section-title">{title}</h2>
 
             <div className="dashboard-grid">
-                {cards.map(({ experiment, latest }) => (
+                {cards.map(({ experiment, measurements }) => (
                     <ExperimentCard
                         key={experiment.id}
                         experiment={experiment}
-                        latest={latest}
+                        measurements={measurements}
                     />
                 ))}
             </div>

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import "../App.css";
-import logo from "./images/logo_cultiva.svg";
+import Sidebar from "./Sidebar";
+import TopBar from "./Topbar";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -69,14 +70,10 @@ export default function SavedFrames() {
   };
 
   return (
-    <>
-      <header className="header">
-        <div className="logo" onClick={() => navigate("/dashboard")}>
-          <img src={logo} alt="Cultiva logo" className="logo-img" />
-          <h1>PlantStalker</h1>
-        </div>
-      </header>
-
+    <div className="dashboard-page">
+      <Sidebar />
+      <div className="dashboard-content">
+        <TopBar />
       <main className="saved-frames-page">
         <div className="saved-frames-heading">
           <button
@@ -149,6 +146,7 @@ export default function SavedFrames() {
           </div>
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }

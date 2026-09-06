@@ -46,3 +46,17 @@ class PumpCommandApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn('detail', response.data)
+
+    def test_latest_is_filtered_by_station_and_pot(self):
+        PumpCommand.objects.create(command='AUTO', station_number=1, pot_number=2)
+        PumpCommand.objects.create(command='OFF', station_number=1, pot_number=1)
+
+        response = self.client.get(
+            reverse('pump-command-latest'),
+            {'station_number': 1, 'pot_number': 2},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['command'], 'AUTO')
+        self.assertEqual(response.data['station_number'], 1)
+        self.assertEqual(response.data['pot_number'], 2)

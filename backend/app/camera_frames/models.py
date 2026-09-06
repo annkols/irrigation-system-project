@@ -7,12 +7,10 @@ from django.db import models
 
 from experiments.models import Experiment
 
-
 class CameraDevice(models.Model):
     name = models.CharField(max_length=100)
     sensor_set_id = models.PositiveSmallIntegerField(
-        choices=Experiment.SensorSet.choices,
-        unique=True,
+        db_index=True,
     )
     token_hash = models.CharField(max_length=64, editable=False)
     is_active = models.BooleanField(default=True)
@@ -43,6 +41,13 @@ class CameraFrame(models.Model):
         Experiment,
         on_delete=models.CASCADE,
         related_name="camera_frames",
+    )
+    camera = models.ForeignKey(
+        CameraDevice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="frames",
     )
     image = models.ImageField(upload_to="camera_frames/%Y/%m/%d/")
     captured_at = models.DateTimeField(auto_now_add=True)
