@@ -1,18 +1,17 @@
-from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.db.models import Q
+
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
 
-from .permissions import CanViewUsers, CanChangeUsers
+from .permissions import CanViewUsers, CanChangeUsers, IsSuperUser
 
 # Create your views here.
 from .serializers import (
@@ -22,7 +21,6 @@ from .serializers import (
     UserSearchSerializer,
     UserSerializer,
 )
-from .permissions import IsSuperUser
 
 User = get_user_model()
 
@@ -52,7 +50,6 @@ class UserSearchView(generics.ListAPIView):
         queryset = User.objects.filter(is_active=True).select_related("profile")
         searchable_fields = (
             "username__icontains",
-            "email__icontains",
             "first_name__icontains",
             "last_name__icontains",
             "profile__university__icontains",
@@ -75,7 +72,7 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = []
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -127,8 +124,21 @@ class UserDeleteView(generics.DestroyAPIView):
     queryset = User.objects.all()
     permission_classes = [IsSuperUser]
 
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if user.pk == request.user.pk:
+            return Response(
+                {"detail": "You cannot delete your own account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return super().destroy(request, *args, **kwargs)
+
+    
 class UserDeactivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
+    serializer_class = UserSerializer
     permission_classes = [CanChangeUsers]
 
     http_method_names = [
@@ -146,10 +156,18 @@ class UserDeactivateView(generics.UpdateAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        if user.pk == request.user.pk:
+            return Response(
+                {"detail": "You cannot deactivate your own account."},
+                status=status.HTTP_400_BAD_REQUEST,
+    )
+
         user.is_active = False
         user.save(update_fields=["is_active"])
 
-        return Response({"detail": "User has been deactivated."})
+        return Response({
+            "detail": "User has been deactivated.",
+            "user": UserSerializer(user, context={"request": request}).data})
 
 
 class UserActivateView(generics.UpdateAPIView):
@@ -180,7 +198,7 @@ class UserActivateView(generics.UpdateAPIView):
 
         return Response({
             "detail": "User has been activated.",
-            "user": UserSerializer(user, context={"request": request}).data,
+            "user": UserSerializer(user, context={"request": request}).data
         })
 
 

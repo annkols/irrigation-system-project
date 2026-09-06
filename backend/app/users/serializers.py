@@ -27,7 +27,7 @@ class UserSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "profile"]
+        fields = ["id", "username", "first_name", "last_name", "profile"]
         read_only_fields = fields
 
 
@@ -100,14 +100,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
 
         with transaction.atomic():
-            user = User(
+            user = User.objects.create_user(
                 **validated_data,
+                password=password,
                 is_active=False,
                 is_staff=False,
-                is_superuser=False
+                is_superuser=False,
             )
-            user.set_password(password)
-            user.save()
 
             profile_data = {
                 "user": user,
