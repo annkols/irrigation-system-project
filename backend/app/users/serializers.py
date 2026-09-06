@@ -19,6 +19,16 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "profile", "is_active", "is_staff"]
+        read_only_fields = fields
+
+
+class UserSearchSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "first_name", "last_name", "profile"]
+        read_only_fields = fields
 
 
 class LoginSerializer(serializers.Serializer):

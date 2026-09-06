@@ -10,7 +10,9 @@ from .views import (
     ExperimentWithMeasurementsListView,
     ExperimentUpdateView,
     ExperimentDeleteView,
-    ExperimentEndView
+    ExperimentEndView,
+    ExperimentCollaboratorsListView,
+    ExperimentCollaboratorDetailView,
 )
 
 urlpatterns = [
@@ -25,4 +27,6 @@ urlpatterns = [
     path('experiments/status/<str:status>/', ExperimentStatusListView.as_view(), name='experiment-status-list'),
     path('experiments/with-measurements/', ExperimentWithMeasurementsListView.as_view(), name='experiment-with-measurements-list'),
     path('experiments/<int:pk>/with-measurements/', ExperimentWithMeasurementsDetailView.as_view(), name='experiment-with-measurements-detail'),
+    path('experiments/<int:pk>/collaborators/', ExperimentCollaboratorsListView.as_view(), name='experiments-collaborators'),
+    path("experiments/<int:pk>/collaborators/<int:membership_pk>/", ExperimentCollaboratorDetailView.as_view(), name="experiment-collaborator-detail"),
 ]

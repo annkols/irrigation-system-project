@@ -3,8 +3,11 @@ from itertools import product
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
+
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,6 +15,7 @@ from camera_frames.models import CameraDevice
 
 from .models import (
     Experiment,
+    ExperimentCollaborator,
     ExperimentCameraAssignment,
     ExperimentalFactor,
     FactorLevel,
@@ -27,16 +31,26 @@ from .serializers import (
     ExperimentDesignReadSerializer,
     ExperimentDesignWriteSerializer,
     ExperimentUpdateSerializer,
+    ExperimentCollaboratorSerializer,
+    ExperimentCollaboratorPermissionSerializer,
 )
 
-from rest_framework.exceptions import ValidationError
+from .permissions import (
+    CanEditExperiment,
+    CanEndExperiment,
+    CanViewExperiment,
+    IsExperimentOwner,
+    IsExperimentOwnerOrCollaborator,
+)
 
 # Create your views here.
 class ExperimentListCreateView(generics.ListCreateAPIView):
     queryset = Experiment.objects.prefetch_related('pots').all().order_by('-created_at')
     serializer_class = ExperimentSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class PublicExperimentSearchView(generics.ListAPIView):
@@ -71,13 +85,16 @@ class PublicExperimentSearchView(generics.ListAPIView):
 class ExperimentDetailView(generics.RetrieveAPIView):
     queryset = Experiment.objects.all()
     serializer_class = ExperimentSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [CanViewExperiment]
 
 
 class ExperimentDesignView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permissions = [IsAuthenticated]
+        permissions.append(CanViewExperiment if self.request.method == "GET" else CanEditExperiment)
+        return [permission() for permission in permissions]
 
     def get_experiment(self, pk):
         try:
@@ -95,6 +112,7 @@ class ExperimentDesignView(APIView):
         experiment = self.get_experiment(pk)
         if not experiment:
             return Response({"detail": "Nie znaleziono eksperymentu."}, status=404)
+        self.check_object_permissions(request, experiment)
         return Response(ExperimentDesignReadSerializer(experiment).data)
 
     @transaction.atomic
@@ -102,6 +120,7 @@ class ExperimentDesignView(APIView):
         experiment = self.get_experiment(pk)
         if not experiment:
             return Response({"detail": "Nie znaleziono eksperymentu."}, status=404)
+        self.check_object_permissions(request, experiment)
 
         serializer = ExperimentDesignWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -296,28 +315,31 @@ class ExperimentStatusListView(generics.ListAPIView):
 class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Experiment.objects.all()
     serializer_class = ExperimentUpdateSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+
+    permission_classes = [
+        IsAuthenticated,
+        CanEditExperiment,
+    ]
 
 
 class ExperimentDeleteView(generics.DestroyAPIView):
     queryset = Experiment.objects.all()
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [
+        IsAuthenticated,
+        IsExperimentOwner
+    ]
 
 
 class ExperimentEndView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [
+        IsAuthenticated,
+        CanEndExperiment
+    ]
 
     def post(self, request, pk):
-        try:
-            experiment = Experiment.objects.get(pk=pk)
-        except Experiment.DoesNotExist:
-            return Response(
-                {"detail": "Nie znaleniono eksperymentu."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        experiment = get_object_or_404(Experiment, pk=pk)
+
+        self.check_object_permissions(request, experiment)
 
         if experiment.finished_at is not None:
             return Response(
@@ -334,7 +356,7 @@ class ExperimentEndView(APIView):
         experiment.finished_at = timezone.now()
         experiment.save(update_fields=["finished_at"])
 
-        serializer = ExperimentSerializer(experiment)
+        serializer = ExperimentSerializer(experiment, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class ActiveExperimentSensorConfigView(APIView):
@@ -397,3 +419,123 @@ class ExperimentWithMeasurementsDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Experiment.objects.all()
+
+    # READ COLABORATORS DLA DANEGO EKSPERYMENTU
+class ExperimentCollaboratorsListView(generics.ListCreateAPIView):
+    serializer_class = ExperimentCollaboratorSerializer
+
+    def get_experiment(self):
+        return get_object_or_404(
+            Experiment,
+            pk=self.kwargs["pk"],
+        )
+
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+
+        if self.request.method == "GET":
+            permission_classes.append(
+                IsExperimentOwnerOrCollaborator
+            )
+        else:
+            permission_classes.append(
+                IsExperimentOwner
+            )
+
+        return [
+            permission()
+            for permission in permission_classes
+        ]
+
+    def get_queryset(self):
+        experiment = self.get_experiment()
+
+        self.check_object_permissions(
+            self.request,
+            experiment,
+        )
+
+        return (
+            ExperimentCollaborator.objects
+            .filter(experiment=experiment)
+            .select_related(
+                "user",
+                "user__profile",
+            )
+            .order_by("user__username")
+        )
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            experiment = get_object_or_404(
+                Experiment.objects.select_for_update(),
+                pk=self.kwargs["pk"],
+)
+            self.check_object_permissions(
+                self.request,
+                experiment,
+            )
+
+            user = serializer.validated_data["user"]
+
+            if user.id == experiment.owner_id:
+                raise ValidationError({
+                    "user_id":
+                    "Właściciel nie może zostać współpracownikiem."
+                })
+
+            if ExperimentCollaborator.objects.filter(
+                experiment=experiment,
+                user=user,
+            ).exists():
+                raise ValidationError({
+                    "user_id":
+                    "Ten użytkownik jest już współpracownikiem."
+                })
+
+            if experiment.collaborator_memberships.count() >= 50:
+                raise ValidationError({
+                    "collaborators":
+                    "Eksperyment może mieć maksymalnie 50 współpracowników."
+                })
+
+            serializer.save(
+                experiment=experiment,
+            )
+
+class ExperimentCollaboratorDetailView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    permission_classes = [
+        IsAuthenticated,
+        IsExperimentOwner,
+    ]
+
+    lookup_url_kwarg = "membership_pk"
+
+    http_method_names = [
+        "get",
+        "patch",
+        "delete",
+        "head",
+        "options",
+    ]
+
+    def get_queryset(self):
+        return (
+            ExperimentCollaborator.objects
+            .filter(
+                experiment_id=self.kwargs["pk"]
+            )
+            .select_related(
+                "experiment",
+                "user",
+                "user__profile",
+            )
+        )
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return ExperimentCollaboratorPermissionSerializer
+
+        return ExperimentCollaboratorSerializer

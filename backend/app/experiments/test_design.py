@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -10,9 +11,15 @@ from .models import Experiment, PotHardwareAssignment
 
 class ExperimentDesignApiTests(APITestCase):
     def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="design-owner",
+            password="test-password",
+        )
+        self.client.force_authenticate(self.user)
         self.experiment = Experiment.objects.create(
             name="Drought and inoculation",
             plant_name="Barley",
+            owner=self.user,
             sensor_set_id=7,
             started_at=timezone.now(),
             planned_end_at=timezone.now() + timedelta(days=30),

@@ -10,10 +10,12 @@ from .views import (
     UserDeleteView,
     UserDetailView,
     UserListView,
+    UserSearchView,
 )
 
 urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
+    path('users/search/', UserSearchView.as_view(), name='user-search'),
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('users/register/', RegisterView.as_view(), name='user-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),

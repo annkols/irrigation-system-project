@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework import generics, status
@@ -11,12 +12,14 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
 
+from .permissions import CanViewUsers, CanChangeUsers
 
 # Create your views here.
 from .serializers import (
     LoginSerializer,
     LogoutSerializer,
     RegisterSerializer,
+    UserSearchSerializer,
     UserSerializer,
 )
 from .permissions import IsSuperUser
@@ -26,12 +29,43 @@ User = get_user_model()
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewUsers]
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanViewUsers]
+
+
+class UserSearchView(generics.ListAPIView):
+    serializer_class = UserSearchSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        query = self.request.query_params.get("q", "").strip()
+
+        if len(query) < 2:
+            raise ValidationError({
+                "q": "Wpisz co najmniej 2 znaki, aby wyszukać użytkownika."
+            })
+
+        queryset = User.objects.filter(is_active=True).select_related("profile")
+        searchable_fields = (
+            "username__icontains",
+            "email__icontains",
+            "first_name__icontains",
+            "last_name__icontains",
+            "profile__university__icontains",
+            "profile__department__icontains",
+        )
+
+        for term in query.split():
+            term_filter = Q()
+            for field in searchable_fields:
+                term_filter |= Q(**{field: term})
+            queryset = queryset.filter(term_filter)
+
+        return queryset.order_by("first_name", "last_name", "username")[:20]
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -95,12 +129,18 @@ class UserDeleteView(generics.DestroyAPIView):
 
 class UserDeactivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanChangeUsers]
 
+    http_method_names = [
+        "patch",
+        "head",
+        "options",
+    ]
+    
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
 
-        if user.is_staff or user.is_superuser:
+        if ((user.is_staff or user.is_superuser) and not request.user.is_superuser):
             return Response(
                 {"detail": "You cannot deactivate admin users."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -115,10 +155,22 @@ class UserDeactivateView(generics.UpdateAPIView):
 class UserActivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [CanChangeUsers]
+
+    http_method_names = [
+        "patch",
+        "head",
+        "options",
+    ]
 
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
+
+        if ((user.is_staff or user.is_superuser) and not request.user.is_superuser):
+            return Response({
+                "detail": "Only a superuser can activate an administrator account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if user.is_active:
             return Response({"detail": "User is already active."})
