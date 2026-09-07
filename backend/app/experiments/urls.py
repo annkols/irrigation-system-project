@@ -3,7 +3,7 @@ from .views import (
     ActiveExperimentSensorConfigView,
     ExperimentDetailView,
     ExperimentDesignView,
-    ExperimentListCreateView,
+    ExperimentCreateView,
     PublicExperimentSearchView,
     ExperimentStatusListView,
     ExperimentWithMeasurementsDetailView,
@@ -13,10 +13,12 @@ from .views import (
     ExperimentEndView,
     ExperimentCollaboratorsListView,
     ExperimentCollaboratorDetailView,
+    OwnedExperimentsListView,
+    CollaboratedExperimentsListView
 )
 
 urlpatterns = [
-    path('experiments/', ExperimentListCreateView.as_view(), name='experiment-list-create'),
+    path('experiments/', ExperimentCreateView.as_view(), name='experiment-list-create'),
     path('experiments/search/', PublicExperimentSearchView.as_view(), name='experiment-public-search'),
     path('experiments/active-sensor-config/', ActiveExperimentSensorConfigView.as_view(), name='experiment-active-sensor-config'),
     path('experiments/<int:pk>/', ExperimentDetailView.as_view(), name='experiment-detail'),
@@ -29,4 +31,7 @@ urlpatterns = [
     path('experiments/<int:pk>/with-measurements/', ExperimentWithMeasurementsDetailView.as_view(), name='experiment-with-measurements-detail'),
     path('experiments/<int:pk>/collaborators/', ExperimentCollaboratorsListView.as_view(), name='experiments-collaborators'),
     path("experiments/<int:pk>/collaborators/<int:membership_pk>/", ExperimentCollaboratorDetailView.as_view(), name="experiment-collaborator-detail"),
+    path("experiments/owned/", OwnedExperimentsListView.as_view(), name="experiment-owned-list"),
+    path("experiments/collaborated/", CollaboratedExperimentsListView.as_view(), name='experiment-collaborated-list'),
+
 ]
