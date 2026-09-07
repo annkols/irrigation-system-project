@@ -43,8 +43,15 @@ from .permissions import (
     IsExperimentOwnerOrCollaborator,
 )
 
+def visible_experiments_for(user):
+    return (
+        Experiment.objects
+        .filter(Q(is_public=True) | Q(owner=user) | Q(collaborators=user))
+        .distinct()
+    )
+
 # Create your views here.
-class ExperimentListCreateView(generics.ListCreateAPIView):
+class ExperimentCreateView(generics.CreateAPIView):
     queryset = Experiment.objects.prefetch_related('pots').all().order_by('-created_at')
     serializer_class = ExperimentSerializer
     permission_classes = [IsAuthenticated]
@@ -55,8 +62,7 @@ class ExperimentListCreateView(generics.ListCreateAPIView):
 
 class PublicExperimentSearchView(generics.ListAPIView):
     serializer_class = ExperimentSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Experiment.objects.filter(is_public=True).order_by('-created_at')
@@ -285,26 +291,27 @@ class ExperimentDesignView(APIView):
 
 class ExperimentStatusListView(generics.ListAPIView):
     serializer_class = ExperimentSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         status = self.kwargs['status']
 
+        visible_experiments = visible_experiments_for(self.request.user)
+
         if status == 'not-started':
-            return Experiment.objects.filter(
+            return visible_experiments.filter(
                 started_at__isnull=True,
                 finished_at__isnull=True
             ).order_by('-created_at')
 
         if status == 'in-progress':
-            return Experiment.objects.filter(
+            return visible_experiments.filter(
                 started_at__isnull=False,
                 finished_at__isnull=True
             ).order_by('-created_at')
 
         if status == 'completed':
-            return Experiment.objects.filter(
+            return visible_experiments.filter(
                 finished_at__isnull=False
             ).order_by('-created_at')
 
@@ -316,25 +323,16 @@ class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Experiment.objects.all()
     serializer_class = ExperimentUpdateSerializer
 
-    permission_classes = [
-        IsAuthenticated,
-        CanEditExperiment,
-    ]
+    permission_classes = [IsAuthenticated,CanEditExperiment]
 
 
 class ExperimentDeleteView(generics.DestroyAPIView):
     queryset = Experiment.objects.all()
-    permission_classes = [
-        IsAuthenticated,
-        IsExperimentOwner
-    ]
+    permission_classes = [IsAuthenticated, IsExperimentOwner]
 
 
 class ExperimentEndView(APIView):
-    permission_classes = [
-        IsAuthenticated,
-        CanEndExperiment
-    ]
+    permission_classes = [IsAuthenticated, CanEndExperiment]
 
     def post(self, request, pk):
         experiment = get_object_or_404(Experiment, pk=pk)
@@ -405,17 +403,16 @@ class ActiveExperimentSensorConfigView(APIView):
 
 class ExperimentWithMeasurementsListView(generics.ListAPIView):
     serializer_class = ExperimentWithMeasurementsSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Experiment.objects.all().order_by('-created_at')
+        return (visible_experiments_for(self.request.user)
+            .order_by("-created_at"))
 
 
 class ExperimentWithMeasurementsDetailView(generics.RetrieveAPIView):
     serializer_class = ExperimentWithMeasurementsSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [CanViewExperiment]
 
     def get_queryset(self):
         return Experiment.objects.all()
@@ -503,9 +500,7 @@ class ExperimentCollaboratorsListView(generics.ListCreateAPIView):
                 experiment=experiment,
             )
 
-class ExperimentCollaboratorDetailView(
-    generics.RetrieveUpdateDestroyAPIView
-):
+class ExperimentCollaboratorDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [
         IsAuthenticated,
         IsExperimentOwner,
@@ -539,3 +534,30 @@ class ExperimentCollaboratorDetailView(
             return ExperimentCollaboratorPermissionSerializer
 
         return ExperimentCollaboratorSerializer
+
+# LIST EXPERIMENTS WHERE THE USER IS AN OWNER
+class OwnedExperimentsListView(generics.ListAPIView):
+    serializer_class = ExperimentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Experiment.objects
+            .filter(owner=self.request.user)
+            .prefetch_related("pots", "keywords")
+            .distinct()
+            .order_by("-created_at")
+        )
+
+# LIST EXPERIMENTS WHERE THE USER COLLABORATES
+class CollaboratedExperimentsListView(generics.ListAPIView):
+    serializer_class = ExperimentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Experiment.objects.filter(collaborators=self.request.user)
+            .prefetch_related("pots", "keywords")
+            .distinct()
+            .order_by("-created_at")
+        )
