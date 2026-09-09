@@ -3969,8 +3969,128 @@ body {
 .pot-selector--section { margin: 0 0 12px; }
 .experiment-layout-card .pot-grid { width: 100%; margin-top: 14px; }
 .frequency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
-.frequency-grid label { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #dde4df; padding: 10px; border-radius: 8px; }
-.frequency-grid input { width: 95px; }
+.frequency-grid label { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--color-border-light); padding: 10px; border-radius: 8px; }
+.frequency-grid input { width: 95px; padding: 6px 8px; border: 1.5px solid var(--color-border-input); border-radius: 6px; font-family: var(--font-main); font-size: 13px; color: var(--color-text-main); background: var(--color-bg-main); }
+.frequency-grid input:focus { outline: none; border-color: var(--color-primary); }
+
+/* ── Experiment edit (matches details layout) ── */
+.exp-edit .exp-tab-actions .exp-btn { white-space: nowrap; }
+
+.exp-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border-divider);
+}
+
+.exp-edit-field--last {
+  border-bottom: none;
+}
+
+.exp-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-main);
+  color: var(--color-text-main);
+  background: var(--color-bg-main);
+}
+
+.exp-edit-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.exp-edit-input--error {
+  border-color: #dc2626;
+}
+
+.exp-edit-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.exp-edit-keyword-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.exp-edit-keyword-row .exp-edit-input {
+  flex: 1;
+}
+
+.exp-edit-dates {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.exp-edit-dates .exp-edit-field {
+  flex: 1;
+  min-width: 180px;
+}
+
+.exp-edit-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--color-text-light);
+  cursor: pointer;
+}
+
+.exp-edit-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
+.exp-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.exp-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.exp-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.exp-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.exp-btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.exp-btn--ghost {
+  background: none;
+  border-color: var(--color-border-light);
+  color: var(--color-text-muted);
+}
+
+.exp-btn--ghost:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
 .pot-assignment-list { display: grid; gap: 8px; max-height: 520px; overflow-y: auto; }
 .pot-assignment { border: 1px solid #dce2de; border-radius: 9px; padding: 10px 12px; }
 .pot-assignment.monitored { border-color: #56a76b; background: #f3faf5; }
