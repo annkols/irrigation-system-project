@@ -12,7 +12,7 @@ import Profile from './pages/Profile'; //profil uzytkownika
 import SavedFrames from './pages/SavedFrames';
 import ProtectedRoute from './ProtectedRoute';
 import PeopleSearch from './pages/PeopleSearch';
-import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntów
+import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntow
 
 function App() {
   return (
