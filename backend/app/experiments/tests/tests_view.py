@@ -77,3 +77,17 @@ class ExperimentUserListsTests(APITestCase):
         self.assertNotIn(self.owned_experiment.id, ids)
         self.assertIn(self.collaborated_experiment.id, ids)
         self.assertNotIn(self.unrelated_experiment.id, ids)
+
+    # CANNOT VIEW MY EXPERIMENTS WITHOUT BEING LOGGED IN -> 401
+    def test_owned_experiments_requires_authentication(self):
+
+        response = self.client.get(reverse("experiment-owned-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,)
+
+    # CANNOT VIEW MY COLLABORATED EXPERIMENTS EXPERIMENTS WITHOUT BEING LOGGED IN -> 401
+    def test_owned_experiments_requires_authentication(self):
+
+        response = self.client.get(reverse("experiment-collaborated-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,)

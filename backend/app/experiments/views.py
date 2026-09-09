@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -295,25 +295,26 @@ class ExperimentStatusListView(generics.ListAPIView):
 
     def get_queryset(self):
         status = self.kwargs['status']
-
+        now = timezone.now()
         visible_experiments = visible_experiments_for(self.request.user)
 
-        if status == 'not-started':
+        if status == "not-started":
             return visible_experiments.filter(
-                started_at__isnull=True,
-                finished_at__isnull=True
-            ).order_by('-created_at')
+                Q(started_at__isnull=True) | Q(started_at__gt=now),
+                finished_at__isnull=True,
+            ).order_by("-created_at")
 
-        if status == 'in-progress':
+        if status == "in-progress":
+            return visible_experiments.filter(
+                started_at__lte=now,
+                finished_at__isnull=True,
+            ).order_by("-created_at")
+
+        if status == "completed":
             return visible_experiments.filter(
                 started_at__isnull=False,
-                finished_at__isnull=True
-            ).order_by('-created_at')
-
-        if status == 'completed':
-            return visible_experiments.filter(
-                finished_at__isnull=False
-            ).order_by('-created_at')
+                finished_at__isnull=False,
+            ).order_by("-created_at")
 
         raise ValidationError({
             "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
@@ -366,7 +367,7 @@ class ActiveExperimentSensorConfigView(APIView):
 
         experiment = (
             Experiment.objects
-            .filter(sensor_set_id=sensor_set_id, finished_at__isnull=True)
+            .filter(sensor_set_id=sensor_set_id, started_at__lte=timezone.now(), finished_at__isnull=True)
             .order_by('-created_at')
             .first()
         )
