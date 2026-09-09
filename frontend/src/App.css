@@ -850,18 +850,9 @@ body {
 
 /* wykresy */
 .chart-panel {
-  background: var(--bg-main);
-  border-radius: 24px;
-  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.chart-title-row h3 {
-  font-size: 30px;
-  font-weight: 700;
-  color: var(--text-main);
 }
 
 .sensor-selectors {
@@ -878,18 +869,26 @@ body {
 }
 
 .sensor-selector label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .sensor-selector select {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: 8px;
+  padding: 9px 12px;
   font-size: 14px;
-  background: var(--action-bg);
-  color: var(--text-main);
+  font-family: var(--font-main);
+  background: var(--color-bg-main);
+  color: var(--color-text-main);
+}
+
+.sensor-selector select:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 /* ===== Experiment Details Page ===== */
@@ -1084,11 +1083,18 @@ body {
 }
 
 .date-range-picker input {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: 8px;
+  padding: 9px 12px;
   font-size: 14px;
-  background: var(--action-bg);
+  font-family: var(--font-main);
+  background: var(--color-bg-main);
+  color: var(--color-text-main);
+}
+
+.date-range-picker input:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .chart-wrapper {

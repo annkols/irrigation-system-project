@@ -773,6 +773,7 @@ function Experiment_details() {
           {/* ── ANALYTICS ── */}
           {activeTab === 'analytics' && (
             <div className="exp-tab-analytics">
+              <h2 className="exp-tab-section-title">Analytics</h2>
               <div className="pot-selector pot-selector--section">
                 <label htmlFor="analytics-pot-select">Pot</label>
                 <select id="analytics-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
