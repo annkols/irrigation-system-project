@@ -23,7 +23,8 @@ export default function Dashboard() {
                 : {};
 
             const [expRes, measRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/experiments/`, { headers }),
+                fetch(`${API_BASE_URL}/experiments/owned/`, { headers }),
+                fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers }),
                 fetch(`${API_BASE_URL}/measurements/`, { headers })
             ]);
 

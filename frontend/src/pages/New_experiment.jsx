@@ -5,6 +5,13 @@ import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 const SENSORS = [
   ["air_temperature", "Air temperature", "shared"],
   ["air_humidity", "Air humidity", "shared"],
@@ -128,7 +135,7 @@ function New_experiment() {
       const numericFrequencies = Object.fromEntries(Object.entries(frequencies).map(([id, value]) => [id, hoursToSeconds(value)]));
       const experimentResponse = await fetch(`${api}/experiments/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           name, plant_name: plantName, description, keywords,
           sensor_set_id: Number(sensorSetId),
@@ -144,7 +151,7 @@ function New_experiment() {
 
       const designResponse = await fetch(`${api}/experiments/${experimentId}/design/`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           factors,
           repetitions: Number(repetitions),
@@ -158,7 +165,12 @@ function New_experiment() {
       toast.success("Experiment and pot layout created!");
       navigate("/dashboard");
     } catch (error) {
-      if (experimentId) await fetch(`${api}/experiments/${experimentId}/delete/`, { method: "DELETE" });
+      if (experimentId){
+        await fetch(`${api}/experiments/${experimentId}/delete/`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+      }
       setErrors({ server: apiErrorMessage(error) });
       toast.error("The experiment could not be created.");
     } finally {

@@ -6,6 +6,13 @@ import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 const parseHours = (value) => Number(String(value).trim().replace(",", "."));
 const hoursToSeconds = (value) => Math.max(1, Math.round(parseHours(value) * 3600));
 const secondsToHours = (value) => {
@@ -39,7 +46,9 @@ function Experiment_edit() {
   ];
 
     useEffect(() => {
-      fetch(`${API_BASE_URL}/experiments/${id}/`)
+      fetch(`${API_BASE_URL}/experiments/${id}/`, {
+        headers: getAuthHeaders(),
+      })
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch experiment data");
           return res.json();
@@ -171,12 +180,10 @@ function Experiment_edit() {
     console.log("Wysylane dane edycji:", updatedExperiment);
 
     fetch(`${API_BASE_URL}/experiments/${id}/edit/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedExperiment),
-      })
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updatedExperiment),
+    })
         .then(async (res) => {
           const data = await res.json();
           if (res.ok) {

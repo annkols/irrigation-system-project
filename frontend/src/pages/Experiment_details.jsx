@@ -85,20 +85,28 @@ function Experiment_details() {
     setExportModalOpen(false);
   };
 
+  const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/`)
+    fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => setExperiment(data))
       .catch(err => console.error(err));
 
-    fetch(`${API_BASE_URL}/experiments/${id}/notes/`)
+    fetch(`${API_BASE_URL}/experiments/${id}/notes/`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => setNotes(data))
       .catch(err => console.error(err));
 
     const fetchMeasurements = () => {
       const currentTime = new Date().toLocaleString();
-      fetch(`${API_BASE_URL}/measurements/`)
+      fetch(`${API_BASE_URL}/measurements/`, { headers: getAuthHeaders() })
         .then(res => {
           if (!res.ok) throw new Error("Server error");
           return res.json();
@@ -126,7 +134,7 @@ function Experiment_details() {
   }, [id, lastSuccessTime]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/design/`)
+    fetch(`${API_BASE_URL}/experiments/${id}/design/`, { headers: getAuthHeaders() })
       .then(res => res.ok ? res.json() : Promise.reject(new Error("Design unavailable")))
       .then(data => setDesign(data))
       .catch(() => setDesign(null));
@@ -180,6 +188,7 @@ function Experiment_details() {
     const controller = new AbortController();
     fetch(`${API_BASE_URL}/pump-control/latest/?station_number=${experiment.sensor_set_id}&pot_number=${selectedPot}`, {
       signal: controller.signal,
+      headers: getAuthHeaders(),
     })
       .then((response) => response.ok ? response.json() : null)
       .then((data) => setSelectedPumpCommand(data?.command || null))
@@ -215,7 +224,7 @@ function Experiment_details() {
                 try {
                   const response = await fetch(`${API_BASE_URL}/experiments/${id}/end/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                   });
                   const data = await response.json();
                   if (!response.ok) { toast.error(data.detail || 'Failed to end the experiment.'); return; }
@@ -247,7 +256,7 @@ function Experiment_details() {
                 try {
                   const response = await fetch(`${API_BASE_URL}/experiments/${id}/delete/`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                   });
                   if (!response.ok) {
                     let errorMsg = 'Failed to delete the experiment.';
@@ -277,7 +286,7 @@ function Experiment_details() {
     try {
       const response = await fetch(`${API_BASE_URL}/pump-control/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           command,
           station_number: experiment.sensor_set_id,
