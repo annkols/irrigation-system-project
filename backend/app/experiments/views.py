@@ -361,8 +361,23 @@ class ActiveExperimentSensorConfigView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    HARDWARE_QUERY_PARAMS = {
+        "soil_moisture_id": PotHardwareAssignment.ComponentType.SOIL_MOISTURE,
+        "soil_temperature_id": PotHardwareAssignment.ComponentType.SOIL_TEMPERATURE,
+        "pump_id": PotHardwareAssignment.ComponentType.PUMP,
+    }
+
     def get(self, request):
         sensor_set_id = request.query_params.get('sensor_set_id', 1)
+        try:
+            sensor_set_id = int(sensor_set_id)
+            if sensor_set_id < 1:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "sensor_set_id musi być dodatnią liczbą całkowitą."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         experiment = (
             Experiment.objects
@@ -394,11 +409,55 @@ class ActiveExperimentSensorConfigView(APIView):
         if not frequencies.get("soil_moisture"):
             frequencies["soil_moisture"] = experiment.measurement_frequency_seconds
 
-        return Response({
+        response_data = {
             "experiment_id": experiment.id,
             "sensor_set_id": experiment.sensor_set_id,
             "sensor_frequencies": frequencies,
+        }
+
+        supplied_hardware = {
+            component_type: request.query_params.get(param_name, "").strip()
+            for param_name, component_type in self.HARDWARE_QUERY_PARAMS.items()
+            if request.query_params.get(param_name, "").strip()
+        }
+
+        # Zapytania bez identyfikatorów pozostają obsługiwane dla starszego firmware.
+        if not supplied_hardware:
+            return Response(response_data)
+
+        pots = experiment.pots.filter(is_monitored=True)
+        for component_type, identifier in supplied_hardware.items():
+            pots = pots.filter(
+                hardware_assignments__component_type=component_type,
+                hardware_assignments__component_identifier__iexact=identifier,
+            )
+
+        matching_pots = list(
+            pots.prefetch_related("hardware_assignments").distinct()[:2]
+        )
+        if len(matching_pots) != 1:
+            return Response(
+                {
+                    "detail": (
+                        "Podane identyfikatory sprzętu nie wskazują jednej "
+                        "monitorowanej doniczki w aktywnym doświadczeniu."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        pot = matching_pots[0]
+        hardware = {
+            assignment.component_type: assignment.component_identifier
+            for assignment in pot.hardware_assignments.all()
+        }
+        response_data.update({
+            "pot_number": pot.position,
+            "pot_label": pot.label,
+            "hardware": hardware,
         })
+
+        return Response(response_data)
 
 
 class ExperimentWithMeasurementsListView(generics.ListAPIView):

@@ -6,6 +6,7 @@
 *.env
 !.env.production.example
 arduino/**/arduino_secrets.h
+arduino/**/device_config.h
 
 # =========================
 # PYTHON

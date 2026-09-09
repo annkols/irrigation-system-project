@@ -7,7 +7,7 @@
 
 #define SOIL_MOISTURE_PIN A0
 #define DS18B20_PIN 22
-#define RELAY_PIN 8
+#define RELAY_PIN 7
 
 #define BH1750_ADDRESS 0x23
 #define BME280_I2C_ADDRESS 0x76
@@ -28,8 +28,8 @@ int dryValue = 502;
 int wetValue = 259;
 
 int moistureLimit = 20;
-int stationNumber = 3;
-int potNumber = 1;
+int stationNumber = 0;
+int potNumber = 0;
 
 unsigned long soilMoistureIntervalMs = 10000;
 unsigned long lightIntervalMs = 10000;
@@ -57,26 +57,32 @@ const int RELAY_OFF = HIGH;
 
 bool pumpState = false;
 bool manualPumpMode = false;
+bool assignmentReady = false;
+bool hasSoilMoistureReading = false;
+bool hasLightSensor = false;
+bool hasAirSensor = false;
 
 void setup() {
   Serial.begin(9600);
   EspSerial.begin(9600);
 
-  Wire.begin();
-
-  pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, RELAY_OFF);
+  pinMode(RELAY_PIN, OUTPUT);
+
+  Wire.begin();
 
   Serial.println("START SYSTEMU");
   Serial.println("--------------------------");
 
-  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, BH1750_ADDRESS)) {
+  hasLightSensor = lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, BH1750_ADDRESS);
+  if (hasLightSensor) {
     Serial.println("BH1750 OK");
   } else {
     Serial.println("BH1750 ERROR");
   }
 
-  if (bme.begin(BME280_I2C_ADDRESS)) {
+  hasAirSensor = bme.begin(BME280_I2C_ADDRESS);
+  if (hasAirSensor) {
     Serial.println("BME280 OK");
   } else {
     Serial.println("BME280 ERROR");
@@ -113,18 +119,18 @@ void loop() {
     shouldSend = true;
   }
 
-  if (shouldRead(lastLightReadAt, lightIntervalMs, now)) {
+  if (hasLightSensor && shouldRead(lastLightReadAt, lightIntervalMs, now)) {
     readLight();
     lastLightReadAt = now;
     lightUpdated = true;
     shouldSend = true;
   }
 
-  if (
+  if (hasAirSensor && (
     shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now) ||
     shouldRead(lastAirHumidityReadAt, airHumidityIntervalMs, now) ||
     shouldRead(lastPressureReadAt, pressureIntervalMs, now)
-  ) {
+  )) {
     readAirSensor();
 
     if (shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now)) {
@@ -145,7 +151,7 @@ void loop() {
     shouldSend = true;
   }
 
-  if (!manualPumpMode) {
+  if (assignmentReady && hasSoilMoistureReading && !manualPumpMode) {
     if (cachedSoilMoisture > moistureLimit) {
       if (pumpState) {
         pumpOff();
@@ -157,7 +163,7 @@ void loop() {
     }
   }
 
-  if (!shouldSend) {
+  if (!assignmentReady || !shouldSend) {
     delay(50);
     return;
   }
@@ -222,6 +228,7 @@ void readSoilMoisture() {
   int rawSoil = analogRead(SOIL_MOISTURE_PIN);
   cachedSoilMoisture = map(rawSoil, dryValue, wetValue, 0, 100);
   cachedSoilMoisture = constrain(cachedSoilMoisture, 0, 100);
+  hasSoilMoistureReading = true;
 }
 
 void readSoilTemperature() {
@@ -261,7 +268,15 @@ void handlePumpCommand() {
 
   if (command.startsWith("CONFIG:")) {
     applySensorConfig(command);
+  } else if (command == "UNASSIGNED") {
+    assignmentReady = false;
+    stationNumber = 0;
+    potNumber = 0;
+    manualPumpMode = false;
+    pumpOff();
+    Serial.println("BRAK PRZYPISANIA SPRZETU DO DONICZKI");
   } else if (command == "PUMP_ON") {
+    if (!assignmentReady) return;
     manualPumpMode = true;
     pumpOn();
   } else if (command == "PUMP_OFF") {
@@ -274,6 +289,8 @@ void handlePumpCommand() {
 }
 
 void applySensorConfig(String command) {
+  stationNumber = readConfigInt(command, "station_number");
+  potNumber = readConfigInt(command, "pot_number");
   updateInterval(command, "soil_moisture", soilMoistureIntervalMs);
   updateInterval(command, "light", lightIntervalMs);
   updateInterval(command, "soil_temperature", soilTemperatureIntervalMs);
@@ -281,7 +298,30 @@ void applySensorConfig(String command) {
   updateInterval(command, "air_humidity", airHumidityIntervalMs);
   updateInterval(command, "pressure", pressureIntervalMs);
 
-  Serial.println("Zaktualizowano czestotliwosci czujnikow");
+  assignmentReady = stationNumber > 0 && potNumber > 0;
+  if (!assignmentReady) {
+    pumpOff();
+    Serial.println("NIEPRAWIDLOWE PRZYPISANIE SPRZETU");
+    return;
+  }
+
+  Serial.print("Przypisano do stacji ");
+  Serial.print(stationNumber);
+  Serial.print(", doniczki P");
+  Serial.println(potNumber);
+}
+
+int readConfigInt(String command, String key) {
+  int keyIndex = command.indexOf(key + "=");
+  if (keyIndex < 0) return 0;
+
+  int valueStart = keyIndex + key.length() + 1;
+  int valueEnd = command.indexOf(';', valueStart);
+  if (valueEnd < 0) valueEnd = command.length();
+
+  String value = command.substring(valueStart, valueEnd);
+  value.trim();
+  return value.toInt();
 }
 
 void updateInterval(String command, String key, unsigned long &intervalMs) {

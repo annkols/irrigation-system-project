@@ -51,9 +51,9 @@ class ExperimentDesignApiTests(APITestCase):
                     {
                         "label": "P1",
                         "is_monitored": True,
-                        "soil_moisture": "SM-01",
-                        "soil_temperature": "ST-01",
-                        "pump": "PUMP-01",
+                        "soil_moisture": "1",
+                        "soil_temperature": "1",
+                        "pump": "1",
                     }
                 ],
             },
@@ -97,6 +97,90 @@ class ExperimentDesignApiTests(APITestCase):
             PotHardwareAssignment.objects.filter(pot__experiment=self.experiment).count(),
             3,
         )
+
+    def test_active_config_resolves_pot_from_physical_hardware_ids(self):
+        design_response = self.client.put(
+            self.url,
+            {
+                "factors": [{
+                    "name": "Drought",
+                    "levels": [
+                        {"label": "control", "is_reference": True},
+                        {"label": "stress", "is_reference": False},
+                    ],
+                }],
+                "repetitions": 2,
+                "pot_assignments": [{
+                    "label": "P2",
+                    "is_monitored": True,
+                    "soil_moisture": "3",
+                    "soil_temperature": "3",
+                    "pump": "3",
+                }],
+            },
+            format="json",
+        )
+        self.assertEqual(design_response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(
+            reverse("experiment-active-sensor-config"),
+            {
+                "sensor_set_id": self.experiment.sensor_set_id,
+                "soil_moisture_id": "3",
+                "soil_temperature_id": "3",
+                "pump_id": "3",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["pot_number"], 2)
+        self.assertEqual(response.data["pot_label"], "P2")
+        self.assertEqual(response.data["hardware"]["pump"], "3")
+
+    def test_active_config_rejects_hardware_from_different_pots(self):
+        design_response = self.client.put(
+            self.url,
+            {
+                "factors": [{
+                    "name": "Drought",
+                    "levels": [
+                        {"label": "control", "is_reference": True},
+                        {"label": "stress", "is_reference": False},
+                    ],
+                }],
+                "repetitions": 2,
+                "pot_assignments": [
+                    {
+                        "label": "P1",
+                        "is_monitored": True,
+                        "soil_moisture": "1",
+                        "soil_temperature": "1",
+                        "pump": "1",
+                    },
+                    {
+                        "label": "P2",
+                        "is_monitored": True,
+                        "soil_moisture": "2",
+                        "soil_temperature": "2",
+                        "pump": "2",
+                    },
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(design_response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(
+            reverse("experiment-active-sensor-config"),
+            {
+                "sensor_set_id": self.experiment.sensor_set_id,
+                "soil_moisture_id": "1",
+                "soil_temperature_id": "2",
+                "pump_id": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_requires_one_reference_level_for_each_factor(self):
         response = self.client.put(
