@@ -9,6 +9,7 @@ import ExperimentChart from "./ExperimentChart";
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
+const latestNonNull = rows => rows.length ? rows.reduceRight((result, row) => ({ ...result, ...Object.fromEntries(Object.entries(row).filter(([, value]) => value != null)) }), {}) : null;
 
 const NAV_ITEMS = [
   { key: 'overview',  label: 'Overview',        icon: 'dashboard'   },
@@ -48,7 +49,7 @@ function Experiment_details() {
     light_lux: true,
     pump_on: true,
   });
-  const [lastSuccessTime, setLastSuccessTime] = useState(null);
+  const lastSuccessTime = useRef(null);
   const [errors, setErrors] = useState({});
   const [errorTime, setErrorTime] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -114,12 +115,12 @@ function Experiment_details() {
         .then(data => {
           if (!data || data.length === 0) throw new Error("No measurements available");
           setMeasurements(data);
-          setLastSuccessTime(currentTime);
+          lastSuccessTime.current = currentTime;
           setErrors(prev => ({ ...prev, measurements: null }));
           setErrorTime(null);
         })
         .catch(() => {
-          const successString = lastSuccessTime ?? "never";
+          const successString = lastSuccessTime.current ?? "never";
           setErrorTime(new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }));
           setErrors(prev => ({
             ...prev,
@@ -131,7 +132,7 @@ function Experiment_details() {
     fetchMeasurements();
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
-  }, [id, lastSuccessTime]);
+  }, [id]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/experiments/${id}/design/`, { headers: getAuthHeaders() })
@@ -331,13 +332,8 @@ function Experiment_details() {
 
   if (!experiment) return <div style={{ padding: 40 }}>Loading...</div>;
 
-  const latest = selectedMeasurements.length > 0 ? selectedMeasurements[0] : null;
-  const latestShared = stationMeasurements.find((measurement) => (
-    measurement.air_temperature != null
-    || measurement.air_humidity != null
-    || measurement.pressure_hpa != null
-    || measurement.light_lux != null
-  )) || null;
+  const latest = latestNonNull(selectedMeasurements);
+  const latestShared = latestNonNull(stationMeasurements);
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
