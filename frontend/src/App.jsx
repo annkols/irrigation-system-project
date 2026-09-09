@@ -12,6 +12,7 @@ import Profile from './pages/Profile'; //profil uzytkownika
 import SavedFrames from './pages/SavedFrames';
 import ProtectedRoute from './ProtectedRoute';
 import PeopleSearch from './pages/PeopleSearch';
+import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntów
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/experiment/:id/frames" element={<ProtectedRoute><SavedFrames /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/search-people" element={<ProtectedRoute><PeopleSearch /></ProtectedRoute>} />
+        <Route path="/search-experiments" element={<ProtectedRoute><ExperimentSearch /></ProtectedRoute>} />
       </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>
