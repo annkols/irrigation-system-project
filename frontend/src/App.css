@@ -2343,12 +2343,12 @@ body {
   font-family: var(--font-main);
 }
 
-/* Left sidebar */
+/* Left sidebar — matches the dashboard sidebar (.sidebar) */
 .exp-sidebar {
-  width: 240px;
+  width: 250px;
   flex-shrink: 0;
-  background: var(--color-bg-card);
-  border-right: 1px solid var(--color-border-light);
+  background: #fff;
+  border-right: 1px solid #ececec;
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
@@ -2365,16 +2365,17 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
+  margin-bottom: 35px;
   cursor: pointer;
   justify-content: center;
+  width: 100%;
   min-height: 64px;
   overflow: hidden;
 }
 
 .exp-sidebar-logo img { display: block; flex-shrink: 0; object-fit: contain; }
-.exp-sidebar-logo-mark { width: 58px; height: 52px; }
-.exp-sidebar-logo-text { width: 120px; height: auto; max-height: 27px; }
+.exp-sidebar-logo-mark { width: 62px; height: 54px; }
+.exp-sidebar-logo-text { width: 132px; height: auto; max-height: 28px; }
 .exp-sidebar--collapsed .exp-sidebar-logo { gap: 0; overflow: visible; }
 .exp-sidebar--collapsed .exp-sidebar-logo-mark { width: 48px; height: 48px; }
 .exp-sidebar--collapsed .exp-sidebar-logo-text,
@@ -2445,19 +2446,19 @@ body {
 .exp-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .exp-nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 12px;
+  gap: 14px;
+  height: 42px;
+  padding: 0 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
-  color: var(--color-text-muted);
+  color: #6f6f6f;
   font-size: 14px;
   font-family: var(--font-main);
   cursor: pointer;
@@ -2466,14 +2467,12 @@ body {
 }
 
 .exp-nav-item:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-main);
+  background: #f3f4f6;
 }
 
 .exp-nav-item.active {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-weight: 600;
+  background: #eef4ff;
+  color: #3563d8;
 }
 
 .exp-nav-item .material-symbols-outlined {
