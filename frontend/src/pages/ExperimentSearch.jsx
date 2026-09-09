@@ -33,7 +33,7 @@ export default function ExperimentSearch() {
 
             if (res.status === 401) {
                 localStorage.removeItem("token");
-                navigate("/login");
+                navigate("/", { state: { showLogin: true } });
                 return;
             }
 

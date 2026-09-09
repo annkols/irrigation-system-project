@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from "react-toastify";
 
 import arrow from './images/arrow.png';
@@ -11,11 +11,19 @@ import Login from "./Login";
 
 function Start() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [hoverSignIn, setHoverSignIn] = React.useState(false);
   const [hoverSignUp, setHoverSignUp] = React.useState(false);
 
-  const [showLogin, setShowLogin] = React.useState(false);
+  const [showLogin, setShowLogin] = React.useState(Boolean(location.state?.showLogin));
   const [showRegister, setShowRegister] = React.useState(false);
+
+  React.useEffect(() => {
+    if (location.state?.showLogin) {
+      toast.info("Your session has expired. Please sign in again.");
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   return (
     <>
