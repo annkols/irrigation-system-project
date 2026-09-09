@@ -1,17 +1,16 @@
 from rest_framework import serializers
-from .models import Note
+from .models import Note, NoteImage
 
 
-class NoteSerializer(serializers.ModelSerializer):
+class NoteImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = Note
-        fields = ['id', 'experiment', 'title', 'content', 'image', 'image_url', 'created_at']
-        read_only_fields = ['id', 'created_at', 'image_url']
+        model = NoteImage
+        fields = ['id', 'image', 'image_url', 'uploaded_at']
+        read_only_fields = ['id', 'image_url', 'uploaded_at']
         extra_kwargs = {
-            'image': {'write_only': True, 'required': False},
-            'experiment': {'read_only': True},
+            'image': {'write_only': True},
         }
 
     def get_image_url(self, obj):
@@ -21,3 +20,12 @@ class NoteSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url
+
+
+class NoteSerializer(serializers.ModelSerializer):
+    images = NoteImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Note
+        fields = ['id', 'experiment', 'title', 'content', 'images', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'experiment', 'images', 'created_at', 'updated_at']

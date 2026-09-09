@@ -53,9 +53,12 @@ function Experiment_details() {
   const [errorTime, setErrorTime] = useState(null);
   const [notes, setNotes] = useState([]);
   const [noteFormOpen, setNoteFormOpen] = useState(false);
-  const [draftNote, setDraftNote] = useState({ title: '', content: '', imageUrl: null, imageFile: null });
+  const [draftNote, setDraftNote] = useState({ title: '', content: '', images: [] });
   const [openNote, setOpenNote] = useState(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [noteEditMode, setNoteEditMode] = useState(false);
+  const [noteEditDraft, setNoteEditDraft] = useState({ title: '', content: '' });
+  const [noteBusy, setNoteBusy] = useState(false);
 
   const columnLabels = {
     moisture_percent: 'Soil moisture',
@@ -93,6 +96,119 @@ function Experiment_details() {
   };
 };
 
+  // Bez Content-Type — przeglądarka sama ustawi boundary dla FormData
+  const getAuthTokenHeader = () => {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const closeNote = () => {
+    setOpenNote(null);
+    setNoteEditMode(false);
+    setLightboxUrl(null);
+  };
+
+  // Odświeża pojedynczą notatkę z backendu (po dodaniu/usunięciu zdjęcia lub edycji)
+  const refreshNote = async (noteId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/notes/${noteId}/`, { headers: getAuthHeaders() });
+      if (!res.ok) return;
+      const fresh = await res.json();
+      setNotes(prev => prev.map(n => (n.id === fresh.id ? fresh : n)));
+      setOpenNote(prev => (prev && prev.id === fresh.id ? fresh : prev));
+    } catch {}
+  };
+
+  const handleSaveNoteEdit = async () => {
+    if (!openNote || !noteEditDraft.title.trim()) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          title: noteEditDraft.title.trim(),
+          content: noteEditDraft.content,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+        setOpenNote(updated);
+        setNoteEditMode(false);
+      } else {
+        toast.error(`Failed to update note (${res.status}).`);
+      }
+    } catch {
+      toast.error('Server connection error.');
+    }
+    setNoteBusy(false);
+  };
+
+  const handleAddNoteImages = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!openNote || files.length === 0) return;
+    setNoteBusy(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file));
+      const res = await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, {
+        method: 'PATCH',
+        headers: getAuthTokenHeader(),
+        body: formData,
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+        setOpenNote(updated);
+      } else {
+        toast.error(`Failed to add image (${res.status}).`);
+      }
+    } catch {
+      toast.error('Server connection error.');
+    }
+    setNoteBusy(false);
+  };
+
+  const handleDeleteNoteImage = async (imageId) => {
+    if (!openNote) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/note-images/${imageId}/`, {
+        method: 'DELETE',
+        headers: getAuthTokenHeader(),
+      });
+      if (res.ok || res.status === 404) {
+        await refreshNote(openNote.id);
+      } else {
+        toast.error(`Failed to delete image (${res.status}).`);
+      }
+    } catch {
+      toast.error('Server connection error.');
+    }
+    setNoteBusy(false);
+  };
+
+  const handleDeleteNote = async () => {
+    if (!openNote) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, {
+        method: 'DELETE',
+        headers: getAuthTokenHeader(),
+      });
+      if (res.ok || res.status === 404) {
+        setNotes(prev => prev.filter(n => n.id !== openNote.id));
+        closeNote();
+      } else {
+        toast.error(`Failed to delete note (${res.status}).`);
+      }
+    } catch {
+      toast.error('Server connection error.');
+    }
+    setNoteBusy(false);
+  };
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
       .then(res => res.json())
@@ -101,7 +217,7 @@ function Experiment_details() {
 
     fetch(`${API_BASE_URL}/experiments/${id}/notes/`, { headers: getAuthHeaders() })
       .then(res => res.json())
-      .then(data => setNotes(data))
+      .then(data => setNotes(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
 
     const fetchMeasurements = () => {
@@ -740,7 +856,7 @@ function Experiment_details() {
             <div className="exp-tab-notes">
               {openNote ? (
                 <>
-                  <button className="note-back-btn" onClick={() => { setOpenNote(null); setLightboxOpen(false); }}>
+                  <button className="note-back-btn" onClick={closeNote}>
                     <span className="material-symbols-outlined">arrow_back</span>
                     Timeline Observations
                   </button>
@@ -751,35 +867,109 @@ function Experiment_details() {
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                       })}
+                      {openNote.updated_at && openNote.updated_at !== openNote.created_at && (
+                        <span className="note-edited-tag"> · edited</span>
+                      )}
                     </span>
-                    <h2 className="note-detail-title">{openNote.title}</h2>
-                    {openNote.content && <p className="note-detail-content">{openNote.content}</p>}
-                    {(openNote.image_url || openNote.imageUrl) && (
-                      <img
-                        src={openNote.image_url || openNote.imageUrl}
-                        alt="Note attachment"
-                        className="note-detail-image"
-                        onClick={() => setLightboxOpen(true)}
-                        title="Click to enlarge"
-                      />
+
+                    {noteEditMode ? (
+                      <>
+                        <input
+                          className="note-input"
+                          type="text"
+                          placeholder="Title"
+                          value={noteEditDraft.title}
+                          onChange={e => setNoteEditDraft(prev => ({ ...prev, title: e.target.value }))}
+                        />
+                        <textarea
+                          className="note-textarea"
+                          placeholder="Describe your observation..."
+                          value={noteEditDraft.content}
+                          onChange={e => setNoteEditDraft(prev => ({ ...prev, content: e.target.value }))}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="note-detail-title">{openNote.title}</h2>
+                        {openNote.content && <p className="note-detail-content">{openNote.content}</p>}
+                      </>
                     )}
+
+                    {(openNote.images?.length > 0) && (
+                      <div className="note-image-gallery">
+                        {openNote.images.map(img => (
+                          <div key={img.id} className="note-gallery-item">
+                            <img
+                              src={img.image_url}
+                              alt="Note attachment"
+                              onClick={() => setLightboxUrl(img.image_url)}
+                              title="Click to enlarge"
+                            />
+                            <button
+                              className="note-image-remove"
+                              disabled={noteBusy}
+                              title="Remove image"
+                              onClick={() => handleDeleteNoteImage(img.id)}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="note-detail-actions">
-                      <button className="note-delete-inline-btn" onClick={async () => {
-                        try {
-                          await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, { method: 'DELETE' });
-                        } catch {}
-                        setNotes(prev => prev.filter(n => n.id !== openNote.id));
-                        setOpenNote(null);
-                      }}>
-                        <span className="material-symbols-outlined">delete</span>
-                        Delete note
-                      </button>
+                      {noteEditMode ? (
+                        <>
+                          <label className="note-image-upload">
+                            <span className="material-symbols-outlined">add_photo_alternate</span>
+                            Add images
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              style={{ display: 'none' }}
+                              disabled={noteBusy}
+                              onChange={e => { handleAddNoteImages(e.target.files); e.target.value = ''; }}
+                            />
+                          </label>
+                          <div className="note-detail-actions-right">
+                            <button className="note-cancel-btn" disabled={noteBusy} onClick={() => setNoteEditMode(false)}>
+                              Cancel
+                            </button>
+                            <button
+                              className="note-save-btn"
+                              disabled={noteBusy || !noteEditDraft.title.trim()}
+                              onClick={handleSaveNoteEdit}
+                            >
+                              Save changes
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="note-edit-inline-btn"
+                            onClick={() => {
+                              setNoteEditDraft({ title: openNote.title, content: openNote.content || '' });
+                              setNoteEditMode(true);
+                            }}
+                          >
+                            <span className="material-symbols-outlined">edit</span>
+                            Edit note
+                          </button>
+                          <button className="note-delete-inline-btn" disabled={noteBusy} onClick={handleDeleteNote}>
+                            <span className="material-symbols-outlined">delete</span>
+                            Delete note
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {lightboxOpen && (
-                    <div className="note-lightbox" onClick={() => setLightboxOpen(false)}>
-                      <img src={openNote.image_url || openNote.imageUrl} alt="Full size" />
+                  {lightboxUrl && (
+                    <div className="note-lightbox" onClick={() => setLightboxUrl(null)}>
+                      <img src={lightboxUrl} alt="Full size" />
                     </div>
                   )}
                 </>
@@ -815,8 +1005,13 @@ function Experiment_details() {
                             <h3 className="note-title">{note.title}</h3>
                             {note.content && <p className="note-content">{note.content}</p>}
                           </div>
-                          {(note.image_url || note.imageUrl) && (
-                            <img src={note.image_url || note.imageUrl} alt="Note attachment" className="note-image" />
+                          {note.images?.length > 0 && (
+                            <div className="note-thumb-wrap">
+                              <img src={note.images[0].image_url} alt="Note attachment" className="note-image" />
+                              {note.images.length > 1 && (
+                                <span className="note-thumb-count">+{note.images.length - 1}</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))
@@ -844,45 +1039,66 @@ function Experiment_details() {
                     />
                     <label className="note-image-upload">
                       <span className="material-symbols-outlined">add_photo_alternate</span>
-                      {draftNote.imageUrl ? 'Change image' : 'Add image'}
+                      Add images
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         style={{ display: 'none' }}
                         onChange={e => {
-                          const file = e.target.files[0];
-                          if (file) setDraftNote(prev => ({
+                          const files = Array.from(e.target.files || []);
+                          if (files.length) setDraftNote(prev => ({
                             ...prev,
-                            imageFile: file,
-                            imageUrl: URL.createObjectURL(file),
+                            images: [...prev.images, ...files.map(file => ({ file, url: URL.createObjectURL(file) }))],
                           }));
+                          e.target.value = '';
                         }}
                       />
                     </label>
-                    {draftNote.imageUrl && (
-                      <img src={draftNote.imageUrl} alt="Preview" className="note-image-preview" />
+                    {draftNote.images.length > 0 && (
+                      <div className="note-image-gallery">
+                        {draftNote.images.map((img, idx) => (
+                          <div key={idx} className="note-gallery-item">
+                            <img src={img.url} alt="Preview" />
+                            <button
+                              className="note-image-remove"
+                              title="Remove image"
+                              onClick={() => setDraftNote(prev => ({
+                                ...prev,
+                                images: prev.images.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                     <div className="note-modal-actions">
                       <button className="note-cancel-btn" onClick={() => {
                         setNoteFormOpen(false);
-                        setDraftNote({ title: '', content: '', imageUrl: null });
+                        setDraftNote({ title: '', content: '', images: [] });
                       }}>Cancel</button>
                       <button
                         className="note-save-btn"
-                        disabled={!draftNote.title.trim()}
+                        disabled={noteBusy || !draftNote.title.trim()}
                         onClick={async () => {
+                          setNoteBusy(true);
                           const formData = new FormData();
                           formData.append('title', draftNote.title);
                           formData.append('content', draftNote.content);
-                          if (draftNote.imageFile) formData.append('image', draftNote.imageFile);
+                          draftNote.images.forEach(img => formData.append('images', img.file));
                           try {
                             const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
                               method: 'POST',
+                              headers: getAuthTokenHeader(),
                               body: formData,
                             });
                             if (res.ok) {
                               const saved = await res.json();
                               setNotes(prev => [saved, ...prev]);
+                              setNoteFormOpen(false);
+                              setDraftNote({ title: '', content: '', images: [] });
                             } else {
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
@@ -891,8 +1107,7 @@ function Experiment_details() {
                           } catch {
                             toast.error('Server connection error.');
                           }
-                          setNoteFormOpen(false);
-                          setDraftNote({ title: '', content: '', imageUrl: null, imageFile: null });
+                          setNoteBusy(false);
                         }}
                       >Save Note</button>
                     </div>
