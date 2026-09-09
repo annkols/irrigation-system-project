@@ -30,7 +30,7 @@ export default function Dashboard() {
 
             if (expRes.status === 401) {
                 localStorage.removeItem("token");
-                navigate("/login");
+                navigate("/", { state: { showLogin: true } });
                 return;
             }
 
