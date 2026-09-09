@@ -298,23 +298,24 @@ class ExperimentStatusListView(generics.ListAPIView):
         now = timezone.now()
         visible_experiments = visible_experiments_for(self.request.user)
 
-        if status == "not-started":
+        # not started dla eksperymentu który albo nie ma daty rozpoczęcia, albo data rozpoczęcia jest w przyszłości
+        if status == 'not-started':
             return visible_experiments.filter(
                 Q(started_at__isnull=True) | Q(started_at__gt=now),
                 finished_at__isnull=True,
-            ).order_by("-created_at")
+            ).order_by('-created_at')
 
-        if status == "in-progress":
+        if status == 'in-progress':
             return visible_experiments.filter(
                 started_at__lte=now,
                 finished_at__isnull=True,
-            ).order_by("-created_at")
+            ).order_by('-created_at')
 
-        if status == "completed":
+        if status == 'completed':
             return visible_experiments.filter(
                 started_at__isnull=False,
                 finished_at__isnull=False,
-            ).order_by("-created_at")
+            ).order_by('-created_at')
 
         raise ValidationError({
             "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
