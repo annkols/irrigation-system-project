@@ -170,15 +170,26 @@ function Experiment_details() {
     if (!cameraPotNumbers.length && selectedCameraPot !== null) setSelectedCameraPot(null);
   }, [cameraPotNumbers, selectedCameraPot]);
 
-  const selectedMeasurements = useMemo(() => measurements.filter((measurement) => (
-    experiment
-    && measurement.station_number === experiment.sensor_set_id
-    && measurement.pot_number === selectedPot
-  )), [experiment, measurements, selectedPot]);
+  const stationMeasurements = useMemo(() => {
+    if (!experiment) return [];
+    const start = experiment.started_at ? new Date(experiment.started_at) : null;
+    const endValue = experiment.finished_at || experiment.planned_end_at;
+    const end = endValue ? new Date(endValue) : null;
 
-  const stationMeasurements = useMemo(() => measurements.filter((measurement) => (
-    experiment && measurement.station_number === experiment.sensor_set_id
-  )), [experiment, measurements]);
+    return measurements.filter((measurement) => {
+      const date = new Date(measurement.created_at);
+      return measurement.station_number === experiment.sensor_set_id
+        && (!start || date >= start)
+        && (!end || date <= end);
+    });
+  }, [experiment, measurements]);
+
+  const selectedMeasurements = useMemo(
+    () => stationMeasurements.filter(
+      (measurement) => measurement.pot_number === selectedPot
+    ),
+    [stationMeasurements, selectedPot]
+  );
 
   useEffect(() => {
     setSelectedPumpCommand(null);
