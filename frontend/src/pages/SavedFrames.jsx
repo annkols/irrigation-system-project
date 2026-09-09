@@ -9,6 +9,11 @@ import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 
 export default function SavedFrames() {
   const { id } = useParams();
@@ -20,7 +25,9 @@ export default function SavedFrames() {
 
   const fetchFrames = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/experiments/${id}/frames/`);
+      const response = await fetch(`${API_BASE_URL}/experiments/${id}/frames/`, {
+        headers: getAuthHeaders(),
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -36,7 +43,7 @@ export default function SavedFrames() {
   }, [id]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/`)
+    fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
       .then((response) => {
         if (!response.ok) throw new Error("Failed to load experiment.");
         return response.json();
@@ -53,6 +60,7 @@ export default function SavedFrames() {
     try {
       const response = await fetch(`${API_BASE_URL}/frames/${frame.id}/`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

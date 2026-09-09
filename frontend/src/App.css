@@ -2020,12 +2020,14 @@ body {
 }
 
 .saved-frames-heading h2 {
-  color: var(--primary-green);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text-main);
 }
 
 .saved-frames-heading p {
   margin-top: 4px;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .frames-grid {
