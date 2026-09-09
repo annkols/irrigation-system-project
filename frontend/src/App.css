@@ -4081,18 +4081,6 @@ body {
 /* ── Experiment edit (matches details layout) ── */
 .exp-edit .exp-tab-actions .exp-btn { white-space: nowrap; }
 
-.exp-edit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--color-border-divider);
-}
-
-.exp-edit-field--last {
-  border-bottom: none;
-}
-
 .exp-edit-input {
   width: 100%;
   box-sizing: border-box;
@@ -4115,8 +4103,9 @@ body {
 }
 
 .exp-edit-textarea {
-  min-height: 110px;
+  min-height: 84px;
   resize: vertical;
+  line-height: 1.5;
 }
 
 .exp-edit-keyword-row {
@@ -4129,15 +4118,18 @@ body {
   flex: 1;
 }
 
-.exp-edit-dates {
+.exp-edit-row {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
-.exp-edit-dates .exp-edit-field {
+.exp-edit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
-  min-width: 180px;
+  min-width: 170px;
 }
 
 .exp-edit-checkbox {
@@ -4159,7 +4151,7 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 8px;
 }
 
 .exp-btn {
