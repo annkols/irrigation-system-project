@@ -2,6 +2,14 @@ from django.db import models
 
 
 class Measurement(models.Model):
+    experiment = models.ForeignKey(
+        'experiments.Experiment',
+        on_delete=models.SET_NULL,
+        related_name='measurements',
+        null=True,
+        blank=True,
+    )
+
     # identyfikatory do powiązania z eksperymentem
     station_number = models.PositiveIntegerField(default=1)
     pot_number = models.PositiveIntegerField(default=1)
