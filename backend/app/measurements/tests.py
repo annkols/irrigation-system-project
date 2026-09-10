@@ -10,6 +10,49 @@ from .models import Measurement
 
 
 class MeasurementApiTests(APITestCase):
+    def test_create_measurement_with_experiment_id(self):
+        experiment = Experiment.objects.create(
+            name="Sensor measurement test",
+            sensor_set_id=2,
+        )
+
+        response = self.client.post(
+            reverse("measurement-list-create"),
+            {
+                "experiment_id": experiment.id,
+                "station_number": 2,
+                "pot_number": 3,
+                "moisture_percent": 58,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        measurement = Measurement.objects.get()
+        self.assertEqual(measurement.experiment, experiment)
+        self.assertEqual(response.data["experiment_id"], experiment.id)
+
+    def test_rejects_experiment_from_another_sensor_set(self):
+        experiment = Experiment.objects.create(
+            name="Other sensor set",
+            sensor_set_id=3,
+        )
+
+        response = self.client.post(
+            reverse("measurement-list-create"),
+            {
+                "experiment_id": experiment.id,
+                "station_number": 2,
+                "pot_number": 1,
+                "moisture_percent": 58,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("experiment_id", response.data)
+        self.assertEqual(Measurement.objects.count(), 0)
+
     def test_create_measurement_with_full_sensor_payload(self):
         payload = {
             "station_number": 2,

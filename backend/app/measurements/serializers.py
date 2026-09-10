@@ -1,12 +1,21 @@
 from rest_framework import serializers
+from experiments.models import Experiment
 from .models import Measurement
 
 
 class MeasurementSerializer(serializers.ModelSerializer):
+    experiment_id = serializers.PrimaryKeyRelatedField(
+        source='experiment',
+        queryset=Experiment.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = Measurement
         fields = [
             'id',
+            'experiment_id',
             'station_number',
             'pot_number',
             'moisture_percent',
@@ -19,6 +28,18 @@ class MeasurementSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = ['id', 'created_at']
+
+    def validate(self, attrs):
+        experiment = attrs.get('experiment', getattr(self.instance, 'experiment', None))
+        station_number = attrs.get(
+            'station_number',
+            getattr(self.instance, 'station_number', None),
+        )
+        if experiment and station_number != experiment.sensor_set_id:
+            raise serializers.ValidationError({
+                'experiment_id': 'Eksperyment należy do innego zestawu czujników.'
+            })
+        return attrs
 
     def validate_moisture_percent(self, value):
         if value is None:
