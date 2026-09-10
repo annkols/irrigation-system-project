@@ -140,10 +140,6 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
 
     <div className="chart-panel">
 
-      <div className="chart-title-row">
-        <h3>EXPERIMENT CHARTS</h3>
-      </div>
-
       <div className="sensor-selectors">
 
         <div className="sensor-selector">

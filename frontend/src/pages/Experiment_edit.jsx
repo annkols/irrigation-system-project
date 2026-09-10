@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
 import "../App.css";
-import Sidebar from "./Sidebar";
-import TopBar from "./Topbar";
+import logo from "./images/logo-color.png";
+import logoName from "./images/name-color.png";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const getAuthHeaders = () => {
@@ -20,9 +20,27 @@ const secondsToHours = (value) => {
   return String(Number(hours.toFixed(4))).replace(".", ",");
 };
 
+const SENSORS = [
+  { key: 'air_temperature', label: 'air temperature (shared)' },
+  { key: 'air_humidity', label: 'air humidity (shared)' },
+  { key: 'pressure', label: 'pressure (shared)' },
+  { key: 'light', label: 'light intensity (shared)' },
+  { key: 'soil_moisture', label: 'soil moisture (per pot)' },
+  { key: 'soil_temperature', label: 'soil temperature (per pot)' },
+];
+
+const NAV_ITEMS = [
+  { key: 'overview', label: 'Overview', icon: 'dashboard' },
+  { key: 'camera', label: 'Camera view', icon: 'videocam' },
+  { key: 'analytics', label: 'Analytics', icon: 'bar_chart' },
+  { key: 'notes', label: 'Notes', icon: 'edit_note' },
+  { key: 'history', label: 'Historical data', icon: 'table_rows' },
+];
+
 function Experiment_edit() {
   const navigate = useNavigate();
-  const {id} = useParams();
+  const { id } = useParams();
+  const [experimentName, setExperimentName] = useState("");
   const [name, setName] = useState("");
   const [plantName, setPlantName] = useState("");
   const [description, setDescription] = useState("");
@@ -34,51 +52,46 @@ function Experiment_edit() {
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebar-collapsed") === "true"
+  );
 
-  const sensors = [
-    { key: 'air_temperature', label: 'air temperature (shared)' },
-    { key: 'air_humidity', label: 'air humidity (shared)' },
-    { key: 'pressure', label: 'pressure (shared)' },
-    { key: 'light', label: 'light intensity (shared)' },
-    { key: 'soil_moisture', label: 'soil moisture (per pot)' },
-    { key: 'soil_temperature', label: 'soil temperature (per pot)' },
-  ];
-
-    useEffect(() => {
-      fetch(`${API_BASE_URL}/experiments/${id}/`, {
-        headers: getAuthHeaders(),
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/experiments/${id}/`, {
+      headers: getAuthHeaders(),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch experiment data");
+        return res.json();
       })
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch experiment data");
-          return res.json();
-        })
-        .then((data) => {
-          setName(data.name || "");
-          setPlantName(data.plant_name || "");
-          setDescription(data.description || "");
-          setIsPublic(data.is_public || false);
-          setKeywords(data.keywords || []);
-      
-          if (data.started_at) setStartDate(data.started_at.split('T')[0]);
-          if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
-      
-          setSelectedSetup(data.sensor_set_id);
-      
-          const fallbackFrequency = data.measurement_frequency_seconds || 3600;
-          setFrequencies(Object.fromEntries(sensors.map((sensor) => [
-            sensor.key,
-            secondsToHours(data.sensor_frequencies?.[sensor.key] || fallbackFrequency),
-          ])));
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          toast.error("Error loading experiment details.");
-          navigate('/dashboard');
-        });
-    }, [id, navigate]);
+      .then((data) => {
+        setExperimentName(data.name || "");
+        setName(data.name || "");
+        setPlantName(data.plant_name || "");
+        setDescription(data.description || "");
+        setIsPublic(data.is_public || false);
+        setKeywords(data.keywords || []);
 
+        if (data.started_at) setStartDate(data.started_at.split('T')[0]);
+        if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
+
+        setSelectedSetup(data.sensor_set_id);
+
+        const fallbackFrequency = data.measurement_frequency_seconds || 3600;
+        setFrequencies(Object.fromEntries(SENSORS.map((sensor) => [
+          sensor.key,
+          secondsToHours(data.sensor_frequencies?.[sensor.key] || fallbackFrequency),
+        ])));
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Error loading experiment details.");
+        navigate('/dashboard');
+      });
+  }, [id, navigate]);
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -93,11 +106,8 @@ function Experiment_edit() {
   };
 
   const handleFreqChange = (sensor, value) => {
-      setFrequencies(prev => ({
-        ...prev,
-        [sensor]: value
-      }));
-    };
+    setFrequencies(prev => ({ ...prev, [sensor]: value }));
+  };
 
   const handleSave = () => {
     setErrors({});
@@ -130,7 +140,7 @@ function Experiment_edit() {
     if (!selectedSetup) {
       localErrors.sensor_set_id = ["Hardware set ID is missing."];
     } else {
-      const invalidSensors = sensors.some(sensor => {
+      const invalidSensors = SENSORS.some(sensor => {
         const val = frequencies[sensor.key];
         const numVal = parseHours(val);
         const isEmpty = !val || val.trim() === "";
@@ -159,10 +169,7 @@ function Experiment_edit() {
     }
 
     const sensorFrequencies = Object.fromEntries(
-      sensors.map(sensor => [
-        sensor.key,
-        hoursToSeconds(frequencies[sensor.key])
-      ])
+      SENSORS.map(sensor => [sensor.key, hoursToSeconds(frequencies[sensor.key])])
     );
 
     const updatedExperiment = {
@@ -174,193 +181,283 @@ function Experiment_edit() {
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
       planned_end_at: endDate || null,
-      is_public: isPublic
+      is_public: isPublic,
     };
 
-    console.log("Wysylane dane edycji:", updatedExperiment);
-
+    setIsSaving(true);
     fetch(`${API_BASE_URL}/experiments/${id}/edit/`, {
       method: "PATCH",
       headers: getAuthHeaders(),
       body: JSON.stringify(updatedExperiment),
     })
-        .then(async (res) => {
-          const data = await res.json();
-          if (res.ok) {
-            navigate(`/experiment/${id}`, { 
-              state: { message: "Experiment updated successfully!" } 
-            });
-          } else {
-            setErrors(data);
-          }
-        })
-        .catch((err) => {
-          console.error("Error updating experiment:", err);
-          toast.error("Server connection error.");
-        });
-    };
-
-    if (isLoading) {
-      return <div className="loading">Loading experiment data...</div>;
-    }
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok) {
+          navigate(`/experiment/${id}`, {
+            state: { message: "Experiment updated successfully!" },
+          });
+        } else {
+          setErrors(data);
+          toast.error("Please fix the highlighted fields.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error updating experiment:", err);
+        toast.error("Server connection error.");
+      })
+      .finally(() => setIsSaving(false));
+  };
 
   return (
-    <div className="dashboard-page">
-      <Sidebar />
-      <div className="dashboard-content">
-        <TopBar />
-      <div className="form edit-experiment-form">
-        <div className="new-exp-form">
-          <h2>Edit experiment</h2>
+    <div className="exp-layout">
+      <aside className={`exp-sidebar ${sidebarCollapsed ? "exp-sidebar--collapsed" : ""}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-button exp-sidebar-collapse-button"
+          onClick={() => setSidebarCollapsed((current) => {
+            const next = !current;
+            localStorage.setItem("sidebar-collapsed", String(next));
+            return next;
+          })}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
+        </button>
+        <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
+          <img src={logo} alt="Logo" className="exp-sidebar-logo-mark" />
+          <img src={logoName} alt="PlantStalker" className="exp-sidebar-logo-text" />
         </div>
 
-        <div className="form-section">
-          <p>Experiment name:</p>
-          <input
-            className={errors.name ? "input-error" : ""}
-            type="text"
-            placeholder="Name your experiment"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          {errors.name && <span className="error-text">{errors.name[0]}</span>}
+        <div className="exp-sidebar-meta">
+          <p className="exp-sidebar-exp-name">{experimentName || "Experiment"}</p>
+          <p className="exp-sidebar-exp-sub">
+            {plantName && <span>{plantName}</span>}
+            {isPublic
+              ? <span className="exp-sidebar-badge exp-sidebar-badge--public">Public</span>
+              : <span className="exp-sidebar-badge exp-sidebar-badge--private">Private</span>
+            }
+          </p>
         </div>
 
-        <div className="form-section">
-          <p>Plant type:</p>
-          <input
-            type="text"
-            placeholder="Type in type of plant"
-            value={plantName}
-            onChange={(e) => setPlantName(e.target.value)}
-          />
-          {errors.plant_name && <span className="error-text">{errors.plant_name[0]}</span>}
-        </div>
+        <p className="exp-sidebar-section-label">EXPERIMENT CONTROLS</p>
 
-        <div className="form-section">
-          <p>Experiment description:</p>
-          <input
-            type="text"
-            placeholder="Describe your experiment (optional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          {errors.description && <span className="error-text">{errors.description[0]}</span>}
-        </div>
-
-        <div className="form-section">
-          <p>Keywords:</p>
-          <div className="keyword-input-wrapper">
-            <input
-              type="text"
-              className={errors.keywords ? "input-error" : ""}
-              placeholder="Add a keyword"
-              value={keywordInput}
-              onChange={(e) => setKeywordInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                }
-              }}
-            />
-            <button type="button" className="btn-create" onClick={handleAddKeyword}>
-              ADD
+        <nav className="exp-sidebar-nav">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.key}
+              className="exp-nav-item"
+              onClick={() => navigate(`/experiment/${id}`)}
+            >
+              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="exp-nav-item-label">{item.label}</span>
             </button>
-          </div>
+          ))}
+        </nav>
+      </aside>
 
-          <div className="keywords-tags-container">
-            {keywords.map((kw, index) => (
-              <span key={index} className="exp-keyword">
-                {kw}
-                <button 
-                  type="button" 
-                  className="btn-remove-tag"
-                  onClick={() => handleRemoveKeyword(index)}
+      <div className="exp-main">
+        <div className="exp-topbar">
+          <div className="exp-breadcrumb">
+            <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>Dashboard</span>
+            <span className="exp-breadcrumb-sep">›</span>
+            <span className="exp-breadcrumb-link" onClick={() => navigate(`/experiment/${id}`)}>
+              {experimentName || "Experiment"}
+            </span>
+            <span className="exp-breadcrumb-sep">›</span>
+            <span>Edit</span>
+          </div>
+          <div className="exp-topbar-actions">
+            <span className="material-symbols-outlined exp-topbar-icon">notifications</span>
+            <span className="material-symbols-outlined exp-topbar-icon">settings</span>
+            <span className="material-symbols-outlined exp-topbar-icon">account_circle</span>
+          </div>
+        </div>
+
+        <div className="exp-content">
+          {isLoading ? (
+            <div className="exp-tab-overview"><p>Loading experiment data...</p></div>
+          ) : (
+            <div className="exp-tab-overview exp-edit">
+              <div className="exp-tab-header">
+                <h1 className="exp-tab-title">Edit experiment</h1>
+                <div className="exp-tab-actions">
+                  <button
+                    className="exp-btn exp-btn--ghost"
+                    onClick={() => navigate(`/experiment/${id}`)}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button className="exp-btn exp-btn--primary" onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field">
+                  <label className="exp-info-label" htmlFor="exp-name">Experiment name</label>
+                  <input
+                    id="exp-name"
+                    className={`exp-edit-input ${errors.name ? "exp-edit-input--error" : ""}`}
+                    type="text"
+                    placeholder="Name your experiment"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  {errors.name && <span className="error-text">{errors.name[0]}</span>}
+                </div>
+
+                <div className="exp-overview-field">
+                  <label className="exp-info-label" htmlFor="exp-plant">Plant type</label>
+                  <input
+                    id="exp-plant"
+                    className={`exp-edit-input ${errors.plant_name ? "exp-edit-input--error" : ""}`}
+                    type="text"
+                    placeholder="Type in type of plant"
+                    value={plantName}
+                    onChange={(e) => setPlantName(e.target.value)}
+                  />
+                  {errors.plant_name && <span className="error-text">{errors.plant_name[0]}</span>}
+                </div>
+
+                <div className="exp-overview-field exp-overview-field--last">
+                  <label className="exp-info-label" htmlFor="exp-desc">Description</label>
+                  <textarea
+                    id="exp-desc"
+                    className={`exp-edit-input exp-edit-textarea ${errors.description ? "exp-edit-input--error" : ""}`}
+                    placeholder="Describe your experiment (optional)"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                  {errors.description && <span className="error-text">{errors.description[0]}</span>}
+                </div>
+              </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field">
+                  <span className="exp-info-label">Keywords</span>
+                  <div className="exp-edit-keyword-row">
+                    <input
+                      className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
+                      type="text"
+                      placeholder="Add a keyword"
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddKeyword();
+                        }
+                      }}
+                    />
+                    <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
+                      Add
+                    </button>
+                  </div>
+                  {keywords.length > 0 && (
+                    <div className="exp-details-keywords">
+                      {keywords.map((kw, index) => (
+                        <span key={index} className="exp-keyword">
+                          {kw}
+                          <button
+                            type="button"
+                            className="btn-remove-tag"
+                            onClick={() => handleRemoveKeyword(index)}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
+                </div>
+
+                <div className="exp-overview-field exp-overview-field--last">
+                  <div className="exp-edit-row">
+                    <div className="exp-edit-col">
+                      <label className="exp-info-label" htmlFor="start_date">Start date</label>
+                      <input
+                        className={`exp-edit-input ${errors.started_at ? "exp-edit-input--error" : ""}`}
+                        type="date"
+                        id="start_date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                      {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
+                    </div>
+                    <div className="exp-edit-col">
+                      <label className="exp-info-label" htmlFor="end_date">Planned end date</label>
+                      <input
+                        className={`exp-edit-input ${errors.planned_end_at ? "exp-edit-input--error" : ""}`}
+                        type="date"
+                        id="end_date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                      {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field exp-overview-field--last">
+                  <span className="exp-info-label">
+                    Hardware set ID: <strong>{selectedSetup}</strong> · reading frequency (hours)
+                  </span>
+                  <div className="frequency-grid">
+                    {SENSORS.map((sensor) => (
+                      <label key={sensor.key}>
+                        <span>{sensor.label}</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="e.g. 0,3"
+                          className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "exp-edit-input--error" : ""}
+                          value={frequencies[sensor.key] || ""}
+                          onKeyDown={(e) => {
+                            if (["e", "E"].includes(e.key)) e.preventDefault();
+                          }}
+                          onChange={(e) => handleFreqChange(sensor.key, e.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
+                </div>
+              </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field exp-overview-field--last">
+                  <label className="exp-edit-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                    />
+                    <span>Make my experiment public and let other users see the data.</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="exp-edit-footer">
+                <button
+                  className="exp-btn exp-btn--ghost"
+                  onClick={() => navigate(`/experiment/${id}`)}
+                  disabled={isSaving}
                 >
-                  &times;
+                  Cancel
                 </button>
-              </span>
-            ))}
-          </div>
-          {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
+                <button className="exp-btn exp-btn--primary" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        <div className="dates-choices">
-          <div className="date-choice">
-            <label htmlFor="start_date">Start date:</label>
-            <input
-              className={errors.started_at ? "input-error" : ""}
-              type="date"
-              id="start_date"
-              name="start_date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
-          </div>
-
-          <div className="date-choice">
-            <label htmlFor="end_date">Planned end date:</label>
-            <input
-              className={errors.planned_end_at ? "input-error" : ""}
-              type="date"
-              id="end_date"
-              name="end_date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-            {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
-          </div>
-        </div>
-
-        <div className="form-section">
-          <p>Hardware set ID: <strong>{selectedSetup}</strong>. Reading frequency in hours:</p>
-          <div className="frequency-grid">
-            {sensors.map((sensor) => (
-              <label key={sensor.key}>
-                <span>{sensor.label}</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="e.g. 0,3"
-                  className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "input-error" : ""}
-                  value={frequencies[sensor.key] || ""}
-                  onKeyDown={(e) => {
-                    if (["e", "E"].includes(e.key)) e.preventDefault();
-                  }}
-                  onChange={(e) => handleFreqChange(sensor.key, e.target.value)}
-                />
-              </label>
-            ))}
-          </div>
-          {errors.sensor_set_id && <span className="error-text">{errors.sensor_set_id[0]}</span>}
-        </div>
-
-        <div className="add-collab">
-          <p>Collaborators:</p>
-        </div>
-
-        <div className="is-public">
-          <label htmlFor="experiment_public">
-            <input 
-              type="checkbox" 
-              id="experiment_public" 
-              name="experiment_public" 
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-            />
-            Make my experiment public and let other users see the data.
-          </label>
-        </div>
-
-        <button className="btn-back" onClick={() => navigate(`/experiment/${id}`)}>
-          <span>CANCEL</span>
-        </button>
-
-        <button className="btn-create" onClick={handleSave}>
-          <span>SAVE CHANGES</span>
-        </button>
-      </div>
       </div>
     </div>
   );
