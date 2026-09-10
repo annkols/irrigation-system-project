@@ -260,7 +260,7 @@ function Experiment_details() {
   const potNumbers = useMemo(() => {
     const planned = design?.pots?.map((pot) => pot.position) || [];
     const measured = measurements
-      .filter((measurement) => !experiment || measurement.station_number === experiment.sensor_set_id)
+      .filter((measurement) => measurement.experiment_id === experiment?.id)
       .map((measurement) => measurement.pot_number);
     const available = planned.length ? planned : measured;
     return [...new Set(available)].sort((a, b) => a - b);
@@ -289,16 +289,9 @@ function Experiment_details() {
 
   const stationMeasurements = useMemo(() => {
     if (!experiment) return [];
-    const start = experiment.started_at ? new Date(experiment.started_at) : null;
-    const endValue = experiment.finished_at || experiment.planned_end_at;
-    const end = endValue ? new Date(endValue) : null;
-
-    return measurements.filter((measurement) => {
-      const date = new Date(measurement.created_at);
-      return measurement.station_number === experiment.sensor_set_id
-        && (!start || date >= start)
-        && (!end || date <= end);
-    });
+    return measurements.filter(
+      (measurement) => measurement.experiment_id === experiment.id
+    );
   }, [experiment, measurements]);
 
   const selectedMeasurements = useMemo(

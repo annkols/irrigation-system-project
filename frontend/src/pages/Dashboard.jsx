@@ -60,7 +60,7 @@ export default function Dashboard() {
     const cards = useMemo(() => {
         return experiments.map((experiment) => {
             const experimentMeasurements = measurements.filter(
-                m => m.station_number === experiment.sensor_set_id
+                m => m.experiment_id === experiment.id
             );
 
             return { experiment, measurements: experimentMeasurements };
