@@ -22,26 +22,36 @@ export default function Dashboard() {
                 ? { Authorization: `Bearer ${token}` }
                 : {};
 
-            const [expRes, measRes] = await Promise.all([
+            const [ownedRes, collaboratedRes, measRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/experiments/owned/`, { headers }),
                 fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers }),
                 fetch(`${API_BASE_URL}/measurements/`, { headers })
             ]);
 
-            if (expRes.status === 401) {
+            if (ownedRes.status === 401 || collaboratedRes.status === 401) {
                 localStorage.removeItem("token");
                 navigate("/", { state: { showLogin: true } });
                 return;
             }
 
-            if (!expRes.ok || !measRes.ok) {
+            if (!ownedRes.ok || !collaboratedRes.ok || !measRes.ok) {
                 throw new Error("Could not load dashboard data.");
             }
 
-            const expData = await expRes.json();
-            const measData = await measRes.json();
+            const [ownedData, collaboratedData, measData] = await Promise.all([
+                ownedRes.json(),
+                collaboratedRes.json(),
+                measRes.json()
+            ]);
+            const experimentData = [
+                ...(Array.isArray(ownedData) ? ownedData : []),
+                ...(Array.isArray(collaboratedData) ? collaboratedData : [])
+            ];
+            const uniqueExperiments = [...new Map(
+                experimentData.map(experiment => [experiment.id, experiment])
+            ).values()];
 
-            setExperiments(Array.isArray(expData) ? expData : []);
+            setExperiments(uniqueExperiments);
             setMeasurements(Array.isArray(measData) ? measData : []);
         } catch (err) {
             console.error(err);
