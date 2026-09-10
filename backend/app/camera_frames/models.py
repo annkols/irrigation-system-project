@@ -4,8 +4,21 @@ from hmac import compare_digest
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from experiments.models import Experiment
+
+
+def camera_frame_upload_path(instance, filename):
+    owner_id = instance.experiment.owner_id or "unassigned"
+    pot_position = instance.pot.position if instance.pot_id else "unassigned"
+    captured_at = timezone.now()
+    return (
+        f"camera_frames/user_{owner_id}/experiment_{instance.experiment_id}/"
+        f"pot_{pot_position}/camera_{instance.camera_id or 'unassigned'}/"
+        f"{captured_at:%Y/%m/%d}/{filename}"
+    )
+
 
 class CameraDevice(models.Model):
     name = models.CharField(max_length=100)
@@ -49,7 +62,14 @@ class CameraFrame(models.Model):
         blank=True,
         related_name="frames",
     )
-    image = models.ImageField(upload_to="camera_frames/%Y/%m/%d/")
+    pot = models.ForeignKey(
+        "experiments.Pot",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="camera_frames",
+    )
+    image = models.ImageField(upload_to=camera_frame_upload_path)
     captured_at = models.DateTimeField(auto_now_add=True)
     captured_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

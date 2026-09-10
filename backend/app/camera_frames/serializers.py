@@ -11,6 +11,7 @@ class CameraFrameSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "experiment",
+            "pot",
             "camera",
             "image_url",
             "captured_at",
@@ -21,6 +22,5 @@ class CameraFrameSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
+        path = f"/api/frames/{obj.pk}/image/"
+        return request.build_absolute_uri(path) if request else path

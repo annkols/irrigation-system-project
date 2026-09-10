@@ -94,9 +94,20 @@ class CameraFrameUploadView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
+        assignment = ExperimentCameraAssignment.objects.filter(
+            experiment=experiment,
+            camera=device,
+        ).select_related("pot").first()
+        if assignment is None:
+            return Response(
+                {"detail": "This camera is not assigned to a pot in the active experiment."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         frame = CameraFrame(
             experiment=experiment,
             camera=device,
+            pot=assignment.pot,
             note="Automatic camera upload",
         )
         frame.image.save(f"{uuid4()}.jpg", ContentFile(image_bytes), save=True)
@@ -120,16 +131,7 @@ class LatestExperimentFrameImageView(APIView):
                     {"detail": "pot_number must be an integer."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            assignment = ExperimentCameraAssignment.objects.filter(
-                experiment_id=experiment_id,
-                pot__position=pot_number,
-            ).first()
-            if assignment is None:
-                return Response(
-                    {"detail": "No camera is assigned to this pot."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            frames = frames.filter(camera_id=assignment.camera_id)
+            frames = frames.filter(pot__position=pot_number)
 
         frame = frames.first()
         if frame is None:
@@ -143,6 +145,17 @@ class LatestExperimentFrameImageView(APIView):
             content_type="image/jpeg",
         )
         response["Cache-Control"] = "no-store"
+        return response
+
+
+class CameraFrameImageView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, pk):
+        frame = get_object_or_404(CameraFrame, pk=pk)
+        response = FileResponse(frame.image.open("rb"), content_type="image/jpeg")
+        response["Cache-Control"] = "private, max-age=300"
         return response
 
 
