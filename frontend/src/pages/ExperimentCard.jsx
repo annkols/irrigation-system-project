@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -18,18 +18,18 @@ export default function ExperimentCard({
         return [...new Set(available)].sort((a, b) => a - b);
     }, [experiment.pot_numbers, measurements]);
     const [selectedPot, setSelectedPot] = useState(null);
+    const activePot = potNumbers.includes(selectedPot) ? selectedPot : potNumbers[0] ?? null;
 
-    useEffect(() => {
-        if (potNumbers.length && !potNumbers.includes(selectedPot)) setSelectedPot(potNumbers[0]);
-    }, [potNumbers, selectedPot]);
-
-    const latest = measurements.find((measurement) => measurement.pot_number === selectedPot) || null;
-    const latestShared = measurements.find((measurement) => (
-        measurement.air_temperature != null
-        || measurement.air_humidity != null
-        || measurement.pressure_hpa != null
-        || measurement.light_lux != null
-    )) || null;
+    const latestAirTemperature = measurements.find(
+        (measurement) => measurement.air_temperature != null
+    )?.air_temperature;
+    const latestAirHumidity = measurements.find(
+        (measurement) => measurement.air_humidity != null
+    )?.air_humidity;
+    const latestSoilMoisture = measurements.find(
+        (measurement) => measurement.pot_number === activePot
+            && (measurement.moisture_percent != null || measurement.soil_moisture != null)
+    );
     const getStatusClass = (status) => {
 
         switch (status?.toLowerCase()) {
@@ -112,7 +112,7 @@ export default function ExperimentCard({
                     <label htmlFor={`dashboard-pot-${experiment.id}`}>Pot</label>
                     <select
                         id={`dashboard-pot-${experiment.id}`}
-                        value={selectedPot ?? ""}
+                        value={activePot ?? ""}
                         onChange={(event) => setSelectedPot(Number(event.target.value))}
                         disabled={!potNumbers.length}
                     >
@@ -133,7 +133,7 @@ export default function ExperimentCard({
 
                         <strong>
 
-                            {latestShared?.air_temperature ?? "-"}°C
+                            {latestAirTemperature ?? "-"}°C
 
                         </strong>
 
@@ -149,7 +149,7 @@ export default function ExperimentCard({
 
                         <strong>
 
-                            {latestShared?.air_humidity ?? "-"}%
+                            {latestAirHumidity ?? "-"}%
 
                         </strong>
 
@@ -165,8 +165,8 @@ export default function ExperimentCard({
 
                         <strong>
 
-                            {latest?.moisture_percent ??
-                                latest?.soil_moisture ??
+                            {latestSoilMoisture?.moisture_percent ??
+                                latestSoilMoisture?.soil_moisture ??
                                 "-"}%
 
                         </strong>
