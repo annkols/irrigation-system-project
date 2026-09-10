@@ -11,10 +11,6 @@ from .serializers import NoteImageSerializer, NoteSerializer
 
 MAX_IMAGES_PER_NOTE = 10
 
-from experiments.models import Experiment
-from experiments.permissions import CanViewExperiment, CanEditExperiment
-
-
 class ExperimentNoteListCreateView(generics.ListCreateAPIView):
 
     serializer_class = NoteSerializer
@@ -67,7 +63,6 @@ class NoteImageDestroyView(generics.DestroyAPIView):
     serializer_class = NoteImageSerializer
     permission_classes = [IsAuthenticated, CanEditExperiment]
 
-        serializer.save(experiment=experiment)
 
 def _attach_images(note, files):
     if not files:
