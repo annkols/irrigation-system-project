@@ -28,6 +28,7 @@ int dryValue = 502;
 int wetValue = 259;
 
 int moistureLimit = 20;
+int experimentId = 0;
 int stationNumber = 0;
 int potNumber = 0;
 
@@ -270,6 +271,7 @@ void handlePumpCommand() {
     applySensorConfig(command);
   } else if (command == "UNASSIGNED") {
     assignmentReady = false;
+    experimentId = 0;
     stationNumber = 0;
     potNumber = 0;
     manualPumpMode = false;
@@ -289,6 +291,7 @@ void handlePumpCommand() {
 }
 
 void applySensorConfig(String command) {
+  experimentId = readConfigInt(command, "experiment_id");
   stationNumber = readConfigInt(command, "station_number");
   potNumber = readConfigInt(command, "pot_number");
   updateInterval(command, "soil_moisture", soilMoistureIntervalMs);
@@ -298,7 +301,7 @@ void applySensorConfig(String command) {
   updateInterval(command, "air_humidity", airHumidityIntervalMs);
   updateInterval(command, "pressure", pressureIntervalMs);
 
-  assignmentReady = stationNumber > 0 && potNumber > 0;
+  assignmentReady = experimentId > 0 && stationNumber > 0 && potNumber > 0;
   if (!assignmentReady) {
     pumpOff();
     Serial.println("NIEPRAWIDLOWE PRZYPISANIE SPRZETU");
@@ -360,7 +363,9 @@ void sendJsonToEsp(
   bool airHumidityUpdated,
   bool pressureUpdated
 ) {
-  EspSerial.print("{\"station_number\":");
+  EspSerial.print("{\"experiment_id\":");
+  EspSerial.print(experimentId);
+  EspSerial.print(",\"station_number\":");
   EspSerial.print(stationNumber);
   EspSerial.print(",\"pot_number\":");
   EspSerial.print(potNumber);

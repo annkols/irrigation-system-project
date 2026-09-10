@@ -17,6 +17,7 @@ const unsigned long configCheckIntervalMs = 30000;
 
 int lastForwardedCommandId = 0;
 String lastForwardedConfig = "";
+int assignedExperimentId = 0;
 int assignedStationNumber = 0;
 int assignedPotNumber = 0;
 bool assignmentReady = false;
@@ -147,15 +148,17 @@ void fetchSensorConfig() {
 
   if (statusCode == 200) {
     String response = http.getString();
+    int experimentId = extractInteger(response, "experiment_id");
     int stationNumber = extractInteger(response, "sensor_set_id");
     int potNumber = extractInteger(response, "pot_number");
 
-    if (stationNumber < 1 || potNumber < 1) {
+    if (experimentId < 1 || stationNumber < 1 || potNumber < 1) {
       clearAssignment();
       http.end();
       return;
     }
 
+    assignedExperimentId = experimentId;
     assignedStationNumber = stationNumber;
     assignedPotNumber = potNumber;
     assignmentReady = true;
@@ -174,7 +177,8 @@ void fetchSensorConfig() {
 
 String buildConfigCommand(String response) {
   String config = "CONFIG:";
-  config += "station_number=" + String(assignedStationNumber);
+  config += "experiment_id=" + String(assignedExperimentId);
+  config += ";station_number=" + String(assignedStationNumber);
   config += ";pot_number=" + String(assignedPotNumber);
   config += ";soil_moisture=" + String(extractFrequency(response, "soil_moisture"));
   config += ";light=" + String(extractFrequency(response, "light"));
@@ -190,6 +194,7 @@ void clearAssignment() {
     Serial.println("UNASSIGNED");
   }
   assignmentReady = false;
+  assignedExperimentId = 0;
   assignedStationNumber = 0;
   assignedPotNumber = 0;
   lastForwardedConfig = "";
