@@ -40,13 +40,13 @@ class UserValidationTests(APITestCase):
 
     # ADMINISTRATOR WITH PERMISSIONS CANNOT ACTIVATE SUPERUSER -> 403
     def test_admin_staff_cannot_activate_superuser(self):
-        inactive_user = User.objects.create_user(
+        super_user = User.objects.create_user(
             username="super.user",
             email="superuser@example.com",
             password="Z9!vQ2#pL7@xpass",
             is_active=False,
             is_staff=True,
-            is_superuser=False
+            is_superuser=True
         )
 
         administrator = User.objects.create_user(
@@ -70,12 +70,12 @@ class UserValidationTests(APITestCase):
         admin_access = RefreshToken.for_user(administrator).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {admin_access}")
 
-        response = self.client.patch(reverse("user-activate", args=[inactive_user.pk]), {}, format="json")
+        response = self.client.patch(reverse("user-activate", args=[super_user.pk]), {}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        inactive_user.refresh_from_db()
-        self.assertFalse(inactive_user.is_active)
+        super_user.refresh_from_db()
+        self.assertFalse(super_user.is_active)
 
 
     # ADMINISTRATOR WITH PERMISSIONS CANNOT ACTIVATE ADMIN -> 403
@@ -193,7 +193,7 @@ class UserValidationTests(APITestCase):
             is_active=False,
         )
 
-        response = self.client.patch(reverse("user-deactivate", args=[inactive_user.pk]), {}, format="json")
+        response = self.client.patch(reverse("user-activate", args=[inactive_user.pk]), {}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
