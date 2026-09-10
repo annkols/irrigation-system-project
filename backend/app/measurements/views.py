@@ -9,7 +9,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+
 import openpyxl
+
+from experiments.permissions import CanViewExperiment
 
 class MeasurementListCreateView(generics.ListCreateAPIView):
     serializer_class = MeasurementSerializer
@@ -74,7 +77,7 @@ class MeasurementLatestView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class MeasurementExportCSVView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [CanViewExperiment]
     authentication_classes = []
 
     def get(self, request, experiment_id):
