@@ -7,8 +7,8 @@ class MeasurementSerializer(serializers.ModelSerializer):
     experiment_id = serializers.PrimaryKeyRelatedField(
         source='experiment',
         queryset=Experiment.objects.all(),
-        required=False,
-        allow_null=True,
+        required=True,
+        allow_null=False,
     )
 
     class Meta:

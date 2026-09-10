@@ -53,8 +53,44 @@ class MeasurementApiTests(APITestCase):
         self.assertIn("experiment_id", response.data)
         self.assertEqual(Measurement.objects.count(), 0)
 
+    def test_requires_experiment_id(self):
+        response = self.client.post(
+            reverse("measurement-list-create"),
+            {
+                "station_number": 2,
+                "pot_number": 3,
+                "moisture_percent": 58,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("experiment_id", response.data)
+        self.assertEqual(Measurement.objects.count(), 0)
+
+    def test_rejects_null_experiment_id(self):
+        response = self.client.post(
+            reverse("measurement-list-create"),
+            {
+                "experiment_id": None,
+                "station_number": 2,
+                "pot_number": 3,
+                "moisture_percent": 58,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("experiment_id", response.data)
+        self.assertEqual(Measurement.objects.count(), 0)
+
     def test_create_measurement_with_full_sensor_payload(self):
+        experiment = Experiment.objects.create(
+            name="Full sensor payload test",
+            sensor_set_id=2,
+        )
         payload = {
+            "experiment_id": experiment.id,
             "station_number": 2,
             "pot_number": 3,
             "moisture_percent": 58,
