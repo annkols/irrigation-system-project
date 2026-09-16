@@ -258,13 +258,13 @@ function Experiment_details() {
   }, [id]);
 
   const potNumbers = useMemo(() => {
-    const planned = design?.pots?.map((pot) => pot.position) || [];
+    const planned = experiment?.pot_numbers || [];
     const measured = measurements
       .filter((measurement) => measurement.experiment_id === experiment?.id)
       .map((measurement) => measurement.pot_number);
     const available = planned.length ? planned : measured;
     return [...new Set(available)].sort((a, b) => a - b);
-  }, [design, experiment, measurements]);
+  }, [experiment, measurements]);
 
   const cameraPotNumbers = useMemo(() => {
     if (!design?.camera_assignments?.length) return [];
