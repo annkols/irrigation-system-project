@@ -38,7 +38,7 @@ function Experiment_details() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
-  const [pumpDurationSeconds, setPumpDurationSeconds] = useState("10");
+  const [pumpDurationSeconds, setPumpDurationSeconds] = useState("3");
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
