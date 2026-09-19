@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
+import TopBar from "./Topbar";
 import ExperimentChart from "./ExperimentChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -500,18 +501,7 @@ function Experiment_details() {
      
       <div className="exp-main">
        
-        <div className="exp-topbar">
-          <div className="exp-breadcrumb">
-            <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>Dashboard</span>
-            <span className="exp-breadcrumb-sep">›</span>
-            <span>{experiment.name}</span>
-          </div>
-          <div className="exp-topbar-actions">
-            <span className="material-symbols-outlined exp-topbar-icon">notifications</span>
-            <span className="material-symbols-outlined exp-topbar-icon">settings</span>
-            <span className="material-symbols-outlined exp-topbar-icon">account_circle</span>
-          </div>
-        </div>
+        <TopBar experimentName={experiment.name} />
 
        
         <div className="exp-content">
