@@ -1649,7 +1649,7 @@ body {
   gap:10px;
 }
 
-.topbar-actions button{
+.topbar-btn{
   width:38px;
   height:38px;
   border:none;
@@ -1659,7 +1659,9 @@ body {
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 
-.profile-wrapper {
+.profile-wrapper,
+.notifications-wrapper,
+.settings-wrapper {
     position: relative;
     display: inline-block;
 }
@@ -1674,9 +1676,112 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 8px;
     z-index: 1000;
-    min-width: 140px;
     font-family: var(--font-main);
     min-width: 180px;
+    min-height: 80px;
+}
+
+.notifications-dropdown,
+.settings-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 1000;
+  font-family: var(--font-main);
+  min-width: 180px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-empty {
+  font-size: 13px;
+  color: var(--color-text-muted, #888888);
+  font-family: var(--font-main);
+  text-align: center;
+}
+
+.settings-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 120px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px;
+  border-radius: var(--radius-normal, 6px);
+  transition: background-color 0.2s ease;
+}
+
+.center-item {
+  justify-content: center;
+}
+
+.settings-options {
+  display: flex;
+  gap: 16px;
+}
+
+.lang-btn {
+  background: none;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: none;
+  width: 32px;
+  height: 24px;
+}
+
+.flag-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lang-btn:hover {
+  border-color: var(--color-primary,);
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--color-text-main);
+  box-shadow: none;
+  width: 36px;
+  height: 28px;
+}
+
+.theme-toggle-btn .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--color-primary, #6366f1);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .profile-dropdown .logout-btn {

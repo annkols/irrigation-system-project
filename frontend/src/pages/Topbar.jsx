@@ -9,14 +9,21 @@ export default function TopBar() {
     const today = new Date();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
+
     const dropdownRef = useRef(null);
+    const notificationsRef = useRef(null);
+    const settingsRef = useRef(null);
+
     const navigate = useNavigate();
 
-    const toggleMenu = () => {
-        setIsMenuOpen((prev) => !prev);
-    };
+    const toggleMenu = () => setIsMenuOpen((prev) => !prev);
+    const toggleNotifications = () => setIsNotificationsOpen((prev) => !prev);
+    const toggleSettings = () => setIsSettingsOpen((prev) => !prev);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -49,6 +56,12 @@ export default function TopBar() {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsMenuOpen(false);
+            }
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+                setIsNotificationsOpen(false);
+            }
+            if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+                setIsSettingsOpen(false);
             }
         };
 
@@ -91,26 +104,70 @@ export default function TopBar() {
             
             <div className="topbar-actions">
 
-                <button>
+                {/* powiadomienia */}
+                <div className="notifications-wrapper" ref={notificationsRef}>
+                    <button 
+                        type="button" 
+                        className="topbar-btn" 
+                        onClick={toggleNotifications}
+                        aria-label="Notifications"
+                    >
+                        <span className="material-symbols-outlined">
+                            notifications
+                        </span>
+                    </button>
+                    {isNotificationsOpen && (
+                        <div className="notifications-dropdown">
+                            <span className="notifications-empty">No unread notifications</span>
+                        </div>
+                    )}
+                </div>
 
-                    <span className="material-symbols-outlined">
+                {/* ustawienia */}
+                <div className="settings-wrapper" ref={settingsRef}>
+                    <button 
+                        type="button" 
+                        className="topbar-btn" 
+                        onClick={toggleSettings}
+                        aria-label="Settings"
+                    >
+                        <span className="material-symbols-outlined">
+                            settings
+                        </span>
+                    </button>
+                    {isSettingsOpen && (
+                        <div className="settings-dropdown">
+                            {/* jezyk */}
+                            <div className="settings-item center-item">
+                                <div className="settings-options">
+                                    <button type="button" className="lang-btn" title="English">
+                                        <img src="https://flagcdn.com/w40/gb.png" alt="UK flag" className="flag-icon" />
+                                    </button>
+                                    <button type="button" className="lang-btn" title="Polski">
+                                        <img src="https://flagcdn.com/w40/pl.png" alt="Poland flag" className="flag-icon" />
+                                    </button>
+                                </div>
+                            </div>
+                            {/* motyw */}
+                            <div className="settings-item center-item">
+                                <div className="settings-options">
+                                    <button type="button" className="theme-toggle-btn" title="Light mode">
+                                        <span className="material-symbols-outlined">
+                                            light_mode
+                                        </span>
+                                    </button>
+                                    <button type="button" className="theme-toggle-btn" title="Dark mode">
+                                        <span className="material-symbols-outlined">
+                                            dark_mode
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
-                        notifications
-
-                    </span>
-
-                </button>
-
-                <button>
-
-                    <span className="material-symbols-outlined">
-
-                        settings
-
-                    </span>
-
-                </button>
-
+                {/* profil */}
                 <div className="profile-wrapper" ref={dropdownRef}>
                     <button 
                         type="button" 
