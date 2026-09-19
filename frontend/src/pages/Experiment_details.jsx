@@ -420,10 +420,10 @@ function Experiment_details() {
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
       setPumpCommandStatus(durationSeconds == null
-        ? `Command ${command} sent. The controller may take up to 5 seconds to receive it.`
-        : `Command sent. The pump may start within 5 seconds and will then run for ${durationSeconds} seconds.`);
+        ? `Polecenie ${command} zostało wysłane. Sterownik może odebrać je z opóźnieniem do 5 sekund.`
+        : `Polecenie zostało wysłane. Pompa może uruchomić się w ciągu 5 sekund, a następnie będzie działać przez ${durationSeconds} s.`);
     } catch {
-      setPumpCommandStatus("Command failed");
+      setPumpCommandStatus("Nie udało się wysłać polecenia");
     } finally {
       setIsSendingPumpCommand(false);
     }
@@ -706,7 +706,7 @@ function Experiment_details() {
                   ))}
                 </div>
                 <p className="exp-pump-delay-note">
-                  The controller checks for commands every 5 seconds, so starting or stopping may be delayed by up to 5 seconds. Timed operation starts when the device receives the command.
+                  Sterownik sprawdza nowe polecenia co 5 sekund, dlatego uruchomienie lub zatrzymanie pompy może nastąpić z opóźnieniem do 5 sekund. Czas pracy jest liczony od chwili odebrania polecenia przez urządzenie.
                 </p>
                 <form
                   className="exp-pump-timer"
@@ -714,13 +714,13 @@ function Experiment_details() {
                     event.preventDefault();
                     const duration = Number(pumpDurationSeconds);
                     if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
-                      setPumpCommandStatus("Enter a whole number from 1 to 300 seconds");
+                      setPumpCommandStatus("Wpisz liczbę całkowitą od 1 do 300 sekund");
                       return;
                     }
                     sendPumpCommand("ON", duration);
                   }}
                 >
-                  <label htmlFor="pump-duration">Run time (seconds)</label>
+                  <label htmlFor="pump-duration">Czas pracy (sekundy)</label>
                   <input
                     id="pump-duration"
                     type="number"
@@ -734,10 +734,10 @@ function Experiment_details() {
                     type="submit"
                     className="exp-pump-btn"
                     disabled={isSendingPumpCommand || selectedPot == null}
-                  >RUN FOR SET TIME</button>
+                  >URUCHOM NA PODANY CZAS</button>
                 </form>
                 {pumpCommandStatus && (
-                  <p className={pumpCommandStatus.includes("failed") || pumpCommandStatus.startsWith("Enter") ? "pump-command-error" : "pump-command-status"}>
+                  <p className={pumpCommandStatus.startsWith("Nie udało") || pumpCommandStatus.startsWith("Wpisz") ? "pump-command-error" : "pump-command-status"}>
                     {pumpCommandStatus}
                   </p>
                 )}

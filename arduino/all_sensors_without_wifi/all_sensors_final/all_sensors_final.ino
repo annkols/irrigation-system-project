@@ -104,7 +104,7 @@ void loop() {
   if (timedPumpActive && now - timedPumpStartedAt >= timedPumpDurationMs) {
     timedPumpActive = false;
     pumpOff();
-    Serial.println("CZAS PRACY POMPY ZAKONCZONY");
+    Serial.println("CZAS PRACY POMPY ZAKOŃCZONY");
   }
   bool shouldSend = false;
   bool soilMoistureUpdated = false;
