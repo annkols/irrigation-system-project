@@ -38,6 +38,7 @@ function Experiment_details() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
+  const [pumpDurationSeconds, setPumpDurationSeconds] = useState("10");
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
@@ -402,7 +403,7 @@ function Experiment_details() {
     );
   };
 
-  const sendPumpCommand = async (command) => {
+  const sendPumpCommand = async (command, durationSeconds = null) => {
     setIsSendingPumpCommand(true);
     setPumpCommandStatus("");
     try {
@@ -411,13 +412,16 @@ function Experiment_details() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           command,
+          ...(durationSeconds != null && { duration_seconds: durationSeconds }),
           station_number: experiment.sensor_set_id,
           pot_number: selectedPot,
         }),
       });
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
-      setPumpCommandStatus(`Command ${command} sent`);
+      setPumpCommandStatus(durationSeconds == null
+        ? `Command ${command} sent. The controller may take up to 5 seconds to receive it.`
+        : `Command sent. The pump may start within 5 seconds and will then run for ${durationSeconds} seconds.`);
     } catch {
       setPumpCommandStatus("Command failed");
     } finally {
@@ -701,8 +705,39 @@ function Experiment_details() {
                     >{cmd}</button>
                   ))}
                 </div>
+                <p className="exp-pump-delay-note">
+                  The controller checks for commands every 5 seconds, so starting or stopping may be delayed by up to 5 seconds. Timed operation starts when the device receives the command.
+                </p>
+                <form
+                  className="exp-pump-timer"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const duration = Number(pumpDurationSeconds);
+                    if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
+                      setPumpCommandStatus("Enter a whole number from 1 to 300 seconds");
+                      return;
+                    }
+                    sendPumpCommand("ON", duration);
+                  }}
+                >
+                  <label htmlFor="pump-duration">Run time (seconds)</label>
+                  <input
+                    id="pump-duration"
+                    type="number"
+                    min="1"
+                    max="300"
+                    step="1"
+                    value={pumpDurationSeconds}
+                    onChange={(event) => setPumpDurationSeconds(event.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="exp-pump-btn"
+                    disabled={isSendingPumpCommand || selectedPot == null}
+                  >RUN FOR SET TIME</button>
+                </form>
                 {pumpCommandStatus && (
-                  <p className={pumpCommandStatus.includes("failed") ? "pump-command-error" : "pump-command-status"}>
+                  <p className={pumpCommandStatus.includes("failed") || pumpCommandStatus.startsWith("Enter") ? "pump-command-error" : "pump-command-status"}>
                     {pumpCommandStatus}
                   </p>
                 )}

@@ -58,6 +58,9 @@ const int RELAY_OFF = HIGH;
 
 bool pumpState = false;
 bool manualPumpMode = false;
+bool timedPumpActive = false;
+unsigned long timedPumpStartedAt = 0;
+unsigned long timedPumpDurationMs = 0;
 bool assignmentReady = false;
 bool hasSoilMoistureReading = false;
 bool hasLightSensor = false;
@@ -98,6 +101,11 @@ void loop() {
   handlePumpCommand();
 
   unsigned long now = millis();
+  if (timedPumpActive && now - timedPumpStartedAt >= timedPumpDurationMs) {
+    timedPumpActive = false;
+    pumpOff();
+    Serial.println("CZAS PRACY POMPY ZAKONCZONY");
+  }
   bool shouldSend = false;
   bool soilMoistureUpdated = false;
   bool soilTemperatureUpdated = false;
@@ -275,17 +283,30 @@ void handlePumpCommand() {
     stationNumber = 0;
     potNumber = 0;
     manualPumpMode = false;
+    timedPumpActive = false;
     pumpOff();
     Serial.println("BRAK PRZYPISANIA SPRZETU DO DONICZKI");
   } else if (command == "PUMP_ON") {
     if (!assignmentReady) return;
     manualPumpMode = true;
+    timedPumpActive = false;
+    pumpOn();
+  } else if (command.startsWith("PUMP_ON:")) {
+    if (!assignmentReady) return;
+    unsigned long durationSeconds = command.substring(8).toInt();
+    if (durationSeconds < 1 || durationSeconds > 300) return;
+    manualPumpMode = true;
+    timedPumpActive = true;
+    timedPumpStartedAt = millis();
+    timedPumpDurationMs = durationSeconds * 1000UL;
     pumpOn();
   } else if (command == "PUMP_OFF") {
     manualPumpMode = true;
+    timedPumpActive = false;
     pumpOff();
   } else if (command == "PUMP_AUTO") {
     manualPumpMode = false;
+    timedPumpActive = false;
     Serial.println("TRYB POMPY AUTO");
   }
 }
