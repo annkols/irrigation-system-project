@@ -501,7 +501,7 @@ function Experiment_details() {
      
       <div className="exp-main">
        
-        <TopBar />
+        <TopBar experimentName={experiment.name} />
 
        
         <div className="exp-content">

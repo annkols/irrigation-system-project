@@ -4,11 +4,12 @@ import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-export default function TopBar() {
+export default function TopBar({ experimentName }) {
 
     const today = new Date();
 
     const location = useLocation();
+    const isExperimentDetails = location.pathname.startsWith('/experiment/');
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -36,16 +37,30 @@ export default function TopBar() {
             accumulatedPath += `/${segment}`;
             const isLast = index === paths.length - 1;
             
-            const formattedName = segment
-                .replace(/-/g, " ")
-                .replace(/^./, (str) => str.toUpperCase());
+            let formattedName = segment;
+
+            if (index === 0 && segment.toLowerCase() === 'dashboard') {
+                return null;
+            }
+
+            const isExperimentId = paths[index - 1] === 'experiment';
+
+            if (isExperimentId && experimentName) {
+                formattedName = experimentName;
+            } else if (segment.toLowerCase() === 'experiment') {
+                return null;
+            } else {
+                formattedName = segment
+                    .replace(/-/g, " ")
+                    .replace(/^./, (str) => str.toUpperCase());
+            }
 
             return {
                 name: formattedName,
                 path: accumulatedPath,
                 isLast,
             };
-        });
+        }).filter(Boolean);
     };
 
     const breadcrumbs = generateBreadcrumbs();
@@ -135,23 +150,21 @@ export default function TopBar() {
                     Dashboard
                 </span>
             
-                {breadcrumbs.length > 0 && breadcrumbs[0].name.toLowerCase() !== 'dashboard' && (
-                    breadcrumbs.map((crumb, index) => (
-                        <React.Fragment key={crumb.path}>
-                            <span className="topbar-breadcrumb-sep">›</span>
-                            {crumb.isLast ? (
-                                <span className="topbar-breadcrumb-current">{crumb.name}</span>
-                            ) : (
-                                <span 
-                                    className="topbar-breadcrumb-link" 
-                                    onClick={() => navigate(crumb.path)}
-                                >
-                                    {crumb.name}
-                                </span>
-                            )}
-                        </React.Fragment>
-                    ))
-                )}
+                {breadcrumbs.map((crumb) => (
+                    <React.Fragment key={crumb.path}>
+                        <span className="topbar-breadcrumb-sep">›</span>
+                        {crumb.isLast ? (
+                            <span className="topbar-breadcrumb-current">{crumb.name}</span>
+                        ) : (
+                            <span 
+                                className="topbar-breadcrumb-link" 
+                                onClick={() => navigate(crumb.path)}
+                            >
+                                {crumb.name}
+                            </span>
+                        )}
+                    </React.Fragment>
+                ))}
             </div>
 
             {/* przyciski po prawej */}
