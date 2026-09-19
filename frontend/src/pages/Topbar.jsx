@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -7,6 +7,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 export default function TopBar() {
 
     const today = new Date();
+
+    const location = useLocation();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -24,6 +26,29 @@ export default function TopBar() {
     const toggleMenu = () => setIsMenuOpen((prev) => !prev);
     const toggleNotifications = () => setIsNotificationsOpen((prev) => !prev);
     const toggleSettings = () => setIsSettingsOpen((prev) => !prev);
+
+    const generateBreadcrumbs = () => {
+        const paths = location.pathname.split("/").filter(Boolean);
+        
+        let accumulatedPath = "";
+        
+        return paths.map((segment, index) => {
+            accumulatedPath += `/${segment}`;
+            const isLast = index === paths.length - 1;
+            
+            const formattedName = segment
+                .replace(/-/g, " ")
+                .replace(/^./, (str) => str.toUpperCase());
+
+            return {
+                name: formattedName,
+                path: accumulatedPath,
+                isLast,
+            };
+        });
+    };
+
+    const breadcrumbs = generateBreadcrumbs();
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -101,7 +126,35 @@ export default function TopBar() {
 
         <div className="topbar">
 
+            {/* sciezka(breadcrumbs) po lewej */}
+            <div className="topbar-breadcrumb">
+                <span 
+                    className="topbar-breadcrumb-link" 
+                    onClick={() => navigate('/dashboard')}
+                >
+                    Dashboard
+                </span>
             
+                {breadcrumbs.length > 0 && breadcrumbs[0].name.toLowerCase() !== 'dashboard' && (
+                    breadcrumbs.map((crumb, index) => (
+                        <React.Fragment key={crumb.path}>
+                            <span className="topbar-breadcrumb-sep">›</span>
+                            {crumb.isLast ? (
+                                <span className="topbar-breadcrumb-current">{crumb.name}</span>
+                            ) : (
+                                <span 
+                                    className="topbar-breadcrumb-link" 
+                                    onClick={() => navigate(crumb.path)}
+                                >
+                                    {crumb.name}
+                                </span>
+                            )}
+                        </React.Fragment>
+                    ))
+                )}
+            </div>
+
+            {/* przyciski po prawej */}
             <div className="topbar-actions">
 
                 {/* powiadomienia */}

@@ -1639,9 +1639,36 @@ body {
 .topbar{
   height:58px;
   display:flex;
-  justify-content:flex-end;
+  justify-content: space-between;
   align-items:center;
   margin-bottom:20px;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.topbar-breadcrumb-link {
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.topbar-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.topbar-breadcrumb-sep {
+  color: var(--color-text-muted);
+}
+
+.topbar-breadcrumb-current {
+  color: var(--color-text-main);
+  font-weight: 600;
 }
 
 .topbar-actions{
