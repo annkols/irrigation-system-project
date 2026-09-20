@@ -63,6 +63,11 @@ function Experiment_edit() {
       headers: getAuthHeaders(),
     })
       .then((res) => {
+        if (res.status === 403) {
+          toast.error("You do not have permission to perform this action.");
+          navigate(`/experiment/${id}`);
+          throw new Error("Forbidden");
+        }
         if (!res.ok) throw new Error("Failed to fetch experiment data");
         return res.json();
       })
@@ -192,6 +197,13 @@ function Experiment_edit() {
     })
       .then(async (res) => {
         const data = await res.json();
+
+        if (res.status === 403) {
+          toast.error("You do not have permission to perform this action.");
+          navigate(`/experiment/${id}`);
+          return;
+        }
+
         if (res.ok) {
           navigate(`/experiment/${id}`, {
             state: { message: "Experiment updated successfully!" },
