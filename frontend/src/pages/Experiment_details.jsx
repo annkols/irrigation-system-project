@@ -26,7 +26,10 @@ function Experiment_details() {
   const location = useLocation();
   const hasShownToast = useRef(false);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.defaultTab || 'overview';
+  });
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true"
   );

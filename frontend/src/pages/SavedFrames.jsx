@@ -87,7 +87,7 @@ export default function SavedFrames() {
           <button
             type="button"
             className="exp-back-btn"
-            onClick={() => navigate(`/experiment/${id}`)}
+            onClick={() => navigate(`/experiment/${id}`, { state: { defaultTab: 'camera' } })}
             aria-label="Back to experiment"
           >
             <span className="material-symbols-outlined">arrow_back</span>
