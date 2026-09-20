@@ -227,7 +227,7 @@ body {
 }
 
 .pump-command-status {
-  color: var(--primary-green);
+  color: var(--color-primary);
 }
 
 .pump-command-error {

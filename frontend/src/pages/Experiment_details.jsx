@@ -423,10 +423,10 @@ function Experiment_details() {
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
       setPumpCommandStatus(durationSeconds == null
-        ? `Polecenie ${command} zostało wysłane. Sterownik może odebrać je z opóźnieniem do 5 sekund.`
-        : `Polecenie zostało wysłane. Pompa może uruchomić się w ciągu 5 sekund, a następnie będzie działać przez ${durationSeconds} s.`);
+        ? `Command ${command} has been sent. The controller may receive it with a delay of up to 5 seconds.`
+        : `Command has been sent. The pump may start within 5 seconds and will then run for ${durationSeconds} seconds.`);
     } catch {
-      setPumpCommandStatus("Nie udało się wysłać polecenia");
+      setPumpCommandStatus("Failed to send command");
     } finally {
       setIsSendingPumpCommand(false);
     }
@@ -742,7 +742,6 @@ function Experiment_details() {
                 {pumpCommandStatus && (
                   <p className={
                     pumpCommandStatus.startsWith("Failed") || 
-                    pumpCommandStatus.startsWith("Nie udało") || 
                     pumpCommandStatus.startsWith("Please") 
                       ? "pump-command-error" 
                       : "pump-command-status"
