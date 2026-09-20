@@ -706,7 +706,7 @@ function Experiment_details() {
                   ))}
                 </div>
                 <p className="exp-pump-delay-note">
-                  Sterownik sprawdza nowe polecenia co 5 sekund, dlatego uruchomienie lub zatrzymanie pompy może nastąpić z opóźnieniem do 5 sekund. Czas pracy jest liczony od chwili odebrania polecenia przez urządzenie.
+                  The controller checks for new commands every 5 seconds, so starting or stopping the pump may take up to a 5-second delay. Operating time is measured from the moment the device receives the command.
                 </p>
                 <form
                   className="exp-pump-timer"
@@ -714,13 +714,13 @@ function Experiment_details() {
                     event.preventDefault();
                     const duration = Number(pumpDurationSeconds);
                     if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
-                      setPumpCommandStatus("Wpisz liczbę całkowitą od 1 do 300 sekund");
+                      setPumpCommandStatus("Please enter an integer between 1 and 300 seconds");
                       return;
                     }
                     sendPumpCommand("ON", duration);
                   }}
                 >
-                  <label htmlFor="pump-duration">Czas pracy (sekundy)</label>
+                  <label htmlFor="pump-duration">Operation time (seconds)</label>
                   <input
                     id="pump-duration"
                     type="number"
@@ -734,10 +734,16 @@ function Experiment_details() {
                     type="submit"
                     className="exp-pump-btn"
                     disabled={isSendingPumpCommand || selectedPot == null}
-                  >URUCHOM NA PODANY CZAS</button>
+                  >RUN FOR SPECIFIED TIME</button>
                 </form>
                 {pumpCommandStatus && (
-                  <p className={pumpCommandStatus.startsWith("Nie udało") || pumpCommandStatus.startsWith("Wpisz") ? "pump-command-error" : "pump-command-status"}>
+                  <p className={
+                    pumpCommandStatus.startsWith("Failed") || 
+                    pumpCommandStatus.startsWith("Nie udało") || 
+                    pumpCommandStatus.startsWith("Please") 
+                      ? "pump-command-error" 
+                      : "pump-command-status"
+                  }>
                     {pumpCommandStatus}
                   </p>
                 )}
