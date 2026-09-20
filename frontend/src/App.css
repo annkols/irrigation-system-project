@@ -2040,7 +2040,9 @@ body {
 
   overflow-y:auto;
 
-  max-height:430px;
+  padding:16px;
+
+  max-height:730px;
 }
 
 .completed-table table{

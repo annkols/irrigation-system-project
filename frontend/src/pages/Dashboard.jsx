@@ -14,6 +14,8 @@ export default function Dashboard() {
     const [experiments, setExperiments] = useState([]);
     const [measurements, setMeasurements] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [completedPage, setCompletedPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     const fetchData = useCallback(async () => {
         try {
@@ -85,6 +87,10 @@ export default function Dashboard() {
         ({ experiment }) => experiment.status === "completed"
     );
 
+    const totalPages = Math.ceil(completedCards.length / ITEMS_PER_PAGE) || 1;
+    const startIndex = (completedPage - 1) * ITEMS_PER_PAGE;
+    const paginatedCompletedCards = completedCards.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
     return (
         <div className="dashboard-page">
             <Sidebar />
@@ -115,7 +121,10 @@ export default function Dashboard() {
                         {completedCards.length > 0 && (
                             <CompletedExperimentsTable
                                 title="Completed Experiments"
-                                cards={completedCards}
+                                cards={paginatedCompletedCards}
+                                currentPage={completedPage}
+                                totalPages={totalPages}
+                                onPageChange={(newPage) => setCompletedPage(newPage)}
                                 navigate={navigate}
                             />
                         )}
@@ -144,7 +153,7 @@ function ExperimentSection({ title, cards }) {
     );
 }
 
-function CompletedExperimentsTable({ title, cards, navigate }) {
+function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPageChange, navigate }) {
     return (
         <>
             <h2 className="section-title completed-title">{title}</h2>
@@ -184,6 +193,28 @@ function CompletedExperimentsTable({ title, cards, navigate }) {
                         ))}
                     </tbody>
                 </table>
+
+                {totalPages > 1 && (
+                    <div className="pagination-controls" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginTop: "15px" }}>
+                        <button
+                            className="exp-btn exp-btn--ghost"
+                            onClick={() => onPageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </button>
+                        <span>
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                            className="exp-btn exp-btn--ghost"
+                            onClick={() => onPageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
             </div>
         </>
     );
