@@ -8,6 +8,7 @@ class PumpCommand(models.Model):
         AUTO = 'AUTO', 'Auto'
 
     command = models.CharField(max_length=10, choices=Command.choices)
+    duration_seconds = models.PositiveSmallIntegerField(null=True, blank=True)
     station_number = models.PositiveIntegerField(default=1)
     pot_number = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -3021,6 +3021,37 @@ body {
   gap: 8px;
 }
 
+.exp-pump-delay-note {
+  margin: 10px 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.exp-pump-timer {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 120px) minmax(170px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.exp-pump-timer label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.exp-pump-timer input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .exp-pump-timer { grid-template-columns: 1fr; }
+}
+
 .exp-pump-btn {
   min-height: 38px;
   border: 1.5px solid var(--color-border-light);

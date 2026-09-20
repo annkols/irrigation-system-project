@@ -18,6 +18,37 @@ class PumpCommandApiTests(APITestCase):
         self.assertEqual(response.data['command'], 'ON')
         self.assertEqual(response.data['arduino_command'], 'PUMP_ON')
 
+    def test_create_timed_pump_command(self):
+        response = self.client.post(
+            reverse('pump-command-list-create'),
+            {'command': 'ON', 'duration_seconds': 15},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['duration_seconds'], 15)
+        self.assertEqual(response.data['arduino_command'], 'PUMP_ON:15')
+
+    def test_rejects_timed_command_outside_allowed_range(self):
+        for duration in (0, 301):
+            response = self.client.post(
+                reverse('pump-command-list-create'),
+                {'command': 'ON', 'duration_seconds': duration},
+                format='json',
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn('duration_seconds', response.data)
+
+    def test_rejects_duration_for_command_other_than_on(self):
+        response = self.client.post(
+            reverse('pump-command-list-create'),
+            {'command': 'OFF', 'duration_seconds': 10},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('duration_seconds', response.data)
+
     def test_rejects_invalid_pump_command(self):
         response = self.client.post(
             reverse('pump-command-list-create'),

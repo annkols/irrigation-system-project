@@ -38,6 +38,7 @@ function Experiment_details() {
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
+  const [pumpDurationSeconds, setPumpDurationSeconds] = useState("3");
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
@@ -402,7 +403,7 @@ function Experiment_details() {
     );
   };
 
-  const sendPumpCommand = async (command) => {
+  const sendPumpCommand = async (command, durationSeconds = null) => {
     setIsSendingPumpCommand(true);
     setPumpCommandStatus("");
     try {
@@ -411,15 +412,18 @@ function Experiment_details() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           command,
+          ...(durationSeconds != null && { duration_seconds: durationSeconds }),
           station_number: experiment.sensor_set_id,
           pot_number: selectedPot,
         }),
       });
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
-      setPumpCommandStatus(`Command ${command} sent`);
+      setPumpCommandStatus(durationSeconds == null
+        ? `Polecenie ${command} zostało wysłane. Sterownik może odebrać je z opóźnieniem do 5 sekund.`
+        : `Polecenie zostało wysłane. Pompa może uruchomić się w ciągu 5 sekund, a następnie będzie działać przez ${durationSeconds} s.`);
     } catch {
-      setPumpCommandStatus("Command failed");
+      setPumpCommandStatus("Nie udało się wysłać polecenia");
     } finally {
       setIsSendingPumpCommand(false);
     }
@@ -701,8 +705,39 @@ function Experiment_details() {
                     >{cmd}</button>
                   ))}
                 </div>
+                <p className="exp-pump-delay-note">
+                  Sterownik sprawdza nowe polecenia co 5 sekund, dlatego uruchomienie lub zatrzymanie pompy może nastąpić z opóźnieniem do 5 sekund. Czas pracy jest liczony od chwili odebrania polecenia przez urządzenie.
+                </p>
+                <form
+                  className="exp-pump-timer"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const duration = Number(pumpDurationSeconds);
+                    if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
+                      setPumpCommandStatus("Wpisz liczbę całkowitą od 1 do 300 sekund");
+                      return;
+                    }
+                    sendPumpCommand("ON", duration);
+                  }}
+                >
+                  <label htmlFor="pump-duration">Czas pracy (sekundy)</label>
+                  <input
+                    id="pump-duration"
+                    type="number"
+                    min="1"
+                    max="300"
+                    step="1"
+                    value={pumpDurationSeconds}
+                    onChange={(event) => setPumpDurationSeconds(event.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="exp-pump-btn"
+                    disabled={isSendingPumpCommand || selectedPot == null}
+                  >URUCHOM NA PODANY CZAS</button>
+                </form>
                 {pumpCommandStatus && (
-                  <p className={pumpCommandStatus.includes("failed") ? "pump-command-error" : "pump-command-status"}>
+                  <p className={pumpCommandStatus.startsWith("Nie udało") || pumpCommandStatus.startsWith("Wpisz") ? "pump-command-error" : "pump-command-status"}>
                     {pumpCommandStatus}
                   </p>
                 )}
