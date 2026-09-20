@@ -81,13 +81,13 @@ export default function SavedFrames() {
     <div className="dashboard-page">
       <Sidebar />
       <div className="dashboard-content">
-        <TopBar />
+        <TopBar experimentName={experiment?.name} />
       <main className="saved-frames-page">
         <div className="saved-frames-heading">
           <button
             type="button"
             className="exp-back-btn"
-            onClick={() => navigate(`/experiment/${id}`)}
+            onClick={() => navigate(`/experiment/${id}`, { state: { defaultTab: 'camera' } })}
             aria-label="Back to experiment"
           >
             <span className="material-symbols-outlined">arrow_back</span>

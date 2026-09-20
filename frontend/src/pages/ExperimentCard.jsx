@@ -181,7 +181,13 @@ export default function ExperimentCard({
 
                     <span>
 
-                        Started {daysAgo()} days ago
+                        {(() => {
+                            const d = daysAgo();
+                            if (d === null) return "-";
+                            if (d === 0) return "Starting today";
+                            if (d > 0) return `Started ${d} ${d === 1 ? "day" : "days"} ago`;
+                            return `Starts in ${Math.abs(d)} ${Math.abs(d) === 1 ? "day" : "days"}`;
+                        })()}
 
                     </span>
 

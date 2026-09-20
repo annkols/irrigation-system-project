@@ -265,7 +265,7 @@ body {
   top: calc(100% + 4px);
   left: 0;
   background: white;
-  border: 1.5px solid var(--primary-green);
+  border: 1.5px solid var(--color-primary);
   border-radius: 6px;
   overflow: hidden;
   z-index: 10;
@@ -286,7 +286,7 @@ body {
 }
 
 .export-menu button:hover {
-  background: var(--primary-light);
+  background: var(--color-primary-light);
 }
 
 .end-experiment-btn {
@@ -826,7 +826,7 @@ body {
 
 .exp-show-all {
   font-size: 12px;
-  color: var(--primary-green);
+  color: var(--color-primary);
   cursor: pointer;
   font-weight: 600;
 }
@@ -1189,7 +1189,7 @@ body {
   padding: 8px 20px;
   border: none;
   border-radius: 8px;
-  background: #4caf50;
+  background: var(--color-primary);
   color: white;
   cursor: pointer;
 }
@@ -2040,7 +2040,9 @@ body {
 
   overflow-y:auto;
 
-  max-height:430px;
+  padding:16px;
+
+  max-height:730px;
 }
 
 .completed-table table{
@@ -2137,7 +2139,7 @@ body {
 
 .saved-frames-page {
   max-width: 1100px;
-  margin: 0 auto;
+  margin: 16px;
   padding: 32px 24px 64px;
 }
 
@@ -2170,7 +2172,7 @@ body {
 
 .frames-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
@@ -2225,7 +2227,7 @@ body {
 
 .frames-empty,
 .frames-message {
-  padding: 60px 20px;
+  padding: 60px 60px;
   text-align: center;
   color: #666;
 }
@@ -2291,7 +2293,7 @@ body {
   border-radius: 20px;
   padding: 35px;
   position: relative;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-main);
 }
 
 .close-btn {
@@ -2308,6 +2310,7 @@ body {
   display: flex;
   gap: 8px;
   margin-bottom: 30px;
+  padding-right: 40px;
 }
 
 .progress-step div {
@@ -2318,7 +2321,7 @@ body {
 }
 
 .progress-step .active {
-  background: #4caf50;
+  background: var(--color-primary);
 }
 
 .register-box h2 {
@@ -2330,24 +2333,29 @@ body {
   width: 100%;
   padding: 14px;
   margin-bottom: 15px;
-  border: 1px solid #ccc;
+  border: 1px solid #d4d4d4;
   border-radius: 10px;
   font-size: 15px;
   box-sizing: border-box;
+}
+
+.register-box input:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .register-box button {
   padding: 14px;
   border: none;
   border-radius: 10px;
-  background: #4caf50;
+  background: var(--color-primary);
   color: white;
   cursor: pointer;
   font-size: 15px;
 }
 
 .register-box button:hover {
-  background: #43a047;
+  background: var(--color-primary-hover);
 }
 
 .buttons {
@@ -2377,13 +2385,13 @@ body {
   transform: translateY(-50%);
   padding: 6px 10px;
   background: none !important;
-  color: #4caf50 !important;
+  color: var(--color-primary) !important;
   font-size: 13px !important;
 }
 
 .form-error {
   margin: -8px 0 5px;
-  color: #d32f2f;
+  color: var(--color-error);
   font-size: 13px;
 }
 
@@ -2407,7 +2415,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-main);
 }
 
 .login-box h2 {
@@ -2430,21 +2438,21 @@ body {
 
 .login-box input:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: var(--color-primary);
 }
 
 .login-box button[type="submit"] {
   padding: 14px;
   border: none;
   border-radius: 10px;
-  background: #4caf50;
+  background: var(--color-primary);
   color: white;
   font-size: 15px;
   cursor: pointer;
 }
 
 .login-box button[type="submit"]:hover {
-  background: #43a047;
+  background: var(--color-primary-hover);
 }
 .login-password-field {
   position: relative;
@@ -2464,7 +2472,7 @@ body {
   transform: translateY(-50%);
   border: none;
   background: none;
-  color: #4caf50;
+  color: var(--color-primary);
   cursor: pointer;
   font-size: 13px;
   padding: 6px 10px;
@@ -2472,7 +2480,7 @@ body {
 
 .login-password-field .password-toggle:hover {
   background: none;
-  color: #43a047;
+  color: var(--color-primary-hover);
 }
 /* ===== Experiment Details — tabbed layout ===== */
 
