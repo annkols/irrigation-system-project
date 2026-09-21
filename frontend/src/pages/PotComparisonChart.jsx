@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { buildChartSeries, formatChartTime } from "./chartDataUtils";
+
 const features = [
   { key: "moisture_percent", label: "Soil moisture", unit: "%" },
   { key: "soil_temperature", label: "Soil temperature", unit: "°C" },
@@ -34,16 +36,25 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
 
   const selectedFeature = features.find((feature) => feature.key === featureKey);
 
-  const chartData = useMemo(() => measurements
-    .filter((measurement) => measurement.pot_number === firstPot || measurement.pot_number === secondPot)
-    .filter((measurement) => !startDate || new Date(measurement.created_at) >= new Date(startDate))
-    .filter((measurement) => !endDate || new Date(measurement.created_at) <= new Date(endDate))
-    .map((measurement) => ({
-      time: new Date(measurement.created_at),
-      firstPot: measurement.pot_number === firstPot ? measurement[featureKey] : null,
-      secondPot: measurement.pot_number === secondPot ? measurement[featureKey] : null,
-    }))
-    .sort((a, b) => a.time - b.time), [endDate, featureKey, firstPot, measurements, secondPot, startDate]);
+  const firstPotData = useMemo(() => buildChartSeries({
+    measurements,
+    valueKey: featureKey,
+    predicate: (measurement) => measurement.pot_number === firstPot,
+    startDate,
+    endDate,
+  }), [endDate, featureKey, firstPot, measurements, startDate]);
+
+  const secondPotData = useMemo(() => buildChartSeries({
+    measurements,
+    valueKey: featureKey,
+    predicate: (measurement) => measurement.pot_number === secondPot,
+    startDate,
+    endDate,
+  }), [endDate, featureKey, measurements, secondPot, startDate]);
+  const missingPots = [
+    !firstPotData.some((point) => point.value != null) && firstPot,
+    !secondPotData.some((point) => point.value != null) && secondPot,
+  ].filter(Boolean);
 
   if (potNumbers.length < 2) {
     return <p className="pot-comparison-empty">At least two pots are required to compare measurements.</p>;
@@ -93,20 +104,27 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
         <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label="Comparison end date" />
       </div>
 
+      <p className="chart-data-note">
+        Both pots use the same value scale and actual measurement times. Line breaks indicate missing data.
+      </p>
+      {missingPots.length > 0 && (
+        <p className="chart-data-warning">
+          No {selectedFeature.label.toLowerCase()} data in the selected range for: {missingPots.map((pot) => `P${pot}`).join(", ")}.
+        </p>
+      )}
+
       <div className="chart-wrapper">
         <ResponsiveContainer width="100%" height={420}>
-          <LineChart data={chartData}>
+          <LineChart>
             <CartesianGrid strokeDasharray="4 4" opacity={0.12} />
             <XAxis
               dataKey="time"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
               minTickGap={20}
               tick={{ fill: "#666", fontSize: 12 }}
-              tickFormatter={(value) => new Date(value).toLocaleString("pl-PL", {
-                day: "2-digit",
-                month: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              tickFormatter={formatChartTime}
             />
             <YAxis
               unit={selectedFeature.unit}
@@ -121,13 +139,14 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
             {series.map((item, index) => (
               <Line
                 key={item.key}
-                dataKey={item.key}
-                connectNulls
+                data={index === 0 ? firstPotData : secondPotData}
+                dataKey="value"
+                connectNulls={false}
                 name={`${selectedFeature.label} — P${index === 0 ? firstPot : secondPot}`}
                 stroke={item.color}
                 strokeWidth={3}
                 dot={false}
-                type="monotone"
+                type="linear"
               />
             ))}
           </LineChart>
