@@ -1,31 +1,51 @@
 import csv
 from io import BytesIO
+
 from django.http import HttpResponse
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
-from .models import Measurement
-from .serializers import MeasurementSerializer
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.views import APIView
+from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 import openpyxl
 
+from experiments.models import Experiment
 from experiments.permissions import CanViewExperiment
+from .models import Measurement
+from .serializers import MeasurementSerializer
 
 class MeasurementListCreateView(generics.ListCreateAPIView):
     serializer_class = MeasurementSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [AllowAny()]
+        return [CanViewExperiment()]
 
     def get_queryset(self):
         queryset = Measurement.objects.all()
 
+        experiment_id = self.request.query_params.get('experiment_id')
         station_number = self.request.query_params.get('station_number')
         pot_number = self.request.query_params.get('pot_number')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
+
+        if self.request.method == 'GET' and experiment_id:
+            experiment = get_object_or_404(Experiment, pk=experiment_id)
+            self.check_object_permissions(self.request, experiment)
+            queryset = queryset.filter(experiment=experiment)
+        elif self.request.method == 'GET':
+            if not self.request.user.is_authenticated:
+                raise NotAuthenticated()
+            queryset = queryset.filter(
+                Q(experiment__owner=self.request.user)
+                | Q(experiment__collaborators=self.request.user)
+            ).distinct()
 
         if station_number:
             queryset = queryset.filter(station_number=station_number)
@@ -78,19 +98,16 @@ class MeasurementLatestView(APIView):
     
 class MeasurementExportCSVView(APIView):
     permission_classes = [CanViewExperiment]
-    authentication_classes = []
 
     def get(self, request, experiment_id):
-        from experiments.models import Experiment
-
         try:
             experiment = Experiment.objects.get(pk=experiment_id)
         except Experiment.DoesNotExist:
             return Response({"detail": "Experiment not found."}, status=404)
 
-        queryset = Measurement.objects.filter(
-            station_number=experiment.sensor_set_id
-        ).order_by('created_at')
+        self.check_object_permissions(request, experiment)
+
+        queryset = Measurement.objects.filter(experiment=experiment).order_by('created_at')
         if experiment.started_at:
             queryset = queryset.filter(created_at__gte=experiment.started_at)
         if experiment.planned_end_at:

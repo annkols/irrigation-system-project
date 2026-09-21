@@ -586,7 +586,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Experiment.objects.filter(pk=experiment.pk).exists())
 
-    def test_experiment_with_measurements_returns_matching_station_measurements(self):
+    def test_experiment_with_measurements_returns_only_its_measurements(self):
         started_at = timezone.now() - timedelta(hours=2)
 
         experiment = Experiment.objects.create(
@@ -598,8 +598,14 @@ class ExperimentTests(APITestCase):
             finished_at=None,
             owner=self.user,
         )
+        other_experiment = Experiment.objects.create(
+            name="Other experiment",
+            sensor_set_id=1,
+            owner=self.user,
+        )
 
         matching_measurement = Measurement.objects.create(
+            experiment=experiment,
             station_number=1,
             pot_number=1,
             raw_value=512,
@@ -613,7 +619,8 @@ class ExperimentTests(APITestCase):
         )
 
         non_matching_measurement = Measurement.objects.create(
-            station_number=2,
+            experiment=other_experiment,
+            station_number=1,
             pot_number=1,
             raw_value=600,
             moisture_percent=18.0,
@@ -645,7 +652,7 @@ class ExperimentTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], experiment.id)
         self.assertEqual(len(response.data["measurements"]), 1)
-        self.assertEqual(response.data["measurements"][0]["station_number"],1)
+        self.assertEqual(response.data["measurements"][0]["id"], matching_measurement.id)
 
     def test_experiment_with_measurements_respects_started_at(self):
         started_at = timezone.now() - timedelta(hours=1)
@@ -661,6 +668,7 @@ class ExperimentTests(APITestCase):
         )
 
         old_measurement = Measurement.objects.create(
+            experiment=experiment,
             station_number=1,
             pot_number=1,
             raw_value=400,
@@ -674,6 +682,7 @@ class ExperimentTests(APITestCase):
         )
 
         new_measurement = Measurement.objects.create(
+            experiment=experiment,
             station_number=1,
             pot_number=1,
             raw_value=700,

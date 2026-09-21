@@ -6,6 +6,7 @@ import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
 import TopBar from "./Topbar";
 import ExperimentChart from "./ExperimentChart";
+import PotComparisonChart from "./PotComparisonChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -228,7 +229,7 @@ function Experiment_details() {
 
     const fetchMeasurements = () => {
       const currentTime = new Date().toLocaleString();
-      fetch(`${API_BASE_URL}/measurements/`, { headers: getAuthHeaders() })
+      fetch(`${API_BASE_URL}/measurements/?experiment_id=${id}`, { headers: getAuthHeaders() })
         .then(res => {
           if (!res.ok) throw new Error("Server error");
           return res.json();
@@ -814,6 +815,7 @@ function Experiment_details() {
                 </select>
               </div>
               <ExperimentChart measurements={stationMeasurements} selectedPot={selectedPot} />
+              <PotComparisonChart measurements={stationMeasurements} potNumbers={potNumbers} />
             </div>
           )}
 
