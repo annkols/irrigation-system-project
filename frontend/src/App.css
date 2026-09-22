@@ -1101,6 +1101,39 @@ body {
   width: 100%;
   height: 420px;
 }
+
+.chart-data-note {
+  margin: -8px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.chart-data-warning {
+  margin: -8px 0 0;
+  color: var(--color-warning-dark, #B45309);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pot-comparison-panel {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.pot-comparison-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 18px;
+}
+
+.pot-comparison-description,
+.pot-comparison-empty {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
 .experiment-select-dropdown {
   background: transparent;
   border: none;
@@ -2984,6 +3017,32 @@ body {
   font-size: 14px;
   font-weight: 500;
   margin-left: 1px;
+}
+
+.exp-light-calculator {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+}
+
+.exp-light-calculator-header { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+.exp-light-calculator h3 { margin: 0 0 4px; font-size: 15px; }
+.exp-light-calculator p { margin: 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.45; }
+.exp-light-calculator-header label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.exp-light-calculator-header label span { display: flex; align-items: center; gap: 6px; }
+.exp-light-calculator input { width: 130px; padding: 8px 10px; border: 1px solid var(--color-border-input); border-radius: 8px; font: inherit; }
+.exp-light-results { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 10px; }
+.exp-light-results > div { display: grid; gap: 3px; padding: 12px; background: var(--color-bg-main); border: 1px solid var(--color-border-light); border-radius: 10px; }
+.exp-light-results span { font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.exp-light-results strong { font-size: 22px; color: var(--color-primary); }
+.exp-light-results small { color: var(--color-text-muted); }
+.exp-light-calculator .exp-light-method { padding-top: 10px; border-top: 1px solid var(--color-border-divider); }
+
+@media (max-width: 700px) {
+  .exp-light-calculator-header { display: grid; }
+  .exp-light-results { grid-template-columns: 1fr; }
 }
 
 /* Pump control (new style) */

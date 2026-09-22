@@ -6,11 +6,16 @@ import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
 import TopBar from "./Topbar";
 import ExperimentChart from "./ExperimentChart";
+import PotComparisonChart from "./PotComparisonChart";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 const latestNonNull = rows => rows.length ? rows.reduceRight((result, row) => ({ ...result, ...Object.fromEntries(Object.entries(row).filter(([, value]) => value != null)) }), {}) : null;
+const DAYLIGHT_PPFD_FACTOR = 0.0185;
+const RED_LIGHT_SHARE = 700 / (700 + 400);
+const BLUE_LIGHT_SHARE = 400 / (700 + 400);
+const SOWELO_PPFD_FACTOR = RED_LIGHT_SHARE / 41.3 + BLUE_LIGHT_SHARE / 15.1;
 
 const NAV_ITEMS = [
   { key: 'overview',  label: 'Overview',        icon: 'dashboard'   },
@@ -42,6 +47,7 @@ function Experiment_details() {
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
   const [pumpDurationSeconds, setPumpDurationSeconds] = useState("3");
+  const [lightCalculatorLux, setLightCalculatorLux] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
@@ -228,7 +234,7 @@ function Experiment_details() {
 
     const fetchMeasurements = () => {
       const currentTime = new Date().toLocaleString();
-      fetch(`${API_BASE_URL}/measurements/`, { headers: getAuthHeaders() })
+      fetch(`${API_BASE_URL}/measurements/?experiment_id=${id}`, { headers: getAuthHeaders() })
         .then(res => {
           if (!res.ok) throw new Error("Server error");
           return res.json();
@@ -451,6 +457,9 @@ function Experiment_details() {
 
   const latest = latestNonNull(selectedMeasurements);
   const latestShared = latestNonNull(stationMeasurements);
+  const calculatorLuxValue = lightCalculatorLux ?? latestShared?.light_lux ?? "";
+  const calculatorLux = Number(calculatorLuxValue);
+  const hasCalculatorLux = calculatorLuxValue !== "" && Number.isFinite(calculatorLux) && calculatorLux >= 0;
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
@@ -751,6 +760,26 @@ function Experiment_details() {
                 )}
               </div>
 
+              <section className="exp-light-calculator">
+                <div className="exp-light-calculator-header">
+                  <div>
+                    <h3>Lux to PPFD calculator</h3>
+                    <p>Enter a BH1750 illuminance reading to compare the daylight and greenhouse LED estimates.</p>
+                  </div>
+                  <label>
+                    Illuminance
+                    <span><input type="number" min="0" step="0.01" value={calculatorLuxValue} onChange={(event) => setLightCalculatorLux(event.target.value)} /> lx</span>
+                  </label>
+                </div>
+                <div className="exp-light-results">
+                  <div><span>Daylight</span><strong>{hasCalculatorLux ? (calculatorLux * DAYLIGHT_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s (CF: {DAYLIGHT_PPFD_FACTOR})</small></div>
+                  <div><span>EKO-LED SOWELO-690-25-70D-CC-3535</span><strong>{hasCalculatorLux ? (calculatorLux * SOWELO_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s (estimated CF: {SOWELO_PPFD_FACTOR.toFixed(4)})</small></div>
+                </div>
+                <p className="exp-light-method">
+                  The greenhouse lamp is treated as a red-blue mixture: 63.6% red and 36.4% blue, estimated from the EKO-LED nominal luminous intensities R&nbsp;700&nbsp;mcd and B&nbsp;400&nbsp;mcd. Formula: PPFD&nbsp;=&nbsp;lux&nbsp;×&nbsp;CF. The estimated lamp factor is (63.6%&nbsp;×&nbsp;0.0242)&nbsp;+&nbsp;(36.4%&nbsp;×&nbsp;0.0662)&nbsp;=&nbsp;0.0395. This is an estimate, not a calibrated PAR measurement.
+                </p>
+              </section>
+
             </div>
           )}
 
@@ -814,6 +843,7 @@ function Experiment_details() {
                 </select>
               </div>
               <ExperimentChart measurements={stationMeasurements} selectedPot={selectedPot} />
+              <PotComparisonChart measurements={stationMeasurements} potNumbers={potNumbers} />
             </div>
           )}
 

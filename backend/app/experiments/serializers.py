@@ -414,7 +414,7 @@ class ExperimentWithMeasurementsSerializer(ExperimentSerializer):
 
     def get_measurements(self, obj):
         measurements = Measurement.objects.filter(
-            station_number=obj.sensor_set_id
+            experiment=obj
         ).order_by('-created_at')
 
         if obj.started_at:

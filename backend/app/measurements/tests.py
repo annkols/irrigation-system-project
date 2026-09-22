@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.urls import reverse
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -9,7 +10,73 @@ from experiments.models import Experiment
 from .models import Measurement
 
 
+User = get_user_model()
+
+
 class MeasurementApiTests(APITestCase):
+    def test_list_filters_measurements_by_experiment_for_owner(self):
+        owner = User.objects.create_user(username="owner", password="test-password")
+        experiment = Experiment.objects.create(name="Owned", owner=owner, sensor_set_id=1)
+        other_experiment = Experiment.objects.create(name="Other", sensor_set_id=2)
+        expected = Measurement.objects.create(experiment=experiment, station_number=1, pot_number=1)
+        Measurement.objects.create(experiment=other_experiment, station_number=2, pot_number=1)
+        self.client.force_authenticate(owner)
+
+        response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [expected.id])
+
+    def test_list_rejects_access_to_another_users_private_experiment(self):
+        owner = User.objects.create_user(username="owner", password="test-password")
+        viewer = User.objects.create_user(username="viewer", password="test-password")
+        experiment = Experiment.objects.create(name="Private", owner=owner, sensor_set_id=1)
+        self.client.force_authenticate(viewer)
+
+        response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_allows_anonymous_access_to_public_experiment(self):
+        experiment = Experiment.objects.create(
+            name="Public",
+            sensor_set_id=1,
+            is_public=True,
+        )
+        expected = Measurement.objects.create(experiment=experiment, station_number=1, pot_number=1)
+
+        response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [expected.id])
+
+    def test_unscoped_list_requires_authentication(self):
+        response = self.client.get(reverse("measurement-list-create"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_unscoped_list_only_returns_users_experiment_measurements(self):
+        owner = User.objects.create_user(username="owner", password="test-password")
+        own_experiment = Experiment.objects.create(name="Owned", owner=owner, sensor_set_id=1)
+        other_experiment = Experiment.objects.create(name="Other", sensor_set_id=2)
+        expected = Measurement.objects.create(experiment=own_experiment, station_number=1, pot_number=1)
+        Measurement.objects.create(experiment=other_experiment, station_number=2, pot_number=1)
+        self.client.force_authenticate(owner)
+
+        response = self.client.get(reverse("measurement-list-create"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [expected.id])
+
     def test_create_measurement_with_experiment_id(self):
         experiment = Experiment.objects.create(
             name="Sensor measurement test",
@@ -165,12 +232,13 @@ class MeasurementApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("detail", response.data)
 
-    def test_export_filters_by_experiment_sensor_set_and_formats_local_time(self):
+    def test_export_filters_by_experiment_id_and_formats_local_time(self):
         experiment = Experiment.objects.create(
             name="Soy extended light test",
             description="Export test.",
             plant_name="Soy",
             sensor_set_id=2,
+            is_public=True,
             started_at=datetime(2026, 6, 1, 8, 0, tzinfo=timezone.get_current_timezone()),
             planned_end_at=datetime(2026, 6, 1, 10, 0, tzinfo=timezone.get_current_timezone()),
             sensor_frequencies={
@@ -180,21 +248,28 @@ class MeasurementApiTests(APITestCase):
                 "light": 30,
             },
         )
+        other_experiment = Experiment.objects.create(
+            name="Other experiment",
+            sensor_set_id=2,
+            is_public=True,
+        )
         matching = Measurement.objects.create(
+            experiment=experiment,
             station_number=2,
             pot_number=1,
             moisture_percent=64,
             light_lux=420.5,
         )
-        other_station = Measurement.objects.create(
-            station_number=1,
+        other_experiment_measurement = Measurement.objects.create(
+            experiment=other_experiment,
+            station_number=2,
             pot_number=1,
             moisture_percent=90,
         )
         Measurement.objects.filter(pk=matching.pk).update(
             created_at=datetime(2026, 6, 1, 9, 0, tzinfo=timezone.get_current_timezone())
         )
-        Measurement.objects.filter(pk=other_station.pk).update(
+        Measurement.objects.filter(pk=other_experiment_measurement.pk).update(
             created_at=datetime(2026, 6, 1, 9, 0, tzinfo=timezone.get_current_timezone())
         )
 
@@ -206,5 +281,5 @@ class MeasurementApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("2026-06-01 09:00:00", content)
         self.assertIn(",2,1,", content)
-        self.assertNotIn(",1,1,90", content)
+        self.assertNotIn(",2,1,90", content)
         self.assertNotIn("+00:00", content)
