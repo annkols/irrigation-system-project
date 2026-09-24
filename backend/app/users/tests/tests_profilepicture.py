@@ -69,6 +69,8 @@ class UserProfilePictureTests(APITestCase):
 
         response = self.client.delete(self.url)
 
+        profile.refresh_from_db()
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["detail"], "Profile picture has been deleted")
 
