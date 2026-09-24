@@ -4106,6 +4106,31 @@ body {
 }
 
 /* people search*/
+.person-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 16px;
+  border-radius: 12px;
+  background: white;
+  margin-bottom: 12px;
+  transition: 0.2s;
+  border: 1px solid var(--color-primary);
+}
+
+.person-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.view-profile-btn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
 .people-search-page {
   padding: 24px 22px;
 }
