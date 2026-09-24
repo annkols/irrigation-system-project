@@ -13,6 +13,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ["university", "department", "role", "profile_picture"]
 
+class ProfilePictureUploadSerializer(serializers.ModelSerializer):
+
+    profile_picture = serializers.ImageField(required=True, allow_empty_file=False)
+
+    class Meta:
+        model = UserProfile
+        fields = ["profile_picture"]
+
+    def validate_profile_picture(self, value):
+        max_size = 5 * 1024 * 1024
+        allowed_content_types = ["image/jpeg", "image/png", "image/webp"]
+
+        if value.size > max_size:
+            raise serializers.ValidationError("Profile picture cannot be larger than 5 MB")
+    
+        if value.content_type not in allowed_content_types:
+            raise serializers.ValidationError("Profile picture has to be one of the allowed types: JPEG, PNG or WEBP")
+
+        return value
+
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
 

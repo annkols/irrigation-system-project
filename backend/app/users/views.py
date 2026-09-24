@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
+from rest_framework.parsers import FormParser, MultiPartParser
 
 from .permissions import CanViewUsers, CanChangeUsers, IsSuperUser
 
@@ -20,7 +21,10 @@ from .serializers import (
     RegisterSerializer,
     UserSearchSerializer,
     UserSerializer,
+    ProfilePictureUploadSerializer
 )
+
+from .models import UserProfile
 
 User = get_user_model()
 
@@ -202,3 +206,36 @@ class UserActivateView(generics.UpdateAPIView):
         })
 
 
+
+class CurrentUserProfilePictureView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def patch(self, request):
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+        serializer = ProfilePictureUploadSerializer(profile, data=request.data, context={"request": request})
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({
+            "detail": "Profile picture has been updated",
+            "user": UserSerializer(request.user, context={"request": request}).data
+            }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+        if profile.profile_picture:
+            profile.profile_picture.delete(save=False)
+            profile.profile_picture = ""
+            profile.save(update_fields=["profile_picture"])
+
+        return Response({
+            "detail": "Profile picture has been deleted",
+            "user": UserSerializer(
+                request.user,
+                context={"request": request}
+            ).data
+        }, status=status.HTTP_200_OK)
