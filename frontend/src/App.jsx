@@ -13,6 +13,7 @@ import SavedFrames from './pages/SavedFrames';
 import ProtectedRoute from './ProtectedRoute';
 import PeopleSearch from './pages/PeopleSearch';
 import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntow
+import PersonProfile from './pages/PersonProfile';
 
 function App() {
   return (
@@ -27,7 +28,8 @@ function App() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/search-people" element={<ProtectedRoute><PeopleSearch /></ProtectedRoute>} />
         <Route path="/search-experiments" element={<ProtectedRoute><ExperimentSearch /></ProtectedRoute>} />
-      </Routes>
+        <Route path="/person/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>}/>
+        </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>
   );
