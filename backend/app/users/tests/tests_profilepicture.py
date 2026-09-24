@@ -34,11 +34,10 @@ class UserProfilePictureTests(APITestCase):
         self.url = reverse("auth-me-avatar")
 
     # LOGGED IN USER CAN CHANGE AN AVATAR -> 200
-    def test_authenticated_user_can_upload_profile_picture(self):
+    def test_authenticated_user_can_upload_avatar(self):
         self.client.force_authenticate(user=self.user)
 
         image = create_test_avatar_file()
-
         response = self.client.patch(self.url, {"profile_picture": image}, format="multipart")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -58,3 +57,59 @@ class UserProfilePictureTests(APITestCase):
         response = self.client.patch(self.url, {"profile_picture": image}, format="multipart")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    # LOGGED IN USER CAN DELETE AN AVATAR -> 200
+    def test_authenticated_user_can_delete_avatar(self):
+        self.client.force_authenticate(user=self.user)
+
+        profile, created = UserProfile.objects.get_or_create(user=self.user)
+        profile.profile_picture = create_test_avatar_file()
+        profile.save()
+
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["detail"], "Profile picture has been deleted")
+
+        self.assertFalse(profile.profile_picture)
+
+
+    # ANONYMOUS TRIES TO DELETE AN AVATAR -> 401
+    def test_unauthenticated_user_cannot_delete_avatar(self):
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    # UPLOAD WITHOUT FILE -> 400
+    def test_upload_without_file(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(self.url, {}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("profile_picture", response.data)
+
+
+    # UPLOADING A FILE TOO LARGE -> 400
+    def test_upload_a_too_big_file(self):
+        self.client.force_authenticate(user=self.user)
+
+        big_file = SimpleUploadedFile("large.jpg", b"a" * (6 * 1024 * 1024), content_type="image/jpeg")
+
+        response = self.client.patch(self.url, {"profile_picture": big_file}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("profile_picture", response.data)
+
+    # UPLOADNIG AN EMPTY EXISTING FILE -> 400
+    def test_upload_empty_file(self):
+        self.client.force_authenticate(user=self.user)
+
+        empty_file = SimpleUploadedFile("empty.jpg", b"", content_type="image/jpeg")
+
+        response = self.client.patch(self.url, {"profile_picture": empty_file}, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("profile_picture", response.data)
