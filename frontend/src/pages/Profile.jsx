@@ -6,7 +6,59 @@ import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
+const PROFILE_PICTURE_UPLOAD_TARGET = 800 * 1024;
+const PROFILE_PICTURE_MAX_DIMENSION = 1200;
 const ALLOWED_PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const canvasToBlob = (canvas, quality) => new Promise((resolve, reject) => {
+    canvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error("Could not process the selected image.")),
+        "image/jpeg",
+        quality
+    );
+});
+
+const optimizeProfilePicture = async (file) => {
+    if (file.size <= PROFILE_PICTURE_UPLOAD_TARGET) return file;
+
+    const bitmap = await createImageBitmap(file);
+    const largestDimension = Math.max(bitmap.width, bitmap.height);
+    let scale = Math.min(1, PROFILE_PICTURE_MAX_DIMENSION / largestDimension);
+    let quality = 0.85;
+
+    try {
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+            const blob = await canvasToBlob(canvas, quality);
+            if (blob.size <= PROFILE_PICTURE_UPLOAD_TARGET) {
+                const baseName = file.name.replace(/\.[^.]+$/, "") || "profile-picture";
+                return new File([blob], `${baseName}.jpg`, {
+                    type: "image/jpeg",
+                    lastModified: Date.now(),
+                });
+            }
+
+            if (quality > 0.55) {
+                quality -= 0.1;
+            } else {
+                scale *= 0.8;
+                quality = 0.75;
+            }
+        }
+    } finally {
+        bitmap.close();
+    }
+
+    throw new Error("The image could not be reduced enough. Please select a smaller file.");
+};
 
 export default function Profile() {
     const navigate = useNavigate();
@@ -82,11 +134,13 @@ export default function Profile() {
             return;
         }
 
-        const formData = new FormData();
-        formData.append("profile_picture", file);
         setIsSavingPicture(true);
 
         try {
+            const optimizedFile = await optimizeProfilePicture(file);
+            const formData = new FormData();
+            formData.append("profile_picture", optimizedFile);
+
             const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
                 method: "PATCH",
                 headers: {
