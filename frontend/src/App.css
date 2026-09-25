@@ -4014,20 +4014,20 @@ body {
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
-  min-width: 190px;
+  min-width: 220px;
   gap: 10px;
 }
 
 .my-profile-avatar-img {
-  width: 120px;
-  height: 120px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .my-profile-avatar-placeholder {
-  width: 120px;
-  height: 120px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
   object-fit: cover;
   background-color: var(--color-primary-light);
@@ -4038,7 +4038,7 @@ body {
 }
 
 .my-profile-avatar-placeholder .material-symbols-outlined {
-  font-size: 64px;
+  font-size: 82px;
 }
 
 .my-profile-picture-input {
@@ -4046,7 +4046,8 @@ body {
 }
 
 .my-profile-picture-btn {
-  width: 100%;
+  width: 160px;
+  box-sizing: border-box;
   padding: 8px 12px;
   border: none;
   border-radius: var(--radius-normal);
@@ -4063,6 +4064,30 @@ body {
 }
 
 .my-profile-picture-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.my-profile-picture-remove-btn {
+  width: 160px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-normal);
+  background-color: #ffffff;
+  color: var(--color-error);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-profile-picture-remove-btn:hover:not(:disabled) {
+  background-color: var(--color-error);
+  color: var(--color-text-white);
+}
+
+.my-profile-picture-remove-btn:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }

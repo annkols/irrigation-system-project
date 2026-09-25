@@ -17,6 +17,7 @@ export default function Profile() {
     const [pictureMessage, setPictureMessage] = useState("");
     const [pictureError, setPictureError] = useState("");
     const [isSavingPicture, setIsSavingPicture] = useState(false);
+    const [isRemovingPicture, setIsRemovingPicture] = useState(false);
     const pictureInputRef = useRef(null);
 
     useEffect(() => {
@@ -114,6 +115,34 @@ export default function Profile() {
         }
     };
 
+    const handleProfilePictureRemove = async () => {
+        setPictureMessage("");
+        setPictureError("");
+        setIsRemovingPicture(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                },
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data?.detail || "Failed to remove profile picture.");
+            }
+
+            setUser(data.user);
+            window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
+            setPictureMessage("Profile picture removed successfully.");
+        } catch (err) {
+            setPictureError(err.message || "Failed to remove profile picture.");
+        } finally {
+            setIsRemovingPicture(false);
+        }
+    };
+
     return (
         <div className="dashboard-page">
             <Sidebar />
@@ -189,7 +218,7 @@ export default function Profile() {
                                     <button
                                         type="button"
                                         className="my-profile-picture-btn"
-                                        disabled={isSavingPicture}
+                                        disabled={isSavingPicture || isRemovingPicture}
                                         onClick={() => pictureInputRef.current?.click()}
                                     >
                                         {isSavingPicture
@@ -198,6 +227,16 @@ export default function Profile() {
                                                 ? "Change picture"
                                                 : "Add picture"}
                                     </button>
+                                    {user?.profile?.profile_picture && (
+                                        <button
+                                            type="button"
+                                            className="my-profile-picture-remove-btn"
+                                            disabled={isSavingPicture || isRemovingPicture}
+                                            onClick={handleProfilePictureRemove}
+                                        >
+                                            {isRemovingPicture ? "Removing..." : "Remove picture"}
+                                        </button>
+                                    )}
                                     <small className="my-profile-picture-help">
                                         JPEG, PNG or WEBP, up to 5 MB
                                     </small>
