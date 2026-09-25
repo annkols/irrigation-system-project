@@ -4008,14 +4008,14 @@ body {
   line-height: 2rem;
 }
 
-.my-profile-avatar-wrapper {
+.my-profile-picture-wrapper {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
   min-width: 220px;
-  gap: 10px;
+  gap: 8px;
 }
 
 .my-profile-avatar-img {
