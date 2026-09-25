@@ -1706,17 +1706,27 @@ body {
 
 .topbar-actions{
   display:flex;
+  align-items:center;
   gap:10px;
 }
 
 .topbar-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   width:38px;
   height:38px;
+  padding:0;
   border:none;
   border-radius:50%;
   background:white;
   cursor:pointer;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+
+.topbar-btn .material-symbols-outlined {
+  display:block;
+  line-height:1;
 }
 
 .profile-wrapper,
