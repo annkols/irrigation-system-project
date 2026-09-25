@@ -14,6 +14,7 @@ import ProtectedRoute from './ProtectedRoute';
 import PeopleSearch from './pages/PeopleSearch';
 import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntow
 import PersonProfile from './pages/PersonProfile';
+import Reports from './pages/Reports'; //raporty PDF z danych eksperymentu
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/search-people" element={<ProtectedRoute><PeopleSearch /></ProtectedRoute>} />
         <Route path="/search-experiments" element={<ProtectedRoute><ExperimentSearch /></ProtectedRoute>} />
         <Route path="/person/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>}/>
+        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>}/>
         </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>
