@@ -70,6 +70,7 @@ export default function Profile() {
     const [pictureError, setPictureError] = useState("");
     const [isSavingPicture, setIsSavingPicture] = useState(false);
     const [isRemovingPicture, setIsRemovingPicture] = useState(false);
+    const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const pictureInputRef = useRef(null);
 
     useEffect(() => {
@@ -113,6 +114,42 @@ export default function Profile() {
 
         fetchUserProfile();
     }, []);
+
+    useEffect(() => {
+        if (!user?.profile?.profile_picture) {
+            setProfilePictureUrl(null);
+            return undefined;
+        }
+
+        let objectUrl;
+        let cancelled = false;
+
+        const fetchProfilePicture = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });
+                if (!response.ok) throw new Error("Failed to load profile picture.");
+
+                const blob = await response.blob();
+                if (!cancelled) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setProfilePictureUrl(objectUrl);
+                }
+            } catch (err) {
+                if (!cancelled) setPictureError(err.message);
+            }
+        };
+
+        fetchProfilePicture();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [user?.profile?.profile_picture]);
 
     const handleProfilePictureChange = async (event) => {
         const input = event.target;
@@ -249,9 +286,9 @@ export default function Profile() {
 
                                 {/* zdjęcie profilowe/placeholder */}
                                 <div className="my-profile-picture-wrapper">
-                                    {user?.profile?.profile_picture ? (
+                                    {profilePictureUrl ? (
                                         <img 
-                                            src={user.profile.profile_picture} 
+                                            src={profilePictureUrl}
                                             alt="Profile" 
                                             className="my-profile-avatar-img"
                                         />

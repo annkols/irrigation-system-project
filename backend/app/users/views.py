@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.db.models import Q
+from django.http import FileResponse, Http404
+import mimetypes
 
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -210,6 +212,24 @@ class UserActivateView(generics.UpdateAPIView):
 class CurrentUserProfilePictureView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+        if not profile.profile_picture:
+            raise Http404("Profile picture not found")
+
+        content_type, _ = mimetypes.guess_type(profile.profile_picture.name)
+        try:
+            image = profile.profile_picture.open("rb")
+        except FileNotFoundError as exc:
+            raise Http404("Profile picture not found") from exc
+
+        return FileResponse(
+            image,
+            content_type=content_type or "application/octet-stream",
+            as_attachment=False,
+        )
 
     def patch(self, request):
         profile, created = UserProfile.objects.get_or_create(user=request.user)

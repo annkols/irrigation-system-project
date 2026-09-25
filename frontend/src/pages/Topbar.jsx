@@ -17,6 +17,7 @@ export default function TopBar({ experimentName }) {
 
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
+    const [profilePictureUrl, setProfilePictureUrl] = useState(null);
 
     const dropdownRef = useRef(null);
     const notificationsRef = useRef(null);
@@ -98,6 +99,42 @@ export default function TopBar({ experimentName }) {
             window.removeEventListener("current-user-updated", handleCurrentUserUpdated);
         };
     }, []);
+
+    useEffect(() => {
+        if (!user?.profile?.profile_picture) {
+            setProfilePictureUrl(null);
+            return undefined;
+        }
+
+        let objectUrl;
+        let cancelled = false;
+
+        const fetchProfilePicture = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });
+                if (!response.ok) return;
+
+                const blob = await response.blob();
+                if (!cancelled) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setProfilePictureUrl(objectUrl);
+                }
+            } catch (err) {
+                console.error("Error while fetching profile picture:", err);
+            }
+        };
+
+        fetchProfilePicture();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [user?.profile?.profile_picture]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -258,9 +295,9 @@ export default function TopBar({ experimentName }) {
                             <div className="user-info">
 
                                 <div className="dropdown-avatar-wrapper">
-                                    {user?.profile?.profile_picture ? (
+                                    {profilePictureUrl ? (
                                         <img 
-                                            src={user.profile.profile_picture} 
+                                            src={profilePictureUrl}
                                             alt="Profile" 
                                             className="dropdown-avatar-img"
                                         />
