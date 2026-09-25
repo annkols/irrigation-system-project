@@ -6,8 +6,6 @@ from users.models import UserProfile
 
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 
 
 User = get_user_model()
@@ -72,34 +70,18 @@ class UserViewTests(APITestCase):
 
         self.assertEqual(response.status_code,status.HTTP_401_UNAUTHORIZED,)
 
-    # REGULAR AUTHENTICATED USER CANNOT VIEW USER -> 403
-    def test_regular_user_cannot_view_user(self):
+    # REGULAR AUTHENTICATED USER CAN VIEW USER -> 200
+    def test_regular_user_can_view_user(self):
         self.authenticate(self.regular_user)
 
         response = self.client.get(reverse("user-detail", args=[self.anna.pk]))
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.anna.pk)
 
-    # STAFF WITHOUT VIEW PERMISSION CANNOT VIEW USER -> 403
-    def test_staff_without_permission_cannot_view_user(self):
+    # STAFF WITHOUT VIEW PERMISSION CAN VIEW USER -> 200
+    def test_staff_without_permission_can_view_user(self):
         self.authenticate(self.staff)
-
-        response = self.client.get(reverse("user-detail", args=[self.anna.pk]))
-
-        self.assertEqual(response.status_code,status.HTTP_403_FORBIDDEN,)
-
-    # STAFF WITH VIEW PERMISSION CAN VIEW USER -> 200
-    def test_staff_with_permission_can_view_user(self):
-        self.authenticate(self.staff)
-
-        content_type = ContentType.objects.get_for_model(User)
-
-        view_user_permission = Permission.objects.get(
-            content_type=content_type,
-            codename=f"view_{User._meta.model_name}",
-        )
-
-        self.staff.user_permissions.add(view_user_permission)
 
         response = self.client.get(reverse("user-detail", args=[self.anna.pk]))
 
