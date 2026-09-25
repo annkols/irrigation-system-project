@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export default function Profile() {
     const navigate = useNavigate();
@@ -12,6 +14,10 @@ export default function Profile() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pictureMessage, setPictureMessage] = useState("");
+    const [pictureError, setPictureError] = useState("");
+    const [isSavingPicture, setIsSavingPicture] = useState(false);
+    const pictureInputRef = useRef(null);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -54,6 +60,59 @@ export default function Profile() {
 
         fetchUserProfile();
     }, []);
+
+    const handleProfilePictureChange = async (event) => {
+        const input = event.target;
+        const file = input.files?.[0];
+        if (!file) return;
+
+        setPictureMessage("");
+        setPictureError("");
+
+        if (!ALLOWED_PROFILE_PICTURE_TYPES.includes(file.type)) {
+            setPictureError("Please select a JPEG, PNG or WEBP image.");
+            input.value = "";
+            return;
+        }
+
+        if (file.size > MAX_PROFILE_PICTURE_SIZE) {
+            setPictureError("The profile picture cannot be larger than 5 MB.");
+            input.value = "";
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("profile_picture", file);
+        setIsSavingPicture(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                },
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.profile_picture?.[0]
+                    || data?.detail
+                    || "Failed to update profile picture."
+                );
+            }
+
+            setUser(data.user);
+            window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
+            setPictureMessage("Profile picture updated successfully.");
+        } catch (err) {
+            setPictureError(err.message || "Failed to update profile picture.");
+        } finally {
+            setIsSavingPicture(false);
+            input.value = "";
+        }
+    };
 
     return (
         <div className="dashboard-page">
@@ -119,6 +178,38 @@ export default function Profile() {
                                                 person
                                             </span>
                                         </div>
+                                    )}
+                                    <input
+                                        ref={pictureInputRef}
+                                        className="my-profile-picture-input"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        onChange={handleProfilePictureChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="my-profile-picture-btn"
+                                        disabled={isSavingPicture}
+                                        onClick={() => pictureInputRef.current?.click()}
+                                    >
+                                        {isSavingPicture
+                                            ? "Saving..."
+                                            : user?.profile?.profile_picture
+                                                ? "Change picture"
+                                                : "Add picture"}
+                                    </button>
+                                    <small className="my-profile-picture-help">
+                                        JPEG, PNG or WEBP, up to 5 MB
+                                    </small>
+                                    {pictureMessage && (
+                                        <p className="my-profile-picture-success" role="status">
+                                            {pictureMessage}
+                                        </p>
+                                    )}
+                                    {pictureError && (
+                                        <p className="my-profile-picture-error" role="alert">
+                                            {pictureError}
+                                        </p>
                                     )}
                                 </div>
 

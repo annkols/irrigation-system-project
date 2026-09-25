@@ -90,6 +90,13 @@ export default function TopBar({ experimentName }) {
         };
 
         fetchUserData();
+
+        const handleCurrentUserUpdated = (event) => setUser(event.detail);
+        window.addEventListener("current-user-updated", handleCurrentUserUpdated);
+
+        return () => {
+            window.removeEventListener("current-user-updated", handleCurrentUserUpdated);
+        };
     }, []);
 
     useEffect(() => {

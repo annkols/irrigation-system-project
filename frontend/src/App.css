@@ -4010,9 +4010,12 @@ body {
 
 .my-profile-avatar-wrapper {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  min-width: 190px;
+  gap: 10px;
 }
 
 .my-profile-avatar-img {
@@ -4036,6 +4039,53 @@ body {
 
 .my-profile-avatar-placeholder .material-symbols-outlined {
   font-size: 64px;
+}
+
+.my-profile-picture-input {
+  display: none;
+}
+
+.my-profile-picture-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-normal);
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-profile-picture-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.my-profile-picture-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.my-profile-picture-help,
+.my-profile-picture-success,
+.my-profile-picture-error {
+  max-width: 220px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+.my-profile-picture-help {
+  color: var(--color-text-muted);
+}
+
+.my-profile-picture-success {
+  color: var(--color-primary);
+}
+
+.my-profile-picture-error {
+  color: var(--color-error);
 }
 
 .my-profile-raw-json {
