@@ -1830,6 +1830,11 @@ body {
   border-color: var(--color-primary,);
 }
 
+.lang-btn.active {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
 .theme-toggle-btn {
   background: none;
   border: 1px solid var(--color-border);

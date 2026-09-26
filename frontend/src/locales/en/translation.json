@@ -1,0 +1,88 @@
+{
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "show": "Show",
+    "hide": "Hide",
+    "loading": "Loading..."
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "searchExperiments": "Search Experiments",
+    "searchPeople": "Search People",
+    "reports": "Reports",
+    "profile": "Profile",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "topbar": {
+    "notifications": "Notifications",
+    "noNotifications": "No unread notifications",
+    "settings": "Settings",
+    "english": "English",
+    "polish": "Polish",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "userProfile": "User profile",
+    "profileImage": "Profile",
+    "myProfile": "My profile",
+    "logOut": "Log out",
+    "loggingOut": "Logging out..."
+  },
+  "start": {
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "title": "Greenhouse experiment management system",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "copyright": "© Department of Agronomy · Poznań University of Life Sciences",
+    "more": "MORE",
+    "scrollDown": "scroll down",
+    "aboutTitle": "About us",
+    "aboutText": "PlantStalker is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management."
+  },
+  "login": {
+    "title": "Sign in",
+    "email": "University e-mail",
+    "password": "Password",
+    "invalidCredentials": "Invalid e-mail or password.",
+    "serverUnavailable": "Unable to connect to the server."
+  },
+  "register": {
+    "title": "Make a new account",
+    "moreInformation": "Add more information",
+    "finalize": "Finalize sign-up",
+    "email": "University e-mail",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "firstName": "Name",
+    "lastName": "Surname",
+    "chooseRole": "Choose role",
+    "university": "University",
+    "department": "Department",
+    "requestAccess": "Request access",
+    "requestSent": "Registration request sent.",
+    "failed": "Registration failed.",
+    "serverError": "Server error.",
+    "roles": {
+      "student": "Student",
+      "doctoralStudent": "Doctoral student",
+      "academicEmployee": "Academic employee",
+      "administrativeWorker": "Administrative worker",
+      "other": "Other"
+    },
+    "errors": {
+      "emailRequired": "E-mail is required.",
+      "emailInvalid": "Enter a valid e-mail address.",
+      "passwordRequired": "Password is required.",
+      "passwordTooShort": "Password must contain at least 8 characters.",
+      "passwordOnlyNumbers": "Password cannot consist entirely of numbers.",
+      "confirmPassword": "Please confirm your password.",
+      "passwordMismatch": "Passwords do not match.",
+      "firstNameRequired": "Name is required.",
+      "lastNameRequired": "Surname is required.",
+      "roleRequired": "Please choose your role.",
+      "universityRequired": "University is required.",
+      "departmentRequired": "Department is required."
+    }
+  }
+}

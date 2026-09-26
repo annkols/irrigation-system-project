@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 function Register({ onClose }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
 
   const [form, setForm] = useState({
@@ -28,31 +30,31 @@ function Register({ onClose }) {
     const newErrors = {};
 
     if (!form.email.trim()) {
-      newErrors.email = "E-mail is required.";
+      newErrors.email = t("register.errors.emailRequired");
     } else if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
     ) {
-      newErrors.email = "Enter a valid e-mail address.";
+      newErrors.email = t("register.errors.emailInvalid");
     }
 
     if (!form.password) {
-      newErrors.password = "Password is required.";
+      newErrors.password = t("register.errors.passwordRequired");
     } else if (form.password.length < 8) {
       newErrors.password =
-        "Password must contain at least 8 characters.";
+        t("register.errors.passwordTooShort");
     } else if (/^\d+$/.test(form.password)) {
       newErrors.password =
-        "Password cannot consist entirely of numbers.";
+        t("register.errors.passwordOnlyNumbers");
     }
 
     if (!form.confirmPassword) {
       newErrors.confirmPassword =
-        "Please confirm your password.";
+        t("register.errors.confirmPassword");
     } else if (
       form.password !== form.confirmPassword
     ) {
       newErrors.confirmPassword =
-        "Passwords do not match.";
+        t("register.errors.passwordMismatch");
     }
 
     setErrors(newErrors);
@@ -64,15 +66,15 @@ function Register({ onClose }) {
     const newErrors = {};
 
     if (!form.first_name.trim()) {
-      newErrors.first_name = "Name is required.";
+      newErrors.first_name = t("register.errors.firstNameRequired");
     }
 
     if (!form.last_name.trim()) {
-      newErrors.last_name = "Surname is required.";
+      newErrors.last_name = t("register.errors.lastNameRequired");
     }
 
     if (!form.role) {
-      newErrors.role = "Please choose your role.";
+      newErrors.role = t("register.errors.roleRequired");
     }
 
     setErrors(newErrors);
@@ -106,11 +108,11 @@ function Register({ onClose }) {
     const newErrors = {};
 
     if (!form.university.trim()) {
-      newErrors.university = "University is required.";
+      newErrors.university = t("register.errors.universityRequired");
     }
 
     if (!form.department.trim()) {
-      newErrors.department = "Department is required.";
+      newErrors.department = t("register.errors.departmentRequired");
     }
 
     setErrors(newErrors);
@@ -143,7 +145,7 @@ function Register({ onClose }) {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Registration request sent.");
+        toast.success(t("register.requestSent"));
         setTimeout(onClose, 0)
       } else {
         console.error("Registration errors:", data);
@@ -153,12 +155,12 @@ function Register({ onClose }) {
             data.password?.[0] ||
             data.email?.[0] ||
             data.non_field_errors?.[0] ||
-            "Registration failed."
+            t("register.failed")
         );
       }
     } catch (err) {
       console.error(err);
-      toast.error("Server error.");
+      toast.error(t("register.serverError"));
     }
   };
 
@@ -178,11 +180,11 @@ function Register({ onClose }) {
 
         {step === 1 && (
           <>
-            <h2>Make a new account</h2>
+            <h2>{t("register.title")}</h2>
 
             <input
               type="email"
-              placeholder="University e-mail"
+              placeholder={t("register.email")}
               value={form.email}
               onChange={(e) => setForm({...form, email: e.target.value,})
               }
@@ -201,7 +203,7 @@ function Register({ onClose }) {
                     ? "text"
                     : "password"
                 }
-                placeholder="Password"
+                placeholder={t("register.password")}
                 value={form.password}
                 onChange={(e) =>
                   setForm({
@@ -218,7 +220,7 @@ function Register({ onClose }) {
                   setShowPassword(!showPassword)
                 }
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("common.hide") : t("common.show")}
               </button>
             </div>
 
@@ -235,7 +237,7 @@ function Register({ onClose }) {
                     ? "text"
                     : "password"
                 }
-                placeholder="Confirm password"
+                placeholder={t("register.confirmPassword")}
                 value={form.confirmPassword}
                 onChange={(e) =>
                   setForm({
@@ -255,8 +257,8 @@ function Register({ onClose }) {
                 }
               >
                 {showConfirmPassword
-                  ? "Hide"
-                  : "Show"}
+                  ? t("common.hide")
+                  : t("common.show")}
               </button>
             </div>
 
@@ -266,16 +268,16 @@ function Register({ onClose }) {
               </p>
             )}
 
-            <button onClick={next}>Next</button>
+            <button onClick={next}>{t("common.next")}</button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2>Add more information</h2>
+            <h2>{t("register.moreInformation")}</h2>
 
             <input
-              placeholder="Name"
+              placeholder={t("register.firstName")}
               value={form.first_name}
               onChange={(e) =>
                 setForm({...form, first_name: e.target.value, })
@@ -289,7 +291,7 @@ function Register({ onClose }) {
             )}
 
             <input
-              placeholder="Surname"
+              placeholder={t("register.lastName")}
               value={form.last_name}
               onChange={(e) =>
                 setForm({...form, last_name: e.target.value, })
@@ -308,12 +310,12 @@ function Register({ onClose }) {
                 setForm({...form, role: e.target.value, })
               }
             >
-              <option value="">Choose role</option>
-              <option value="student">Student</option>
-              <option value="doctoral_student">Doctoral student</option>
-              <option value="academic_employee">Academic employee</option>
-              <option value="administrative_worker">Administrative worker</option>
-              <option value="other">Other</option>
+              <option value="">{t("register.chooseRole")}</option>
+              <option value="student">{t("register.roles.student")}</option>
+              <option value="doctoral_student">{t("register.roles.doctoralStudent")}</option>
+              <option value="academic_employee">{t("register.roles.academicEmployee")}</option>
+              <option value="administrative_worker">{t("register.roles.administrativeWorker")}</option>
+              <option value="other">{t("register.roles.other")}</option>
             </select>
 
             {errors.role && (
@@ -323,18 +325,18 @@ function Register({ onClose }) {
             )}
 
             <div className="buttons">
-              <button onClick={back}>Back</button>
-              <button onClick={next}>Next</button>
+              <button onClick={back}>{t("common.back")}</button>
+              <button onClick={next}>{t("common.next")}</button>
             </div>
           </>
         )}
 
         {step === 3 && (
           <>
-            <h2>Finalize sign-up</h2>
+            <h2>{t("register.finalize")}</h2>
 
             <input
-              placeholder="University"
+              placeholder={t("register.university")}
               value={form.university}
               onChange={(e) =>
                 setForm({
@@ -351,7 +353,7 @@ function Register({ onClose }) {
             )}
 
             <input
-              placeholder="Department"
+              placeholder={t("register.department")}
               value={form.department}
               onChange={(e) =>
                 setForm({
@@ -368,8 +370,8 @@ function Register({ onClose }) {
             )}
 
             <div className="buttons">
-              <button onClick={back}>Back</button>
-              <button onClick={submit}>Request access</button>
+              <button onClick={back}>{t("common.back")}</button>
+              <button onClick={submit}>{t("register.requestAccess")}</button>
             </div>
           </>
         )}

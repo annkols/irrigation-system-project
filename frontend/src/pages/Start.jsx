@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 
 import arrow from './images/arrow.png';
 import back_img from './images/back.jpg';
@@ -10,6 +11,7 @@ import Register from './Register';
 import Login from "./Login";
 
 function Start() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [hoverSignIn, setHoverSignIn] = React.useState(false);
@@ -20,10 +22,10 @@ function Start() {
 
   React.useEffect(() => {
     if (location.state?.showLogin) {
-      toast.info("Your session has expired. Please sign in again.");
+      toast.info(t("start.sessionExpired"));
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location, navigate]);
+  }, [location, navigate, t]);
 
   return (
     <>
@@ -82,7 +84,7 @@ function Start() {
             margin: 0,
             lineHeight: 1.2,
           }}>
-            Greenhouse experiment management system
+            {t("start.title")}
           </h1>
 
           <div style={{ display: 'flex', gap: '16px' }}>
@@ -104,7 +106,7 @@ function Start() {
               onMouseLeave={() => setHoverSignIn(false)}
               onClick={() => setShowLogin(true)}
             >
-              Sign in
+              {t("start.signIn")}
             </button>
 
             <button
@@ -125,7 +127,7 @@ function Start() {
               onMouseLeave={() => setHoverSignUp(false)}
               onClick={() => setShowRegister(true)}
             >
-              Sign up
+              {t("start.signUp")}
             </button>
           </div>
 
@@ -135,7 +137,7 @@ function Start() {
             color: 'rgba(255,255,255,0.7)',
             margin: 0,
           }}>
-            © Department of Agronomy · Poznań University of Life Sciences
+            {t("start.copyright")}
           </p>
         </div>
 
@@ -162,8 +164,8 @@ function Start() {
             fontFamily: 'Inter, sans-serif',
             color: 'white',
             letterSpacing: '2px',
-          }}>MORE</span>
-          <img src={arrow} alt="scroll down" style={{ width: '32px', height: 'auto', marginTop: '6px' }} />
+          }}>{t("start.more")}</span>
+          <img src={arrow} alt={t("start.scrollDown")} style={{ width: '32px', height: 'auto', marginTop: '6px' }} />
         </div>
       </div>
 
@@ -190,7 +192,7 @@ function Start() {
           margin: 0,
           lineHeight: 1.2,
         }}>
-          About us
+          {t("start.aboutTitle")}
         </h2>
 
         <p style={{
@@ -200,7 +202,7 @@ function Start() {
           lineHeight: '1.7',
           margin: 0,
         }}>
-          {' '}PlantStalker is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management.
+          {t("start.aboutText")}
         </p>
       </div>
       {showLogin && (<Login onClose={() => setShowLogin(false)} />)}

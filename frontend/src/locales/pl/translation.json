@@ -1,0 +1,88 @@
+{
+  "common": {
+    "back": "Wstecz",
+    "next": "Dalej",
+    "show": "Pokaż",
+    "hide": "Ukryj",
+    "loading": "Ładowanie..."
+  },
+  "navigation": {
+    "dashboard": "Panel główny",
+    "searchExperiments": "Wyszukaj doświadczenia",
+    "searchPeople": "Wyszukaj osoby",
+    "reports": "Raporty",
+    "profile": "Profil",
+    "expandSidebar": "Rozwiń pasek boczny",
+    "collapseSidebar": "Zwiń pasek boczny"
+  },
+  "topbar": {
+    "notifications": "Powiadomienia",
+    "noNotifications": "Brak nieprzeczytanych powiadomień",
+    "settings": "Ustawienia",
+    "english": "Angielski",
+    "polish": "Polski",
+    "lightMode": "Tryb jasny",
+    "darkMode": "Tryb ciemny",
+    "userProfile": "Profil użytkownika",
+    "profileImage": "Zdjęcie profilowe",
+    "myProfile": "Mój profil",
+    "logOut": "Wyloguj się",
+    "loggingOut": "Wylogowywanie..."
+  },
+  "start": {
+    "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
+    "title": "System zarządzania doświadczeniami szklarniowymi",
+    "signIn": "Zaloguj się",
+    "signUp": "Zarejestruj się",
+    "copyright": "© Katedra Agronomii · Uniwersytet Przyrodniczy w Poznaniu",
+    "more": "WIĘCEJ",
+    "scrollDown": "przewiń w dół",
+    "aboutTitle": "O nas",
+    "aboutText": "PlantStalker to system zarządzania stworzony, aby wspierać naukowców Uniwersytetu Przyrodniczego w Poznaniu w prowadzeniu doświadczeń szklarniowych. Naszym celem jest automatyzacja zbierania danych, nawadniania i monitorowania roślin, umożliwiająca wygodne zarządzanie zdalne."
+  },
+  "login": {
+    "title": "Logowanie",
+    "email": "Uniwersytecki adres e-mail",
+    "password": "Hasło",
+    "invalidCredentials": "Nieprawidłowy adres e-mail lub hasło.",
+    "serverUnavailable": "Nie można połączyć się z serwerem."
+  },
+  "register": {
+    "title": "Utwórz nowe konto",
+    "moreInformation": "Dodaj więcej informacji",
+    "finalize": "Dokończ rejestrację",
+    "email": "Uniwersytecki adres e-mail",
+    "password": "Hasło",
+    "confirmPassword": "Powtórz hasło",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "chooseRole": "Wybierz rolę",
+    "university": "Uczelnia",
+    "department": "Jednostka organizacyjna",
+    "requestAccess": "Poproś o dostęp",
+    "requestSent": "Prośba o rejestrację została wysłana.",
+    "failed": "Rejestracja nie powiodła się.",
+    "serverError": "Błąd serwera.",
+    "roles": {
+      "student": "Student",
+      "doctoralStudent": "Doktorant",
+      "academicEmployee": "Pracownik naukowy",
+      "administrativeWorker": "Pracownik administracyjny",
+      "other": "Inna"
+    },
+    "errors": {
+      "emailRequired": "Adres e-mail jest wymagany.",
+      "emailInvalid": "Wprowadź poprawny adres e-mail.",
+      "passwordRequired": "Hasło jest wymagane.",
+      "passwordTooShort": "Hasło musi zawierać co najmniej 8 znaków.",
+      "passwordOnlyNumbers": "Hasło nie może składać się wyłącznie z cyfr.",
+      "confirmPassword": "Powtórz hasło.",
+      "passwordMismatch": "Hasła nie są zgodne.",
+      "firstNameRequired": "Imię jest wymagane.",
+      "lastNameRequired": "Nazwisko jest wymagane.",
+      "roleRequired": "Wybierz rolę.",
+      "universityRequired": "Uczelnia jest wymagana.",
+      "departmentRequired": "Jednostka organizacyjna jest wymagana."
+    }
+  }
+}

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import "../App.css";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 function Login({ onClose }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,11 +34,11 @@ function Login({ onClose }) {
         onClose();
         navigate("/dashboard");
       } else {
-        alert(data.detail || "Invalid e-mail or password.");
+        alert(data.detail || t("login.invalidCredentials"));
       }
     } catch (err) {
       console.error(err);
-      alert("Unable to connect to the server.");
+      alert(t("login.serverUnavailable"));
     }
   };
 
@@ -48,13 +50,13 @@ function Login({ onClose }) {
           ✕
         </button>
 
-        <h2>Sign in</h2>
+        <h2>{t("login.title")}</h2>
 
         <form onSubmit={login}>
 
           <input
             type="email"
-            placeholder="University e-mail"
+            placeholder={t("login.email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -63,7 +65,7 @@ function Login({ onClose }) {
             <input
               className="password-input"
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder={t("login.password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -73,12 +75,12 @@ function Login({ onClose }) {
               className="password-toggle"
               onClick={() => setShowPassword(!showPassword)}
             >
-              {showPassword ? "Hide" : "Show"}
+              {showPassword ? t("common.hide") : t("common.show")}
             </button>
           </div>
 
           <button type="submit">
-            Sign in
+            {t("start.signIn")}
           </button>
 
         </form>

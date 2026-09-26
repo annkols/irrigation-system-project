@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import logo from "./images/logo-color.png";
 import name from "./images/name-color.png";
 
 export default function Sidebar() {
 
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(
@@ -23,22 +25,22 @@ export default function Sidebar() {
     const menu = [
         {
             icon: "dashboard",
-            title: "Dashboard",
+            title: t("navigation.dashboard"),
             path: "/dashboard"
         },
         {
             icon: "search",
-            title: "Search Experiments",
+            title: t("navigation.searchExperiments"),
             path: "/search-experiments"
         },
         {
             icon: "person",
-            title: "Search People",
+            title: t("navigation.searchPeople"),
             path: "/search-people"
         },
         {
             icon: "description",
-            title: "Reports",
+            title: t("navigation.reports"),
             path: "/reports"
         },
     ];
@@ -51,8 +53,8 @@ export default function Sidebar() {
                 type="button"
                 className="sidebar-collapse-button"
                 onClick={toggleCollapsed}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={collapsed ? t("navigation.expandSidebar") : t("navigation.collapseSidebar")}
+                title={collapsed ? t("navigation.expandSidebar") : t("navigation.collapseSidebar")}
             >
                 <span className="material-symbols-outlined">
                     {collapsed ? "chevron_right" : "chevron_left"}
