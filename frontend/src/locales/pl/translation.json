@@ -1,7 +1,4 @@
 {
-  "app": {
-    "title": "PlantStalker — doświadczenia szklarniowe"
-  },
   "common": {
     "back": "Wstecz",
     "next": "Dalej",
@@ -9,11 +6,17 @@
     "hide": "Ukryj",
     "loading": "Ładowanie..."
   },
+  "dates": {
+    "datePlaceholder": "DD-MM-RRRR",
+    "dateTimePlaceholder": "DD-MM-RRRR GG:mm",
+    "time": "Czas"
+  },
   "navigation": {
     "dashboard": "Panel główny",
     "searchExperiments": "Wyszukaj doświadczenia",
     "searchPeople": "Wyszukaj osoby",
     "reports": "Raporty",
+    "newExperiment": "Nowe doświadczenie",
     "profile": "Profil",
     "expandSidebar": "Rozwiń pasek boczny",
     "collapseSidebar": "Zwiń pasek boczny"
@@ -24,6 +27,7 @@
     "settings": "Ustawienia",
     "english": "Angielski",
     "polish": "Polski",
+    "languageSelection": "Wybór języka",
     "englishFlag": "Język angielski",
     "polishFlag": "Język polski",
     "lightMode": "Tryb jasny",
@@ -36,18 +40,20 @@
   },
   "start": {
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
-    "title": "System zarządzania doświadczeniami szklarniowymi",
+    "titleLine1": "System zarządzania",
+    "titleLine2": "doświadczeniami szklarniowymi",
     "signIn": "Zaloguj się",
     "signUp": "Zarejestruj się",
     "copyright": "© Katedra Agronomii · Uniwersytet Przyrodniczy w Poznaniu",
     "more": "WIĘCEJ",
     "scrollDown": "przewiń w dół",
-    "aboutTitle": "O nas",
-    "aboutText": "PlantStalker to system zarządzania stworzony, aby wspierać naukowców Uniwersytetu Przyrodniczego w Poznaniu w prowadzeniu doświadczeń szklarniowych. Naszym celem jest automatyzacja zbierania danych, nawadniania i monitorowania roślin, umożliwiająca wygodne zarządzanie zdalne."
+    "aboutTitle": "O PlantStalker",
+    "aboutText": "PlantStalker to system wspierający prowadzenie doświadczeń szklarniowych poprzez bieżące monitorowanie warunków rozwoju roślin. Umożliwia gromadzenie i analizę danych z czujników oraz zdalne sterowanie podlewaniem niezależnie dla każdej doniczki.",
+    "contactTitle": "Skontaktuj się z nami"
   },
   "login": {
     "title": "Logowanie",
-    "email": "Uniwersytecki adres e-mail",
+    "email": "E-mail",
     "password": "Hasło",
     "invalidCredentials": "Nieprawidłowy adres e-mail lub hasło.",
     "serverUnavailable": "Nie można połączyć się z serwerem."
@@ -140,7 +146,7 @@
   "peopleSearch": {
     "title": "Wyszukiwanie osób",
     "searchLabel": "Wyszukaj użytkowników",
-    "searchPlaceholder": "Imię, nazwa użytkownika, uczelnia...",
+    "searchPlaceholder": "Imię, nazwisko, uczelnia...",
     "loadError": "Błąd podczas wczytywania użytkowników.",
     "notFound": "Nie znaleziono użytkowników.",
     "startTyping": "Zacznij pisać, aby wyszukać osoby."
@@ -245,10 +251,10 @@
     "created": "Doświadczenie i układ doniczek zostały utworzone!",
     "createFailed": "Nie udało się utworzyć doświadczenia.",
     "describe": "Opisz doświadczenie",
-    "plantSpecies": "Gatunek rośliny:",
-    "nameLabel": "Nazwa doświadczenia:",
-    "descriptionLabel": "Opis:",
-    "keywordsLabel": "Słowa kluczowe:",
+    "plantSpecies": "Gatunek rośliny",
+    "nameLabel": "Nazwa doświadczenia",
+    "descriptionLabel": "Opis",
+    "keywordsLabel": "Słowa kluczowe",
     "addUpper": "DODAJ",
     "defineFactors": "Zdefiniuj czynniki doświadczalne",
     "factorHelp": "Dodaj wszystkie czynniki i oznacz dla każdego poziom referencyjny.",
@@ -263,7 +269,7 @@
     "addFactor": "+ Dodaj czynnik",
     "selectCombinations": "Wybierz kombinacje i powtórzenia",
     "combinationsHelp": "Wszystkie kombinacje są generowane automatycznie. Odznacz tylko te, których nie potrzebujesz.",
-    "repetitions": "Liczba powtórzeń każdej kombinacji:",
+    "repetitions": "Liczba powtórzeń każdej kombinacji",
     "referenceCombination": "Kombinacja referencyjna",
     "treatment": "Wariant",
     "potLayout": "Układ doniczek ({{count}})",
@@ -285,7 +291,7 @@
     "pumpId": "ID pompy",
     "exampleId": "np. 1",
     "cameraAssignment": "Przypisanie kamer (opcjonalnie)",
-    "cameraHelp": "Możesz pozostawić te pola puste. ID urządzenia kamery to numer widoczny obok kamery w panelu administracyjnym Django.",
+    "cameraHelp": "Możesz pozostawić te pola puste, jeśli nie planujesz korzystać z kamer w tym doświadczeniu.",
     "cameraDevice": "ID urządzenia kamery {{number}}",
     "observedPot": "Obserwowana doniczka",
     "selectPot": "Wybierz doniczkę",

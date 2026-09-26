@@ -12,6 +12,7 @@ import {
 
 import { buildChartSeries, formatChartTime } from "./chartDataUtils";
 import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 
 const features = [
   { key: "moisture_percent", labelKey: "charts.soilMoisturePlain", unit: "%" },
@@ -101,9 +102,9 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
       </div>
 
       <div className="date-range-picker">
-        <input type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} aria-label={t('charts.comparisonStart')} />
+        <LocalizedDateInput includeTime value={startDate} onChange={setStartDate} ariaLabel={t('charts.comparisonStart')} />
         <span>—</span>
-        <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label={t('charts.comparisonEnd')} />
+        <LocalizedDateInput includeTime value={endDate} onChange={setEndDate} ariaLabel={t('charts.comparisonEnd')} />
       </div>
 
       <p className="chart-data-note">

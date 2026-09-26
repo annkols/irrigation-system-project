@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -393,24 +394,12 @@ function Experiment_edit() {
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="start_date">{t("experimentForm.startDate")}</label>
-                      <input
-                        className={`exp-edit-input ${errors.started_at ? "exp-edit-input--error" : ""}`}
-                        type="date"
-                        id="start_date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                      />
+                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} />
                       {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
                     </div>
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="end_date">{t("experimentForm.plannedEndDate")}</label>
-                      <input
-                        className={`exp-edit-input ${errors.planned_end_at ? "exp-edit-input--error" : ""}`}
-                        type="date"
-                        id="end_date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                      />
+                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} />
                       {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
                     </div>
                   </div>

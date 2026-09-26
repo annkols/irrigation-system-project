@@ -12,6 +12,7 @@ import {
 
 import { buildChartSeries, findSharedSensorSource, formatChartTime } from "./chartDataUtils";
 import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 
 const sensors = [
   { key: "air_temperature", labelKey: "charts.airTemperature", color: "#36d45d", scope: "shared" },
@@ -95,9 +96,9 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
       </div>
 
       <div className="date-range-picker">
-        <input type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} aria-label={t('charts.startDate')} />
+        <LocalizedDateInput includeTime value={startDate} onChange={setStartDate} ariaLabel={t('charts.startDate')} />
         <span>—</span>
-        <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label={t('charts.endDate')} />
+        <LocalizedDateInput includeTime value={endDate} onChange={setEndDate} ariaLabel={t('charts.endDate')} />
       </div>
 
       <p className="chart-data-note">

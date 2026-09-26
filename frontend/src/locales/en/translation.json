@@ -1,7 +1,4 @@
 {
-  "app": {
-    "title": "PlantStalker — Greenhouse experiments"
-  },
   "common": {
     "back": "Back",
     "next": "Next",
@@ -9,11 +6,17 @@
     "hide": "Hide",
     "loading": "Loading..."
   },
+  "dates": {
+    "datePlaceholder": "DD-MM-YYYY",
+    "dateTimePlaceholder": "DD-MM-YYYY HH:mm",
+    "time": "Time"
+  },
   "navigation": {
     "dashboard": "Dashboard",
     "searchExperiments": "Search Experiments",
     "searchPeople": "Search People",
     "reports": "Reports",
+    "newExperiment": "New experiment",
     "profile": "Profile",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
@@ -24,6 +27,7 @@
     "settings": "Settings",
     "english": "English",
     "polish": "Polish",
+    "languageSelection": "Language selection",
     "englishFlag": "English language",
     "polishFlag": "Polish language",
     "lightMode": "Light mode",
@@ -36,18 +40,20 @@
   },
   "start": {
     "sessionExpired": "Your session has expired. Please sign in again.",
-    "title": "Greenhouse experiment management system",
+    "titleLine1": "Greenhouse experiment",
+    "titleLine2": "management system",
     "signIn": "Sign in",
     "signUp": "Sign up",
     "copyright": "© Department of Agronomy · Poznań University of Life Sciences",
     "more": "MORE",
     "scrollDown": "scroll down",
-    "aboutTitle": "About us",
-    "aboutText": "PlantStalker is a management system developed to support scientists at the Poznań University of Life Sciences in conducting greenhouse experiments. Our objective is to automate data collection, irrigation and plant monitoring, which enables seamless remote management."
+    "aboutTitle": "About PlantStalker",
+    "aboutText": "PlantStalker supports greenhouse experiments by continuously monitoring plant development conditions. It enables the collection and analysis of sensor data, as well as remote control of irrigation independently for each pot.",
+    "contactTitle": "Contact us"
   },
   "login": {
     "title": "Sign in",
-    "email": "University e-mail",
+    "email": "Email",
     "password": "Password",
     "invalidCredentials": "Invalid e-mail or password.",
     "serverUnavailable": "Unable to connect to the server."
@@ -136,7 +142,7 @@
   "peopleSearch": {
     "title": "People Search",
     "searchLabel": "Search users",
-    "searchPlaceholder": "Name, username, university...",
+    "searchPlaceholder": "First name, last name, university...",
     "loadError": "Error loading users.",
     "notFound": "No users found.",
     "startTyping": "Start typing to search for people."
@@ -241,10 +247,10 @@
     "created": "Experiment and pot layout created!",
     "createFailed": "The experiment could not be created.",
     "describe": "Describe your experiment",
-    "plantSpecies": "Plant species:",
-    "nameLabel": "Experiment name:",
-    "descriptionLabel": "Description:",
-    "keywordsLabel": "Keywords:",
+    "plantSpecies": "Plant species",
+    "nameLabel": "Experiment name",
+    "descriptionLabel": "Description",
+    "keywordsLabel": "Keywords",
     "addUpper": "ADD",
     "defineFactors": "Define experimental factors",
     "factorHelp": "Add every factor and mark its reference level.",
@@ -259,7 +265,7 @@
     "addFactor": "+ Add factor",
     "selectCombinations": "Select combinations and repetitions",
     "combinationsHelp": "All combinations are generated automatically. Deselect only those you do not need.",
-    "repetitions": "Repetitions per combination:",
+    "repetitions": "Repetitions per combination",
     "referenceCombination": "Reference combination",
     "treatment": "Treatment",
     "potLayout": "Pot layout ({{count}})",
@@ -279,7 +285,7 @@
     "pumpId": "Pump ID",
     "exampleId": "e.g. 1",
     "cameraAssignment": "Camera assignment (optional)",
-    "cameraHelp": "You may leave these fields empty. Camera device ID is the number visible next to the camera in Django admin.",
+    "cameraHelp": "You can leave these fields empty if you do not plan to use cameras in this experiment.",
     "cameraDevice": "Camera {{number}} device ID",
     "observedPot": "Observed pot",
     "selectPot": "Select pot",

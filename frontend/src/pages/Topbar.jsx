@@ -51,6 +51,8 @@ export default function TopBar({ experimentName }) {
                 reports: t("navigation.reports"),
                 "search-experiments": t("navigation.searchExperiments"),
                 "search-people": t("navigation.searchPeople"),
+                "new-experiment": t("navigation.newExperiment"),
+                edit: t("editExperiment.edit"),
             };
 
             if (isExperimentId && experimentName) {

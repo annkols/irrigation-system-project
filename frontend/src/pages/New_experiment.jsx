@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -193,7 +194,7 @@ function New_experiment() {
               <div className="new-exp-form"><h2>{t("newExperiment.describe")}</h2></div>
               <div className="form-section"><p>{t("newExperiment.nameLabel")}</p><input value={name} onChange={(event) => setName(event.target.value)} /></div>
               <div className="form-section"><p>{t("newExperiment.plantSpecies")}</p><input value={plantName} onChange={(event) => setPlantName(event.target.value)} /></div>
-              <div className="dates-choices"><div className="date-choice"><label>{t("experimentForm.startDate")}:</label><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div><div className="date-choice"><label>{t("experimentForm.plannedEndDate")}:</label><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div></div>
+              <div className="dates-choices"><div className="date-choice"><label>{t("experimentForm.startDate")}</label><LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} /></div><div className="date-choice"><label>{t("experimentForm.plannedEndDate")}</label><LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} /></div></div>
               <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
               <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
             </div>}
@@ -209,7 +210,7 @@ function New_experiment() {
             </div>}
 
             {step === 3 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.selectCombinations")}</h2><p>{t("newExperiment.combinationsHelp")}</p></div>
+              <div className="new-exp-form"><h2>{t("newExperiment.selectCombinations")}</h2><p className="designer-help">{t("newExperiment.combinationsHelp")}</p></div>
               <div className="form-section compact-field"><label>{t("newExperiment.repetitions")}</label><input type="number" min="1" max="50" value={repetitions} onChange={(event) => setRepetitions(event.target.value)} /></div>
               <div className="combination-grid">{combinations.map((combination) => { const key = keyOf(combination); const enabled = !excluded.includes(key); return <label className={`combination-card ${enabled ? "selected" : ""}`} key={key}><input type="checkbox" checked={enabled} onChange={() => setExcluded(enabled ? [...excluded, key] : excluded.filter((item) => item !== key))} /><strong>{combination.every((item) => item.is_reference) ? t("newExperiment.referenceCombination") : t("newExperiment.treatment")}</strong>{combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</label>; })}</div>
               <h3>{t("newExperiment.potLayout", { count: pots.length })}</h3><div className="pot-grid">{pots.map((pot) => <div className="pot-card" key={pot.label}><strong>{pot.label}</strong><small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
@@ -225,7 +226,7 @@ function New_experiment() {
                 <p>{t("newExperiment.layoutHelp")}</p>
                 <div className="pot-grid pot-grid--reference">{pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}><strong>{pot.label}</strong><small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
               </section>
-              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}:</label><input type="number" min="1" value={sensorSetId} onChange={(event) => setSensorSetId(event.target.value)} /></div>
+              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => setSensorSetId(event.target.value)} /></div>
               <h3>{t("experimentForm.frequencyTitle")}</h3><div className="frequency-grid">{SENSORS.map(([id, labelKey, scopeKey]) => <label key={id}><span>{t(`experimentForm.sensors.${labelKey}`)}<small>{t(`experimentForm.sensors.${scopeKey}`)}</small></span><input type="text" inputMode="decimal" placeholder={t("experimentForm.exampleDecimal")} value={frequencies[id]} onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} /></label>)}</div>
               <h3>{t("newExperiment.individualHardware")}</h3>
               <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
