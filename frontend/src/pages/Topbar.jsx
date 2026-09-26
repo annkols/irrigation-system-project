@@ -264,7 +264,7 @@ export default function TopBar({ experimentName }) {
                                         aria-pressed={i18n.resolvedLanguage === "en"}
                                         onClick={() => i18n.changeLanguage("en")}
                                     >
-                                        <img src="https://flagcdn.com/w40/gb.png" alt="UK flag" className="flag-icon" />
+                                        <img src="https://flagcdn.com/w40/gb.png" alt={t("topbar.englishFlag")} className="flag-icon" />
                                     </button>
                                     <button
                                         type="button"
@@ -273,7 +273,7 @@ export default function TopBar({ experimentName }) {
                                         aria-pressed={i18n.resolvedLanguage === "pl"}
                                         onClick={() => i18n.changeLanguage("pl")}
                                     >
-                                        <img src="https://flagcdn.com/w40/pl.png" alt="Poland flag" className="flag-icon" />
+                                        <img src="https://flagcdn.com/w40/pl.png" alt={t("topbar.polishFlag")} className="flag-icon" />
                                     </button>
                                 </div>
                             </div>

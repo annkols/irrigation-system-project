@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -17,6 +18,12 @@ import PersonProfile from './pages/PersonProfile';
 import Reports from './pages/Reports'; //raporty PDF z danych eksperymentu
 
 function App() {
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    document.title = t('app.title');
+  }, [i18n.resolvedLanguage, t]);
+
   return (
     <Router>
       <Routes>

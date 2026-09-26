@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "PlantStalker — Greenhouse experiments"
+  },
   "common": {
     "back": "Back",
     "next": "Next",
@@ -21,6 +24,8 @@
     "settings": "Settings",
     "english": "English",
     "polish": "Polish",
+    "englishFlag": "English language",
+    "polishFlag": "Polish language",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
     "userProfile": "User profile",
@@ -458,7 +463,8 @@
       "latestFrame": "Latest frame — P{{pot}}",
       "noFrame": "P{{pot}}: no saved frame available.",
       "noNotes": "No notes recorded for this experiment.",
-      "morePhotos": "+{{count}} more photo(s) attached"
+      "morePhotos_one": "+{{count}} more photo attached",
+      "morePhotos_other": "+{{count}} more photos attached"
     }
   },
   "savedFrames": {

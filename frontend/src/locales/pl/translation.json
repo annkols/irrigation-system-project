@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "PlantStalker — doświadczenia szklarniowe"
+  },
   "common": {
     "back": "Wstecz",
     "next": "Dalej",
@@ -21,6 +24,8 @@
     "settings": "Ustawienia",
     "english": "Angielski",
     "polish": "Polski",
+    "englishFlag": "Język angielski",
+    "polishFlag": "Język polski",
     "lightMode": "Tryb jasny",
     "darkMode": "Tryb ciemny",
     "userProfile": "Profil użytkownika",
@@ -464,7 +469,10 @@
       "latestFrame": "Najnowsza klatka — P{{pot}}",
       "noFrame": "P{{pot}}: brak zapisanej klatki.",
       "noNotes": "Nie zapisano notatek dla tego doświadczenia.",
-      "morePhotos": "+{{count}} załączonych zdjęć"
+      "morePhotos_one": "+{{count}} załączone zdjęcie",
+      "morePhotos_few": "+{{count}} załączone zdjęcia",
+      "morePhotos_many": "+{{count}} załączonych zdjęć",
+      "morePhotos_other": "+{{count}} załączonego zdjęcia"
     }
   },
   "savedFrames": {
