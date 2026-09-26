@@ -7,6 +7,7 @@ import logoName from "./images/name-color.png";
 import TopBar from "./Topbar";
 import ExperimentChart from "./ExperimentChart";
 import PotComparisonChart from "./PotComparisonChart";
+import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -18,14 +19,15 @@ const BLUE_LIGHT_SHARE = 400 / (700 + 400);
 const SOWELO_PPFD_FACTOR = RED_LIGHT_SHARE / 41.3 + BLUE_LIGHT_SHARE / 15.1;
 
 const NAV_ITEMS = [
-  { key: 'overview',  label: 'Overview',        icon: 'dashboard'   },
-  { key: 'camera',    label: 'Camera view',     icon: 'videocam'    },
-  { key: 'analytics', label: 'Analytics',       icon: 'bar_chart'   },
-  { key: 'notes',     label: 'Notes',           icon: 'edit_note'   },
-  { key: 'history',   label: 'Historical data', icon: 'table_rows'  },
+  { key: 'overview',  labelKey: 'experimentForm.overview',  icon: 'dashboard'  },
+  { key: 'camera',    labelKey: 'experimentForm.camera',    icon: 'videocam'   },
+  { key: 'analytics', labelKey: 'experimentForm.analytics', icon: 'bar_chart'  },
+  { key: 'notes',     labelKey: 'experimentForm.notes',     icon: 'edit_note'  },
+  { key: 'history',   labelKey: 'experimentForm.history',   icon: 'table_rows' },
 ];
 
 function Experiment_details() {
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +47,7 @@ function Experiment_details() {
   const [measurements, setMeasurements] = useState([]);
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
+  const [pumpCommandHasError, setPumpCommandHasError] = useState(false);
   const [isSendingPumpCommand, setIsSendingPumpCommand] = useState(false);
   const [pumpDurationSeconds, setPumpDurationSeconds] = useState("3");
   const [lightCalculatorLux, setLightCalculatorLux] = useState(null);
@@ -73,13 +76,13 @@ function Experiment_details() {
   const [noteBusy, setNoteBusy] = useState(false);
 
   const columnLabels = {
-    moisture_percent: 'Soil moisture',
-    air_temperature: 'Air temperature',
-    air_humidity: 'Air humidity',
-    soil_temperature: 'Soil temperature',
-    pressure_hpa: 'Pressure',
-    light_lux: 'Light intensity',
-    pump_on: 'Pump status',
+    moisture_percent: t('experimentForm.sensors.soilMoisture'),
+    air_temperature: t('experimentForm.sensors.airTemperature'),
+    air_humidity: t('experimentForm.sensors.airHumidity'),
+    soil_temperature: t('experimentForm.sensors.soilTemperature'),
+    pressure_hpa: t('experimentForm.sensors.pressure'),
+    light_lux: t('experimentForm.sensors.light'),
+    pump_on: t('experimentDetails.pumpStatus'),
   };
 
   const handleExportClick = (format) => {
@@ -90,7 +93,7 @@ function Experiment_details() {
 
   const handleDownload = () => {
     const cols = Object.entries(selectedColumns)
-      .filter(([_, checked]) => checked)
+      .filter(([, checked]) => checked)
       .map(([key]) => key)
       .join(',');
     window.open(
@@ -128,7 +131,9 @@ function Experiment_details() {
       const fresh = await res.json();
       setNotes(prev => prev.map(n => (n.id === fresh.id ? fresh : n)));
       setOpenNote(prev => (prev && prev.id === fresh.id ? fresh : prev));
-    } catch {}
+    } catch {
+      // The existing note remains visible if refreshing it fails.
+    }
   };
 
   const handleSaveNoteEdit = async () => {
@@ -149,10 +154,10 @@ function Experiment_details() {
         setOpenNote(updated);
         setNoteEditMode(false);
       } else {
-        toast.error(`Failed to update note (${res.status}).`);
+        toast.error(t('experimentDetails.errors.updateNote', { status: res.status }));
       }
     } catch {
-      toast.error('Server connection error.');
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -174,10 +179,10 @@ function Experiment_details() {
         setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
         setOpenNote(updated);
       } else {
-        toast.error(`Failed to add image (${res.status}).`);
+        toast.error(t('experimentDetails.errors.addImage', { status: res.status }));
       }
     } catch {
-      toast.error('Server connection error.');
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -193,10 +198,10 @@ function Experiment_details() {
       if (res.ok || res.status === 404) {
         await refreshNote(openNote.id);
       } else {
-        toast.error(`Failed to delete image (${res.status}).`);
+        toast.error(t('experimentDetails.errors.deleteImage', { status: res.status }));
       }
     } catch {
-      toast.error('Server connection error.');
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -213,10 +218,10 @@ function Experiment_details() {
         setNotes(prev => prev.filter(n => n.id !== openNote.id));
         closeNote();
       } else {
-        toast.error(`Failed to delete note (${res.status}).`);
+        toast.error(t('experimentDetails.errors.deleteNote', { status: res.status }));
       }
     } catch {
-      toast.error('Server connection error.');
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -247,11 +252,11 @@ function Experiment_details() {
           setErrorTime(null);
         })
         .catch(() => {
-          const successString = lastSuccessTime.current ?? "never";
-          setErrorTime(new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }));
+          const successString = lastSuccessTime.current ?? t('experimentDetails.never');
+          setErrorTime(new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" }));
           setErrors(prev => ({
             ...prev,
-            measurements: `Failed to fetch sensor data. Last successful fetch: ${successString}.`
+            measurements: t('experimentDetails.errors.measurements', { time: successString })
           }));
         });
     };
@@ -259,7 +264,7 @@ function Experiment_details() {
     fetchMeasurements();
     const interval = setInterval(fetchMeasurements, 10000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, i18n.resolvedLanguage, t]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/experiments/${id}/design/`, { headers: getAuthHeaders() })
@@ -315,6 +320,7 @@ function Experiment_details() {
   useEffect(() => {
     setSelectedPumpCommand(null);
     setPumpCommandStatus("");
+    setPumpCommandHasError(false);
     if (!experiment || selectedPot == null) return undefined;
 
     const controller = new AbortController();
@@ -348,7 +354,7 @@ function Experiment_details() {
     toast(
       ({ closeToast }) => (
         <div>
-          <p>Are you sure you want to end this experiment?</p>
+          <p>{t('experimentDetails.confirmEnd')}</p>
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
             <button
               onClick={async () => {
@@ -359,16 +365,16 @@ function Experiment_details() {
                     headers: getAuthHeaders(),
                   });
                   const data = await response.json();
-                  if (!response.ok) { toast.error(data.detail || 'Failed to end the experiment.'); return; }
-                  toast.success("Experiment has been successfully ended!");
+                  if (!response.ok) { toast.error(data.detail || t('experimentDetails.errors.end')); return; }
+                  toast.success(t('experimentDetails.ended'));
                   setExperiment(data);
                 } catch {
-                  toast.error("Server connection error.");
+                  toast.error(t('experimentForm.errors.connection'));
                 }
               }}
               style={{ padding: '4px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >Yes</button>
-            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            >{t('profile.yes')}</button>
+            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>{t('experimentForm.cancel')}</button>
           </div>
         </div>
       ),
@@ -380,7 +386,7 @@ function Experiment_details() {
     toast(
       ({ closeToast }) => (
         <div>
-          <p>Are you sure you want to <strong>delete</strong> this experiment permanently?</p>
+          <p>{t('experimentDetails.confirmDelete')}</p>
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
             <button
               onClick={async () => {
@@ -391,20 +397,25 @@ function Experiment_details() {
                     headers: getAuthHeaders(),
                   });
                   if (!response.ok) {
-                    let errorMsg = 'Failed to delete the experiment.';
-                    try { const data = await response.json(); errorMsg = data.detail || errorMsg; } catch {}
+                    let errorMsg = t('experimentDetails.errors.deleteExperiment');
+                    try {
+                      const data = await response.json();
+                      errorMsg = data.detail || errorMsg;
+                    } catch {
+                      // Keep the translated fallback when the response has no JSON body.
+                    }
                     toast.error(errorMsg);
                     return;
                   }
-                  toast.success("Experiment has been successfully deleted!");
+                  toast.success(t('experimentDetails.deleted'));
                   navigate('/dashboard');
                 } catch {
-                  toast.error("Server connection error.");
+                  toast.error(t('experimentForm.errors.connection'));
                 }
               }}
               style={{ padding: '4px 12px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >Delete</button>
-            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            >{t('experimentDetails.delete')}</button>
+            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>{t('experimentForm.cancel')}</button>
           </div>
         </div>
       ),
@@ -415,6 +426,7 @@ function Experiment_details() {
   const sendPumpCommand = async (command, durationSeconds = null) => {
     setIsSendingPumpCommand(true);
     setPumpCommandStatus("");
+    setPumpCommandHasError(false);
     try {
       const response = await fetch(`${API_BASE_URL}/pump-control/`, {
         method: "POST",
@@ -429,10 +441,11 @@ function Experiment_details() {
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
       setPumpCommandStatus(durationSeconds == null
-        ? `Command ${command} has been sent. The controller may receive it with a delay of up to 5 seconds.`
-        : `Command has been sent. The pump may start within 5 seconds and will then run for ${durationSeconds} seconds.`);
+        ? t('experimentDetails.commandSent', { command })
+        : t('experimentDetails.timedCommandSent', { seconds: durationSeconds }));
     } catch {
-      setPumpCommandStatus("Failed to send command");
+      setPumpCommandStatus(t('experimentDetails.errors.command'));
+      setPumpCommandHasError(true);
     } finally {
       setIsSendingPumpCommand(false);
     }
@@ -450,10 +463,10 @@ function Experiment_details() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("pl-PL");
+    return new Date(dateStr).toLocaleDateString(i18n.resolvedLanguage);
   };
 
-  if (!experiment) return <div style={{ padding: 40 }}>Loading...</div>;
+  if (!experiment) return <div style={{ padding: 40 }}>{t('common.loading')}</div>;
 
   const latest = latestNonNull(selectedMeasurements);
   const latestShared = latestNonNull(stationMeasurements);
@@ -463,7 +476,7 @@ function Experiment_details() {
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
-  const nowDateTime = `${now.toLocaleDateString("pl-PL")} ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+  const nowDateTime = `${now.toLocaleDateString(i18n.resolvedLanguage)} ${now.toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" })}`;
 
   return (
     <div className="exp-layout">
@@ -477,8 +490,8 @@ function Experiment_details() {
             localStorage.setItem("sidebar-collapsed", String(next));
             return next;
           })}
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={sidebarCollapsed ? t('navigation.expandSidebar') : t('navigation.collapseSidebar')}
+          title={sidebarCollapsed ? t('navigation.expandSidebar') : t('navigation.collapseSidebar')}
         >
           <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
         </button>
@@ -492,13 +505,13 @@ function Experiment_details() {
           <p className="exp-sidebar-exp-sub">
             {experiment.plant_name && <span>{experiment.plant_name}</span>}
             {experiment.is_public
-              ? <span className="exp-sidebar-badge exp-sidebar-badge--public">Public</span>
-              : <span className="exp-sidebar-badge exp-sidebar-badge--private">Private</span>
+              ? <span className="exp-sidebar-badge exp-sidebar-badge--public">{t('experimentForm.public')}</span>
+              : <span className="exp-sidebar-badge exp-sidebar-badge--private">{t('experimentForm.private')}</span>
             }
           </p>
         </div>
 
-        <p className="exp-sidebar-section-label">EXPERIMENT CONTROLS</p>
+        <p className="exp-sidebar-section-label">{t('experimentForm.controls')}</p>
 
         <nav className="exp-sidebar-nav">
           {NAV_ITEMS.map(item => (
@@ -508,7 +521,7 @@ function Experiment_details() {
               onClick={() => setActiveTab(item.key)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="exp-nav-item-label">{item.label}</span>
+              <span className="exp-nav-item-label">{t(item.labelKey)}</span>
             </button>
           ))}
         </nav>
@@ -528,10 +541,10 @@ function Experiment_details() {
               <div className="exp-tab-header">
                 <h1 className="exp-tab-title">{experiment.name}</h1>
                 <div className="exp-tab-actions">
-                  <button className="exp-icon-btn" onClick={() => navigate(`/experiment/${id}/edit`)} title="Edit">
+                  <button className="exp-icon-btn" onClick={() => navigate(`/experiment/${id}/edit`)} title={t('editExperiment.edit')}>
                     <span className="material-symbols-outlined">edit</span>
                   </button>
-                  <button className="exp-icon-btn exp-icon-btn--danger" onClick={handleDeleteExperiment} title="Delete">
+                  <button className="exp-icon-btn exp-icon-btn--danger" onClick={handleDeleteExperiment} title={t('experimentDetails.delete')}>
                     <span className="material-symbols-outlined">delete</span>
                   </button>
                 </div>
@@ -545,37 +558,37 @@ function Experiment_details() {
                   </div>
                   <span className="exp-status-pct">{progressPercent}%</span>
                 </div>
-                <span className="exp-status-label">{experiment.is_public ? "Public" : "Private"}</span>
+                <span className="exp-status-label">{experiment.is_public ? t('experimentForm.public') : t('experimentForm.private')}</span>
               </div>
 
               {/* Info card: Plant type, Description, Collaborators */}
               <div className="exp-overview-card">
                 <div className="exp-overview-field">
-                  <span className="exp-info-label">Plant type</span>
+                  <span className="exp-info-label">{t('experimentForm.plant')}</span>
                   <span>{experiment.plant_name || "-"}</span>
                 </div>
                 <div className="exp-overview-field">
-                  <span className="exp-info-label">Description</span>
+                  <span className="exp-info-label">{t('experimentForm.description')}</span>
                   <p className="exp-info-desc" style={{ margin: 0 }}>{experiment.description || "-"}</p>
                 </div>
                 <div className="exp-overview-field">
-                  <span className="exp-info-label">Keywords</span>
+                  <span className="exp-info-label">{t('experimentForm.keywords')}</span>
                   <div className="exp-details-keywords">
                     {experiment.keywords?.length > 0 ? (
                       experiment.keywords.map((keyword, i) => (
                         <span key={i} className="exp-keyword">{keyword}</span>
                       ))
                     ) : (
-                      <span className="exp-no-keywords">This experiment does not have keywords</span>
+                      <span className="exp-no-keywords">{t('experimentDetails.noKeywords')}</span>
                     )}
                   </div>
                 </div>
                 <div className="exp-overview-field exp-overview-field--last">
-                  <span className="exp-info-label">Collaborators</span>
+                  <span className="exp-info-label">{t('experimentDetails.collaborators')}</span>
                   <div className="exp-collaborators">
                     {experiment.collaborators?.length > 0
                       ? experiment.collaborators.map((c, i) => <span key={i} className="collab-chip">{c}</span>)
-                      : <span style={{ color: '#888', fontSize: '14px' }}>None</span>
+                      : <span style={{ color: '#888', fontSize: '14px' }}>{t('experimentDetails.none')}</span>
                     }
                   </div>
                 </div>
@@ -584,19 +597,19 @@ function Experiment_details() {
               {design?.pots?.length > 0 && (
                 <div className="exp-overview-card experiment-layout-card">
                   <div className="exp-overview-field exp-overview-field--last">
-                    <span className="exp-info-label">Experimental layout</span>
+                    <span className="exp-info-label">{t('experimentDetails.layout')}</span>
                     <p className="exp-info-desc">
-                      {design.factors.length} factor(s), {design.treatments.length} treatment combination(s), {design.pots.length} pot(s)
+                      {t('newExperiment.summaryCounts', { factors: design.factors.length, combinations: design.treatments.length, pots: design.pots.length })}
                     </p>
                     <div className="pot-grid">
                       {design.pots.map((pot) => (
                         <div className={`pot-card ${pot.is_monitored ? "monitored" : ""}`} key={pot.id}>
                           <strong>{pot.label}</strong>
-                          <small>rep. {pot.replicate_number}</small>
+                          <small>{t('newExperiment.replicate', { number: pot.replicate_number })}</small>
                           {pot.treatment_levels.map((item) => (
                             <span key={item.factor}>{item.factor}: {item.level}</span>
                           ))}
-                          <small>{pot.is_monitored ? "monitored" : "manual"}</small>
+                          <small>{pot.is_monitored ? t('newExperiment.monitored') : t('experimentDetails.manual')}</small>
                           {pot.hardware_assignments.map((item) => (
                             <small key={item.id}>{item.component_type}: {item.component_identifier}</small>
                           ))}
@@ -611,22 +624,22 @@ function Experiment_details() {
               <div className="exp-overview-card exp-overview-card--dates">
                 <div className="exp-dates-row">
                   <div className="exp-date-field">
-                    <span className="exp-info-label">Start date</span>
+                    <span className="exp-info-label">{t('experimentForm.startDate')}</span>
                     <span>{formatDate(experiment.started_at)}</span>
                   </div>
                   <div className="exp-date-field">
-                    <span className="exp-info-label">Planned end date</span>
+                    <span className="exp-info-label">{t('experimentForm.plannedEndDate')}</span>
                     <span>{formatDate(experiment.planned_end_at)}</span>
                   </div>
                   <div className="exp-date-field">
-                    <span className="exp-info-label">End date</span>
+                    <span className="exp-info-label">{t('experimentDetails.endDate')}</span>
                     <span>{formatDate(experiment.finished_at)}</span>
                   </div>
                 </div>
                 {experiment.started_at && !experiment.finished_at && (
                   <button className="end-experiment-btn end-experiment-btn--new" onClick={handleEndExperiment}>
                     <span className="material-symbols-outlined">check</span>
-                    END EXPERIMENT
+                    {t('experimentDetails.endExperiment')}
                   </button>
                 )}
               </div>
@@ -635,10 +648,10 @@ function Experiment_details() {
               <div className="exp-alerts-section">
                 <div className="exp-alerts-header">
                   <div className="exp-alerts-title-row">
-                    <span className="exp-alerts-title">Experiment Alerts</span>
-                    {errors.measurements && <span className="exp-alerts-badge">1 Critical</span>}
+                    <span className="exp-alerts-title">{t('experimentDetails.alerts')}</span>
+                    {errors.measurements && <span className="exp-alerts-badge">{t('experimentDetails.oneCritical')}</span>}
                   </div>
-                  <span className="exp-alerts-view-all">View All Notifications</span>
+                  <span className="exp-alerts-view-all">{t('experimentDetails.viewNotifications')}</span>
                 </div>
 
                 {errors.measurements ? (
@@ -647,7 +660,7 @@ function Experiment_details() {
                       <span className="material-symbols-outlined">error</span>
                     </div>
                     <div className="exp-alert-content">
-                      <span className="exp-alert-name">Measurement Fetch Failed</span>
+                      <span className="exp-alert-name">{t('experimentDetails.measurementFailed')}</span>
                       <span className="exp-alert-desc">{errors.measurements}</span>
                     </div>
                     {errorTime && <span className="exp-alert-time">{errorTime}</span>}
@@ -658,8 +671,8 @@ function Experiment_details() {
                       <span className="material-symbols-outlined">check_circle</span>
                     </div>
                     <div className="exp-alert-content">
-                      <span className="exp-alert-name">All systems normal</span>
-                      <span className="exp-alert-desc">Sensors reporting as expected.</span>
+                      <span className="exp-alert-name">{t('experimentDetails.systemsNormal')}</span>
+                      <span className="exp-alert-desc">{t('experimentDetails.sensorsNormal')}</span>
                     </div>
                   </div>
                 )}
@@ -669,24 +682,24 @@ function Experiment_details() {
               <div className="exp-sensors-section">
                 <div className="exp-sensors-header">
                   <div>
-                    <span className="exp-sensors-title">Live Sensors</span>
+                    <span className="exp-sensors-title">{t('experimentDetails.liveSensors')}</span>
                     <div className="pot-selector">
-                      <label htmlFor="live-pot-select">Pot</label>
+                      <label htmlFor="live-pot-select">{t('experimentDetails.pot')}</label>
                       <select id="live-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
                         {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                       </select>
                     </div>
                   </div>
-                  <span className="exp-sensors-time">Updated: {nowDateTime}</span>
+                  <span className="exp-sensors-time">{t('experimentDetails.updated', { date: nowDateTime })}</span>
                 </div>
                 <div className="exp-sensors-grid">
                   {[
-                    { icon: 'device_thermostat', label: 'Temp Inside',     value: latestShared?.air_temperature,  unit: '°C'  },
-                    { icon: 'water_drop',        label: 'Soil Moisture',   value: latest?.moisture_percent, unit: '%'   },
-                    { icon: 'cloud',             label: 'Air Humidity',    value: latestShared?.air_humidity,     unit: '%'   },
-                    { icon: 'light_mode',        label: 'Light Intensity', value: latestShared?.light_lux,        unit: 'lx'  },
-                    { icon: 'thermostat',        label: 'Soil Temp',       value: latest?.soil_temperature, unit: '°C'  },
-                    { icon: 'speed',             label: 'Pressure',        value: latestShared?.pressure_hpa,     unit: 'hPa' },
+                    { icon: 'device_thermostat', label: t('experimentDetails.tempInside'), value: latestShared?.air_temperature, unit: '°C' },
+                    { icon: 'water_drop', label: t('experimentForm.sensors.soilMoisture'), value: latest?.moisture_percent, unit: '%' },
+                    { icon: 'cloud', label: t('experimentForm.sensors.airHumidity'), value: latestShared?.air_humidity, unit: '%' },
+                    { icon: 'light_mode', label: t('experimentForm.sensors.light'), value: latestShared?.light_lux, unit: 'lx' },
+                    { icon: 'thermostat', label: t('experimentForm.sensors.soilTemperature'), value: latest?.soil_temperature, unit: '°C' },
+                    { icon: 'speed', label: t('experimentForm.sensors.pressure'), value: latestShared?.pressure_hpa, unit: 'hPa' },
                   ].map(({ icon, label, value, unit }) => (
                     <div key={label} className="exp-sensor-card">
                       <span className="material-symbols-outlined exp-sensor-icon">{icon}</span>
@@ -702,9 +715,9 @@ function Experiment_details() {
               {/* Pump control */}
               <div className="exp-pump-control">
                 <div className="exp-pump-header">
-                  <span className="exp-pump-label">PUMP CONTROL {selectedPot != null ? `— P${selectedPot}` : ""}</span>
+                  <span className="exp-pump-label">{t('experimentDetails.pumpControl')} {selectedPot != null ? `— P${selectedPot}` : ""}</span>
                   <span className={`exp-pump-status ${latest?.pump_on ? 'running' : 'stopped'}`}>
-                    STATUS: {latest ? (latest.pump_on ? 'RUNNING' : 'STOPPED') : 'NO DATA'}
+                    {t('experimentDetails.status')}: {latest ? (latest.pump_on ? t('experimentDetails.running') : t('experimentDetails.stopped')) : t('experimentDetails.noData')}
                   </span>
                 </div>
                 <div className="exp-pump-buttons">
@@ -718,7 +731,7 @@ function Experiment_details() {
                   ))}
                 </div>
                 <p className="exp-pump-delay-note">
-                  The controller checks for new commands every 5 seconds, so starting or stopping the pump may take up to a 5-second delay. Operating time is measured from the moment the device receives the command.
+                  {t('experimentDetails.pumpDelay')}
                 </p>
                 <form
                   className="exp-pump-timer"
@@ -726,13 +739,14 @@ function Experiment_details() {
                     event.preventDefault();
                     const duration = Number(pumpDurationSeconds);
                     if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
-                      setPumpCommandStatus("Please enter an integer between 1 and 300 seconds");
+                      setPumpCommandStatus(t('experimentDetails.errors.duration'));
+                      setPumpCommandHasError(true);
                       return;
                     }
                     sendPumpCommand("ON", duration);
                   }}
                 >
-                  <label htmlFor="pump-duration">Operation time (seconds)</label>
+                  <label htmlFor="pump-duration">{t('experimentDetails.operationTime')}</label>
                   <input
                     id="pump-duration"
                     type="number"
@@ -746,14 +760,11 @@ function Experiment_details() {
                     type="submit"
                     className="exp-pump-btn"
                     disabled={isSendingPumpCommand || selectedPot == null}
-                  >RUN FOR SPECIFIED TIME</button>
+                  >{t('experimentDetails.runTimed')}</button>
                 </form>
                 {pumpCommandStatus && (
                   <p className={
-                    pumpCommandStatus.startsWith("Failed") || 
-                    pumpCommandStatus.startsWith("Please") 
-                      ? "pump-command-error" 
-                      : "pump-command-status"
+                    pumpCommandHasError ? "pump-command-error" : "pump-command-status"
                   }>
                     {pumpCommandStatus}
                   </p>
@@ -763,20 +774,20 @@ function Experiment_details() {
               <section className="exp-light-calculator">
                 <div className="exp-light-calculator-header">
                   <div>
-                    <h3>Lux to PPFD calculator</h3>
-                    <p>Enter a BH1750 illuminance reading to compare the daylight and greenhouse LED estimates.</p>
+                    <h3>{t('experimentDetails.lightCalculator')}</h3>
+                    <p>{t('experimentDetails.lightCalculatorHelp')}</p>
                   </div>
                   <label>
-                    Illuminance
+                    {t('experimentDetails.illuminance')}
                     <span><input type="number" min="0" step="0.01" value={calculatorLuxValue} onChange={(event) => setLightCalculatorLux(event.target.value)} /> lx</span>
                   </label>
                 </div>
                 <div className="exp-light-results">
-                  <div><span>Daylight</span><strong>{hasCalculatorLux ? (calculatorLux * DAYLIGHT_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s (CF: {DAYLIGHT_PPFD_FACTOR})</small></div>
-                  <div><span>EKO-LED SOWELO-690-25-70D-CC-3535</span><strong>{hasCalculatorLux ? (calculatorLux * SOWELO_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s (estimated CF: {SOWELO_PPFD_FACTOR.toFixed(4)})</small></div>
+                  <div><span>{t('experimentDetails.daylight')}</span><strong>{hasCalculatorLux ? (calculatorLux * DAYLIGHT_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s (CF: {DAYLIGHT_PPFD_FACTOR})</small></div>
+                  <div><span>EKO-LED SOWELO-690-25-70D-CC-3535</span><strong>{hasCalculatorLux ? (calculatorLux * SOWELO_PPFD_FACTOR).toFixed(2) : "-"}</strong><small>µmol/m²/s ({t('experimentDetails.estimatedCf')}: {SOWELO_PPFD_FACTOR.toFixed(4)})</small></div>
                 </div>
                 <p className="exp-light-method">
-                  The greenhouse lamp is treated as a red-blue mixture: 63.6% red and 36.4% blue, estimated from the EKO-LED nominal luminous intensities R&nbsp;700&nbsp;mcd and B&nbsp;400&nbsp;mcd. Formula: PPFD&nbsp;=&nbsp;lux&nbsp;×&nbsp;CF. The estimated lamp factor is (63.6%&nbsp;×&nbsp;0.0242)&nbsp;+&nbsp;(36.4%&nbsp;×&nbsp;0.0662)&nbsp;=&nbsp;0.0395. This is an estimate, not a calibrated PAR measurement.
+                  {t('experimentDetails.lightMethod')}
                 </p>
               </section>
 
@@ -786,16 +797,16 @@ function Experiment_details() {
           {/* ── CAMERA VIEW ── */}
           {activeTab === 'camera' && (
             <div className="exp-tab-camera">
-              <h2 className="exp-tab-section-title">Camera view</h2>
+              <h2 className="exp-tab-section-title">{t('experimentForm.camera')}</h2>
               <div className="pot-selector pot-selector--section">
-                <label htmlFor="camera-pot-select">Pot</label>
+                <label htmlFor="camera-pot-select">{t('experimentDetails.pot')}</label>
                 <select
                   id="camera-pot-select"
                   value={selectedCameraPot ?? ""}
                   disabled={!cameraPotNumbers.length}
                   onChange={(e) => setSelectedCameraPot(Number(e.target.value))}
                 >
-                  {!cameraPotNumbers.length && <option value="">No camera assigned</option>}
+                  {!cameraPotNumbers.length && <option value="">{t('experimentDetails.noCameraAssigned')}</option>}
                   {cameraPotNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                 </select>
               </div>
@@ -805,7 +816,7 @@ function Experiment_details() {
                     <img
                       key={selectedCameraPot}
                       src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/?pot_number=${selectedCameraPot}`}
-                      alt={`Latest camera frame for pot P${selectedCameraPot}`}
+                      alt={t('experimentDetails.latestFrameAlt', { pot: selectedCameraPot })}
                       className="exp-camera-stream"
                       onLoad={e => {
                         e.target.style.display = '';
@@ -819,13 +830,13 @@ function Experiment_details() {
                   )}
                   <div className={`exp-camera-placeholder ${selectedCameraPot == null ? 'exp-camera-placeholder-visible' : ''}`}>
                     <span className="material-symbols-outlined">photo_camera</span>
-                    <span>No camera feed available</span>
+                    <span>{t('experimentDetails.noCameraFeed')}</span>
                   </div>
                 </div>
                 <div className="exp-camera-controls">
                   <button className="saved-frames-btn" onClick={() => navigate(`/experiment/${id}/frames`)}>
                     <span className="material-symbols-outlined">photo_library</span>
-                    Saved frames
+                    {t('experimentDetails.savedFrames')}
                   </button>
                 </div>
               </div>
@@ -835,9 +846,9 @@ function Experiment_details() {
           {/* ── ANALYTICS ── */}
           {activeTab === 'analytics' && (
             <div className="exp-tab-analytics">
-              <h2 className="exp-tab-section-title">Analytics</h2>
+              <h2 className="exp-tab-section-title">{t('experimentForm.analytics')}</h2>
               <div className="pot-selector pot-selector--section">
-                <label htmlFor="analytics-pot-select">Pot</label>
+                <label htmlFor="analytics-pot-select">{t('experimentDetails.pot')}</label>
                 <select id="analytics-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
                   {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                 </select>
@@ -852,9 +863,9 @@ function Experiment_details() {
             <div className="exp-tab-history">
               <div className="exp-tab-header">
                 <div>
-                  <h2 className="exp-tab-title">Historical data</h2>
+                  <h2 className="exp-tab-title">{t('experimentForm.history')}</h2>
                   <div className="pot-selector">
-                    <label htmlFor="history-pot-select">Pot</label>
+                    <label htmlFor="history-pot-select">{t('experimentDetails.pot')}</label>
                     <select id="history-pot-select" value={selectedPot ?? ""} onChange={(e) => setSelectedPot(Number(e.target.value))}>
                       {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                     </select>
@@ -863,7 +874,7 @@ function Experiment_details() {
                 <div className="export-dropdown">
                   <button className="export-btn" onClick={() => setExportOpen(!exportOpen)}>
                     <span className="material-symbols-outlined">download</span>
-                    Export
+                    {t('experimentDetails.export')}
                     <span className="material-symbols-outlined">expand_more</span>
                   </button>
                   {exportOpen && (
@@ -878,27 +889,27 @@ function Experiment_details() {
               {selectedMeasurements.length === 0 ? (
                 <div className="exp-empty-state">
                   <span className="material-symbols-outlined">table_rows</span>
-                  <p>No measurements recorded yet.</p>
+                  <p>{t('experimentDetails.noMeasurements')}</p>
                 </div>
               ) : (
                 <div className="exp-history-table-wrap">
                   <table className="exp-history-table">
                     <thead>
                       <tr>
-                        <th>Date & time</th>
-                        <th>Air temp. (°C)</th>
-                        <th>Soil moisture (%)</th>
-                        <th>Air humidity (%)</th>
-                        <th>Light (lx)</th>
-                        <th>Soil temp. (°C)</th>
-                        <th>Pressure (hPa)</th>
-                        <th>Pump</th>
+                        <th>{t('experimentDetails.dateTime')}</th>
+                        <th>{t('experimentDetails.airTemp')} (°C)</th>
+                        <th>{t('experimentForm.sensors.soilMoisture')} (%)</th>
+                        <th>{t('experimentForm.sensors.airHumidity')} (%)</th>
+                        <th>{t('experimentDetails.light')} (lx)</th>
+                        <th>{t('experimentDetails.soilTemp')} (°C)</th>
+                        <th>{t('experimentForm.sensors.pressure')} (hPa)</th>
+                        <th>{t('experimentDetails.pump')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedMeasurements.map((m, i) => (
                         <tr key={i}>
-                          <td>{m.created_at ? new Date(m.created_at).toLocaleString('pl-PL') : '-'}</td>
+                          <td>{m.created_at ? new Date(m.created_at).toLocaleString(i18n.resolvedLanguage) : '-'}</td>
                           <td>{m.air_temperature ?? '-'}</td>
                           <td>{m.moisture_percent ?? '-'}</td>
                           <td>{m.air_humidity ?? '-'}</td>
@@ -922,17 +933,17 @@ function Experiment_details() {
                 <>
                   <button className="note-back-btn" onClick={closeNote}>
                     <span className="material-symbols-outlined">arrow_back</span>
-                    Timeline Observations
+                    {t('experimentDetails.timeline')}
                   </button>
 
                   <div className="note-detail-card">
                     <span className="note-date">
-                      {new Date(openNote.created_at || openNote.createdAt).toLocaleString('en-US', {
+                      {new Date(openNote.created_at || openNote.createdAt).toLocaleString(i18n.resolvedLanguage, {
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                       })}
                       {openNote.updated_at && openNote.updated_at !== openNote.created_at && (
-                        <span className="note-edited-tag"> · edited</span>
+                        <span className="note-edited-tag"> · {t('experimentDetails.edited')}</span>
                       )}
                     </span>
 
@@ -941,13 +952,13 @@ function Experiment_details() {
                         <input
                           className="note-input"
                           type="text"
-                          placeholder="Title"
+                          placeholder={t('experimentDetails.noteTitle')}
                           value={noteEditDraft.title}
                           onChange={e => setNoteEditDraft(prev => ({ ...prev, title: e.target.value }))}
                         />
                         <textarea
                           className="note-textarea"
-                          placeholder="Describe your observation..."
+                          placeholder={t('experimentDetails.notePlaceholder')}
                           value={noteEditDraft.content}
                           onChange={e => setNoteEditDraft(prev => ({ ...prev, content: e.target.value }))}
                         />
@@ -965,14 +976,14 @@ function Experiment_details() {
                           <div key={img.id} className="note-gallery-item">
                             <img
                               src={img.image_url}
-                              alt="Note attachment"
+                              alt={t('experimentDetails.noteAttachment')}
                               onClick={() => setLightboxUrl(img.image_url)}
-                              title="Click to enlarge"
+                              title={t('experimentDetails.enlarge')}
                             />
                             <button
                               className="note-image-remove"
                               disabled={noteBusy}
-                              title="Remove image"
+                              title={t('experimentDetails.removeImage')}
                               onClick={() => handleDeleteNoteImage(img.id)}
                             >
                               <span className="material-symbols-outlined">close</span>
@@ -987,7 +998,7 @@ function Experiment_details() {
                         <>
                           <label className="note-image-upload">
                             <span className="material-symbols-outlined">add_photo_alternate</span>
-                            Add images
+                            {t('experimentDetails.addImages')}
                             <input
                               type="file"
                               accept="image/*"
@@ -999,14 +1010,14 @@ function Experiment_details() {
                           </label>
                           <div className="note-detail-actions-right">
                             <button className="note-cancel-btn" disabled={noteBusy} onClick={() => setNoteEditMode(false)}>
-                              Cancel
+                              {t('experimentForm.cancel')}
                             </button>
                             <button
                               className="note-save-btn"
                               disabled={noteBusy || !noteEditDraft.title.trim()}
                               onClick={handleSaveNoteEdit}
                             >
-                              Save changes
+                              {t('editExperiment.save')}
                             </button>
                           </div>
                         </>
@@ -1020,11 +1031,11 @@ function Experiment_details() {
                             }}
                           >
                             <span className="material-symbols-outlined">edit</span>
-                            Edit note
+                            {t('experimentDetails.editNote')}
                           </button>
                           <button className="note-delete-inline-btn" disabled={noteBusy} onClick={handleDeleteNote}>
                             <span className="material-symbols-outlined">delete</span>
-                            Delete note
+                            {t('experimentDetails.deleteNote')}
                           </button>
                         </>
                       )}
@@ -1033,7 +1044,7 @@ function Experiment_details() {
 
                   {lightboxUrl && (
                     <div className="note-lightbox" onClick={() => setLightboxUrl(null)}>
-                      <img src={lightboxUrl} alt="Full size" />
+                      <img src={lightboxUrl} alt={t('experimentDetails.fullSize')} />
                     </div>
                   )}
                 </>
@@ -1042,26 +1053,26 @@ function Experiment_details() {
                   <div className="notes-header">
                     <button className="notes-new-btn" onClick={() => setNoteFormOpen(true)}>
                       <span className="material-symbols-outlined">add</span>
-                      New Note
+                      {t('experimentDetails.newNote')}
                     </button>
                   </div>
 
                   <div className="notes-timeline-header">
-                    <span className="notes-timeline-title">Timeline Observations</span>
+                    <span className="notes-timeline-title">{t('experimentDetails.timeline')}</span>
                   </div>
 
                   <div className="notes-list">
                     {notes.length === 0 ? (
                       <div className="notes-empty">
                         <span className="material-symbols-outlined">edit_note</span>
-                        <p>No notes yet. Click "+ New Note" to add your first observation.</p>
+                        <p>{t('experimentDetails.noNotes')}</p>
                       </div>
                     ) : (
                       notes.map(note => (
                         <div key={note.id} className="note-card" onClick={() => setOpenNote(note)}>
                           <div className="note-card-main">
                             <span className="note-date">
-                              {new Date(note.created_at || note.createdAt).toLocaleString('en-US', {
+                              {new Date(note.created_at || note.createdAt).toLocaleString(i18n.resolvedLanguage, {
                                 year: 'numeric', month: 'short', day: 'numeric',
                                 hour: '2-digit', minute: '2-digit'
                               })}
@@ -1071,7 +1082,7 @@ function Experiment_details() {
                           </div>
                           {note.images?.length > 0 && (
                             <div className="note-thumb-wrap">
-                              <img src={note.images[0].image_url} alt="Note attachment" className="note-image" />
+                              <img src={note.images[0].image_url} alt={t('experimentDetails.noteAttachment')} className="note-image" />
                               {note.images.length > 1 && (
                                 <span className="note-thumb-count">+{note.images.length - 1}</span>
                               )}
@@ -1087,23 +1098,23 @@ function Experiment_details() {
               {noteFormOpen && (
                 <div className="note-modal-overlay" onClick={() => setNoteFormOpen(false)}>
                   <div className="note-modal" onClick={e => e.stopPropagation()}>
-                    <h3 className="note-modal-title">New Observation</h3>
+                    <h3 className="note-modal-title">{t('experimentDetails.newObservation')}</h3>
                     <input
                       className="note-input"
                       type="text"
-                      placeholder="Title"
+                      placeholder={t('experimentDetails.noteTitle')}
                       value={draftNote.title}
                       onChange={e => setDraftNote(prev => ({ ...prev, title: e.target.value }))}
                     />
                     <textarea
                       className="note-textarea"
-                      placeholder="Describe your observation..."
+                      placeholder={t('experimentDetails.notePlaceholder')}
                       value={draftNote.content}
                       onChange={e => setDraftNote(prev => ({ ...prev, content: e.target.value }))}
                     />
                     <label className="note-image-upload">
                       <span className="material-symbols-outlined">add_photo_alternate</span>
-                      Add images
+                      {t('experimentDetails.addImages')}
                       <input
                         type="file"
                         accept="image/*"
@@ -1123,10 +1134,10 @@ function Experiment_details() {
                       <div className="note-image-gallery">
                         {draftNote.images.map((img, idx) => (
                           <div key={idx} className="note-gallery-item">
-                            <img src={img.url} alt="Preview" />
+                            <img src={img.url} alt={t('experimentDetails.preview')} />
                             <button
                               className="note-image-remove"
-                              title="Remove image"
+                              title={t('experimentDetails.removeImage')}
                               onClick={() => setDraftNote(prev => ({
                                 ...prev,
                                 images: prev.images.filter((_, i) => i !== idx),
@@ -1142,7 +1153,7 @@ function Experiment_details() {
                       <button className="note-cancel-btn" onClick={() => {
                         setNoteFormOpen(false);
                         setDraftNote({ title: '', content: '', images: [] });
-                      }}>Cancel</button>
+                      }}>{t('experimentForm.cancel')}</button>
                       <button
                         className="note-save-btn"
                         disabled={noteBusy || !draftNote.title.trim()}
@@ -1166,14 +1177,14 @@ function Experiment_details() {
                             } else {
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
-                              toast.error(`Failed to save note (${res.status}).`);
+                              toast.error(t('experimentDetails.errors.saveNote', { status: res.status }));
                             }
                           } catch {
-                            toast.error('Server connection error.');
+                            toast.error(t('experimentForm.errors.connection'));
                           }
                           setNoteBusy(false);
                         }}
-                      >Save Note</button>
+                      >{t('experimentDetails.saveNote')}</button>
                     </div>
                   </div>
                 </div>
@@ -1188,7 +1199,7 @@ function Experiment_details() {
       {exportModalOpen && (
         <div className="export-modal-overlay" onClick={() => setExportModalOpen(false)}>
           <div className="export-modal" onClick={e => e.stopPropagation()}>
-            <h3>Select sensors to export</h3>
+            <h3>{t('experimentDetails.selectSensors')}</h3>
             <div className="export-checkboxes">
               {Object.entries(columnLabels).map(([key, label]) => (
                 <label key={key} className="export-checkbox-label">
@@ -1202,8 +1213,8 @@ function Experiment_details() {
               ))}
             </div>
             <div className="export-modal-buttons">
-              <button className="export-cancel-btn" onClick={() => setExportModalOpen(false)}>Cancel</button>
-              <button className="export-download-btn" onClick={handleDownload}>Download {exportFormat.toUpperCase()}</button>
+              <button className="export-cancel-btn" onClick={() => setExportModalOpen(false)}>{t('experimentForm.cancel')}</button>
+              <button className="export-download-btn" onClick={handleDownload}>{t('experimentDetails.download')} {exportFormat.toUpperCase()}</button>
             </div>
           </div>
         </div>

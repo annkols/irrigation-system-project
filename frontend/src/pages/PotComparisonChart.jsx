@@ -11,10 +11,11 @@ import {
 } from "recharts";
 
 import { buildChartSeries, formatChartTime } from "./chartDataUtils";
+import { useTranslation } from "react-i18next";
 
 const features = [
-  { key: "moisture_percent", label: "Soil moisture", unit: "%" },
-  { key: "soil_temperature", label: "Soil temperature", unit: "°C" },
+  { key: "moisture_percent", labelKey: "charts.soilMoisturePlain", unit: "%" },
+  { key: "soil_temperature", labelKey: "charts.soilTemperaturePlain", unit: "°C" },
 ];
 
 const series = [
@@ -23,6 +24,7 @@ const series = [
 ];
 
 export default function PotComparisonChart({ measurements = [], potNumbers = [] }) {
+  const { t, i18n } = useTranslation();
   const [featureKey, setFeatureKey] = useState(features[0].key);
   const [firstPotChoice, setFirstPotChoice] = useState(null);
   const [secondPotChoice, setSecondPotChoice] = useState(null);
@@ -57,30 +59,30 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
   ].filter(Boolean);
 
   if (potNumbers.length < 2) {
-    return <p className="pot-comparison-empty">At least two pots are required to compare measurements.</p>;
+    return <p className="pot-comparison-empty">{t('charts.twoPotsRequired')}</p>;
   }
 
   return (
     <div className="chart-panel pot-comparison-panel">
       <div>
-        <h3 className="pot-comparison-title">Compare pots</h3>
+        <h3 className="pot-comparison-title">{t('charts.comparePots')}</h3>
         <p className="pot-comparison-description">
-          Select one soil measurement and two pots to compare.
+          {t('charts.compareHelp')}
         </p>
       </div>
 
       <div className="sensor-selectors">
         <div className="sensor-selector">
-          <label htmlFor="comparison-feature">Feature</label>
+          <label htmlFor="comparison-feature">{t('charts.feature')}</label>
           <select id="comparison-feature" value={featureKey} onChange={(event) => setFeatureKey(event.target.value)}>
             {features.map((feature) => (
-              <option key={feature.key} value={feature.key}>{feature.label} ({feature.unit})</option>
+              <option key={feature.key} value={feature.key}>{t(feature.labelKey)} ({feature.unit})</option>
             ))}
           </select>
         </div>
 
         <div className="sensor-selector">
-          <label htmlFor="comparison-first-pot">First pot</label>
+          <label htmlFor="comparison-first-pot">{t('charts.firstPot')}</label>
           <select id="comparison-first-pot" value={firstPot ?? ""} onChange={(event) => setFirstPotChoice(Number(event.target.value))}>
             {potNumbers.map((number) => (
               <option key={number} value={number} disabled={number === secondPot}>P{number}</option>
@@ -89,7 +91,7 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
         </div>
 
         <div className="sensor-selector">
-          <label htmlFor="comparison-second-pot">Second pot</label>
+          <label htmlFor="comparison-second-pot">{t('charts.secondPot')}</label>
           <select id="comparison-second-pot" value={secondPot ?? ""} onChange={(event) => setSecondPotChoice(Number(event.target.value))}>
             {potNumbers.map((number) => (
               <option key={number} value={number} disabled={number === firstPot}>P{number}</option>
@@ -99,17 +101,17 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
       </div>
 
       <div className="date-range-picker">
-        <input type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} aria-label="Comparison start date" />
+        <input type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} aria-label={t('charts.comparisonStart')} />
         <span>—</span>
-        <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label="Comparison end date" />
+        <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label={t('charts.comparisonEnd')} />
       </div>
 
       <p className="chart-data-note">
-        Both pots use the same value scale and actual measurement times. Line breaks indicate missing data.
+        {t('charts.comparisonNote')}
       </p>
       {missingPots.length > 0 && (
         <p className="chart-data-warning">
-          No {selectedFeature.label.toLowerCase()} data in the selected range for: {missingPots.map((pot) => `P${pot}`).join(", ")}.
+          {t('charts.noFeatureData', { feature: t(selectedFeature.labelKey).toLowerCase(), pots: missingPots.map((pot) => `P${pot}`).join(", ") })}
         </p>
       )}
 
@@ -124,7 +126,7 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
               domain={["dataMin", "dataMax"]}
               minTickGap={20}
               tick={{ fill: "#666", fontSize: 12 }}
-              tickFormatter={formatChartTime}
+              tickFormatter={(value) => formatChartTime(value, i18n.resolvedLanguage)}
             />
             <YAxis
               unit={selectedFeature.unit}
@@ -132,7 +134,7 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
               domain={["auto", "auto"]}
             />
             <Tooltip
-              labelFormatter={(value) => new Date(value).toLocaleString("pl-PL")}
+              labelFormatter={(value) => new Date(value).toLocaleString(i18n.resolvedLanguage)}
               formatter={(value, name) => [`${value} ${selectedFeature.unit}`, name]}
             />
             <Legend />
@@ -142,7 +144,7 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
                 data={index === 0 ? firstPotData : secondPotData}
                 dataKey="value"
                 connectNulls={false}
-                name={`${selectedFeature.label} — P${index === 0 ? firstPot : secondPot}`}
+                name={`${t(selectedFeature.labelKey)} — P${index === 0 ? firstPot : secondPot}`}
                 stroke={item.color}
                 strokeWidth={3}
                 dot={false}
