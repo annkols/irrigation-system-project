@@ -411,6 +411,72 @@
     "comparisonNote": "Both pots use the same value scale and actual measurement times. Line breaks indicate missing data.",
     "noFeatureData": "No {{feature}} data in the selected range for: {{pots}}."
   },
+  "reports": {
+    "title": "Reports",
+    "noExperiments": "You don't have any experiments yet — create one first.",
+    "sectionsToInclude": "Sections to include",
+    "generating": "Generating…",
+    "generatePdf": "Generate PDF",
+    "selectSection": "Select at least one section.",
+    "generated": "Report generated.",
+    "sections": {
+      "details": "Experiment details",
+      "detailsDescription": "Plant type, description, keywords, dates, collaborators.",
+      "sensors": "Sensor readings",
+      "sensorsDescription": "Latest reading from every sensor, per pot.",
+      "charts": "Charts",
+      "chartsDescription": "Soil moisture per pot and shared air temperature over time.",
+      "camera": "Camera view",
+      "cameraDescription": "Latest camera frame for every monitored pot.",
+      "notes": "Notes",
+      "notesDescription": "Timeline observations, with the first attached photo."
+    },
+    "errors": {
+      "loadExperiments": "Could not load your experiments.",
+      "loadDetails": "Could not load experiment details.",
+      "generate": "Failed to generate the report."
+    },
+    "pdf": {
+      "title": "Experiment Report",
+      "layout": "Experimental layout ({{count}} pot(s))",
+      "replicate": "Replicate",
+      "monitoring": "Monitoring",
+      "sharedSensors": "Shared sensors (station-wide)",
+      "potReadings": "P{{pot}} — sensor readings ({{count}})",
+      "noPotMeasurements": "No measurements recorded for this pot.",
+      "airT": "Air T (°C)",
+      "moisture": "Moist (%)",
+      "humidity": "Hum (%)",
+      "light": "Light (lx)",
+      "soilT": "Soil T (°C)",
+      "pressure": "Press (hPa)",
+      "noChartData": "No measurements available to plot.",
+      "sharedAirTemperature": "Air temperature (°C, shared)",
+      "soilMoistureChart": "Soil moisture % — P{{pot}}",
+      "notEnoughData": "Not enough data to plot a chart.",
+      "noCamera": "No camera assigned to this experiment.",
+      "latestFrame": "Latest frame — P{{pot}}",
+      "noFrame": "P{{pot}}: no saved frame available.",
+      "noNotes": "No notes recorded for this experiment.",
+      "morePhotos": "+{{count}} more photo(s) attached"
+    }
+  },
+  "savedFrames": {
+    "title": "Saved frames",
+    "back": "Back to experiment",
+    "empty": "No saved frames yet",
+    "emptyHelp": "Return to the experiment and save a frame from the camera stream.",
+    "frameAlt": "Saved frame {{id}}",
+    "delete": "Delete frame",
+    "close": "Close preview",
+    "confirmDelete": "Delete this saved frame permanently?",
+    "deleted": "Frame deleted.",
+    "errors": {
+      "load": "Failed to load saved frames.",
+      "experiment": "Failed to load experiment.",
+      "delete": "Failed to delete frame."
+    }
+  },
   "editExperiment": {
     "edit": "Edit",
     "title": "Edit experiment",

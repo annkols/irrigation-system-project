@@ -417,6 +417,72 @@
     "comparisonNote": "Obie doniczki korzystają z tej samej skali wartości i rzeczywistych czasów pomiarów. Przerwy w liniach oznaczają brak danych.",
     "noFeatureData": "Brak danych „{{feature}}” w wybranym zakresie dla: {{pots}}."
   },
+  "reports": {
+    "title": "Raporty",
+    "noExperiments": "Nie masz jeszcze żadnych doświadczeń — najpierw utwórz doświadczenie.",
+    "sectionsToInclude": "Sekcje do uwzględnienia",
+    "generating": "Generowanie…",
+    "generatePdf": "Wygeneruj PDF",
+    "selectSection": "Wybierz co najmniej jedną sekcję.",
+    "generated": "Raport został wygenerowany.",
+    "sections": {
+      "details": "Szczegóły doświadczenia",
+      "detailsDescription": "Rodzaj rośliny, opis, słowa kluczowe, daty i współpracownicy.",
+      "sensors": "Odczyty czujników",
+      "sensorsDescription": "Najnowszy odczyt z każdego czujnika dla poszczególnych doniczek.",
+      "charts": "Wykresy",
+      "chartsDescription": "Wilgotność gleby dla doniczek oraz wspólna temperatura powietrza w czasie.",
+      "camera": "Widok kamery",
+      "cameraDescription": "Najnowsza klatka z kamery dla każdej monitorowanej doniczki.",
+      "notes": "Notatki",
+      "notesDescription": "Oś czasu obserwacji wraz z pierwszym załączonym zdjęciem."
+    },
+    "errors": {
+      "loadExperiments": "Nie udało się wczytać Twoich doświadczeń.",
+      "loadDetails": "Nie udało się wczytać szczegółów doświadczenia.",
+      "generate": "Nie udało się wygenerować raportu."
+    },
+    "pdf": {
+      "title": "Raport z doświadczenia",
+      "layout": "Układ doświadczenia (liczba doniczek: {{count}})",
+      "replicate": "Powtórzenie",
+      "monitoring": "Monitorowanie",
+      "sharedSensors": "Czujniki wspólne dla stacji",
+      "potReadings": "P{{pot}} — odczyty czujników ({{count}})",
+      "noPotMeasurements": "Nie zarejestrowano pomiarów dla tej doniczki.",
+      "airT": "Temp. pow. (°C)",
+      "moisture": "Wilg. gleby (%)",
+      "humidity": "Wilg. pow. (%)",
+      "light": "Światło (lx)",
+      "soilT": "Temp. gleby (°C)",
+      "pressure": "Ciśn. (hPa)",
+      "noChartData": "Brak pomiarów do przedstawienia na wykresie.",
+      "sharedAirTemperature": "Temperatura powietrza (°C, wspólna)",
+      "soilMoistureChart": "Wilgotność gleby % — P{{pot}}",
+      "notEnoughData": "Za mało danych do narysowania wykresu.",
+      "noCamera": "Do tego doświadczenia nie przypisano kamery.",
+      "latestFrame": "Najnowsza klatka — P{{pot}}",
+      "noFrame": "P{{pot}}: brak zapisanej klatki.",
+      "noNotes": "Nie zapisano notatek dla tego doświadczenia.",
+      "morePhotos": "+{{count}} załączonych zdjęć"
+    }
+  },
+  "savedFrames": {
+    "title": "Zapisane klatki",
+    "back": "Powrót do doświadczenia",
+    "empty": "Brak zapisanych klatek",
+    "emptyHelp": "Wróć do doświadczenia i zapisz klatkę z obrazu kamery.",
+    "frameAlt": "Zapisana klatka {{id}}",
+    "delete": "Usuń klatkę",
+    "close": "Zamknij podgląd",
+    "confirmDelete": "Czy trwale usunąć tę zapisaną klatkę?",
+    "deleted": "Klatka została usunięta.",
+    "errors": {
+      "load": "Nie udało się wczytać zapisanych klatek.",
+      "experiment": "Nie udało się wczytać doświadczenia.",
+      "delete": "Nie udało się usunąć klatki."
+    }
+  },
   "editExperiment": {
     "edit": "Edycja",
     "title": "Edytuj doświadczenie",
