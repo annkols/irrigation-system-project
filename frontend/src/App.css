@@ -1978,6 +1978,10 @@ body {
   line-height: 1.75;
 }
 
+.start-about-description-line {
+  display: block;
+}
+
 .start-contact {
   margin-top: 30px;
   display: flex;
@@ -1993,13 +1997,25 @@ body {
 .start-contact a {
   color: var(--color-primary, #007f4e);
   font: inherit;
-  font-weight: 600;
   text-decoration: none;
 }
 
 .start-contact a:hover {
   text-decoration: underline;
 }
+
+.start-contact-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #374151 !important;
+}
+
+.start-contact-action .material-symbols-outlined {
+  color: #006d3d;
+  font-size: 22px;
+}
+
 
 @media (max-width: 600px) {
   .start-brand img:first-child {

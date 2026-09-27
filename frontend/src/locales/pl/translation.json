@@ -48,7 +48,8 @@
     "more": "WIĘCEJ",
     "scrollDown": "przewiń w dół",
     "aboutTitle": "O PlantStalker",
-    "aboutText": "PlantStalker to system wspierający prowadzenie doświadczeń szklarniowych poprzez bieżące monitorowanie warunków rozwoju roślin. Umożliwia gromadzenie i analizę danych z czujników oraz zdalne sterowanie podlewaniem niezależnie dla każdej doniczki.",
+    "aboutTextLine1": "PlantStalker to system wspierający prowadzenie doświadczeń szklarniowych poprzez bieżące monitorowanie warunków rozwoju roślin. Umożliwia gromadzenie i analizę danych z czujników",
+    "aboutTextLine2": "oraz zdalne sterowanie podlewaniem niezależnie dla każdej doniczki.",
     "contactTitle": "Skontaktuj się z nami"
   },
   "login": {

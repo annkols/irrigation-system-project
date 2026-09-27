@@ -48,7 +48,8 @@
     "more": "MORE",
     "scrollDown": "scroll down",
     "aboutTitle": "About PlantStalker",
-    "aboutText": "PlantStalker supports greenhouse experiments by continuously monitoring plant development conditions. It enables the collection and analysis of sensor data, as well as remote control of irrigation independently for each pot.",
+    "aboutTextLine1": "PlantStalker supports greenhouse experiments by continuously monitoring plant development conditions. It enables the collection and analysis of sensor data,",
+    "aboutTextLine2": "as well as remote control of irrigation independently for each pot.",
     "contactTitle": "Contact us"
   },
   "login": {

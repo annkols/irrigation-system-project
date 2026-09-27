@@ -204,10 +204,15 @@ function Start() {
         </div>
 
         <div className="start-about-content">
-          <p className="start-about-description">{t("start.aboutText")}</p>
+          <p className="start-about-description">
+            <span>{t("start.aboutTextLine1")}</span>
+            <span className="start-about-description-line">{t("start.aboutTextLine2")}</span>
+          </p>
           <div className="start-contact">
-            <span>{t("start.contactTitle")}</span>
-            <a href="mailto:anna.kolanos@up.poznan.pl">anna.kolanos@up.poznan.pl</a>
+            <a className="start-contact-action" href="mailto:anna.kolanos@up.poznan.pl">
+              <span className="material-symbols-outlined" aria-hidden="true">mail</span>
+              <span>{t("start.contactTitle")}</span>
+            </a>
           </div>
         </div>
       </div>
