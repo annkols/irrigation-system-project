@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
+import { useTranslation } from "react-i18next";
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -16,6 +17,7 @@ const getAuthHeaders = () => {
 
 
 export default function SavedFrames() {
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [experiment, setExperiment] = useState(null);
@@ -31,31 +33,31 @@ export default function SavedFrames() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Failed to load saved frames.");
+        throw new Error(data.detail || t('savedFrames.errors.load'));
       }
 
       setFrames(data);
     } catch (error) {
-      toast.error(error.message || "Failed to load saved frames.");
+      toast.error(error.message || t('savedFrames.errors.load'));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
       .then((response) => {
-        if (!response.ok) throw new Error("Failed to load experiment.");
+        if (!response.ok) throw new Error(t('savedFrames.errors.experiment'));
         return response.json();
       })
       .then(setExperiment)
       .catch((error) => toast.error(error.message));
 
     fetchFrames();
-  }, [id, fetchFrames]);
+  }, [id, fetchFrames, t]);
 
   const deleteFrame = async (frame) => {
-    if (!window.confirm("Delete this saved frame permanently?")) return;
+    if (!window.confirm(t('savedFrames.confirmDelete'))) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/frames/${frame.id}/`, {
@@ -64,14 +66,14 @@ export default function SavedFrames() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete frame.");
+        throw new Error(t('savedFrames.errors.delete'));
       }
 
       setFrames((currentFrames) =>
         currentFrames.filter((item) => item.id !== frame.id)
       );
       setSelectedFrame(null);
-      toast.success("Frame deleted.");
+      toast.success(t('savedFrames.deleted'));
     } catch (error) {
       toast.error(error.message);
     }
@@ -88,23 +90,23 @@ export default function SavedFrames() {
             type="button"
             className="exp-back-btn"
             onClick={() => navigate(`/experiment/${id}`, { state: { defaultTab: 'camera' } })}
-            aria-label="Back to experiment"
+            aria-label={t('savedFrames.back')}
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div>
-            <h2>Saved frames</h2>
-            <p>{experiment?.name || "Experiment"}</p>
+            <h2>{t('savedFrames.title')}</h2>
+            <p>{experiment?.name || t('experimentForm.experiment')}</p>
           </div>
         </div>
 
         {loading ? (
-          <p className="frames-message">Loading...</p>
+          <p className="frames-message">{t('common.loading')}</p>
         ) : frames.length === 0 ? (
           <div className="frames-empty">
             <span className="material-symbols-outlined">photo_library</span>
-            <h3>No saved frames yet</h3>
-            <p>Return to the experiment and save a frame from the camera stream.</p>
+            <h3>{t('savedFrames.empty')}</h3>
+            <p>{t('savedFrames.emptyHelp')}</p>
           </div>
         ) : (
           <div className="frames-grid">
@@ -115,12 +117,12 @@ export default function SavedFrames() {
                   className="frame-preview-btn"
                   onClick={() => setSelectedFrame(frame)}
                 >
-                  <img src={frame.image_url} alt={`Saved frame ${frame.id}`} />
+                  <img src={frame.image_url} alt={t('savedFrames.frameAlt', { id: frame.id })} />
                 </button>
                 <div className="frame-card-footer">
                   <div>
                     <time dateTime={frame.captured_at}>
-                      {new Date(frame.captured_at).toLocaleString("pl-PL")}
+                      {new Date(frame.captured_at).toLocaleString(i18n.resolvedLanguage)}
                     </time>
                     {frame.note && <p>{frame.note}</p>}
                   </div>
@@ -128,7 +130,7 @@ export default function SavedFrames() {
                     type="button"
                     className="frame-delete-btn"
                     onClick={() => deleteFrame(frame)}
-                    aria-label="Delete frame"
+                    aria-label={t('savedFrames.delete')}
                   >
                     <span className="material-symbols-outlined">delete</span>
                   </button>
@@ -146,11 +148,11 @@ export default function SavedFrames() {
               type="button"
               className="frame-modal-close"
               onClick={() => setSelectedFrame(null)}
-              aria-label="Close preview"
+              aria-label={t('savedFrames.close')}
             >
               <span className="material-symbols-outlined">close</span>
             </button>
-            <img src={selectedFrame.image_url} alt={`Saved frame ${selectedFrame.id}`} />
+            <img src={selectedFrame.image_url} alt={t('savedFrames.frameAlt', { id: selectedFrame.id })} />
           </div>
         </div>
       )}

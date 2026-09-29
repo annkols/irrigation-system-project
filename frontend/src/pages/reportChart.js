@@ -1,6 +1,6 @@
 // Renders a simple line chart to a PNG data URL using a plain <canvas>,
 // independent of Recharts, so it can be embedded into the PDF report.
-export function renderLineChartImage({ points, title, color = "#006D3D", width = 900, height = 320 }) {
+export function renderLineChartImage({ points, title, color = "#006D3D", width = 900, height = 320, locale, insufficientData = "Not enough data to plot a chart." }) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -21,7 +21,7 @@ export function renderLineChartImage({ points, title, color = "#006D3D", width =
   if (valid.length < 2) {
     ctx.fillStyle = "#9ca3af";
     ctx.font = "14px Arial, sans-serif";
-    ctx.fillText("Not enough data to plot a chart.", padding.left, padding.top + plotH / 2);
+    ctx.fillText(insufficientData, padding.left, padding.top + plotH / 2);
     return canvas.toDataURL("image/png");
   }
 
@@ -63,7 +63,7 @@ export function renderLineChartImage({ points, title, color = "#006D3D", width =
     const t = xMin + (xMax - xMin) * fraction;
     const x = xScale(t);
     const date = new Date(t);
-    const text = `${date.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+    const text = `${date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`;
     ctx.textAlign = fraction === 0 ? "left" : fraction === 1 ? "right" : "center";
     ctx.fillText(text, x, height - 16);
   });

@@ -11,25 +11,28 @@ import {
 } from "recharts";
 
 import { buildChartSeries, findSharedSensorSource, formatChartTime } from "./chartDataUtils";
+import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 
 const sensors = [
-  { key: "air_temperature", label: "Temperature inside (°C)", color: "#36d45d", scope: "shared" },
-  { key: "soil_temperature", label: "Soil temperature (°C)", color: "#22c7d6", scope: "pot" },
-  { key: "air_humidity", label: "Air humidity (%)", color: "#2962ff", scope: "shared" },
-  { key: "moisture_percent", label: "Soil moisture (%)", color: "#ff7b00", scope: "pot" },
-  { key: "light_lux", label: "Light intensity (lx)", color: "#a855f7", scope: "shared" },
-  { key: "pressure_hpa", label: "Pressure (hPa)", color: "#8b4513", scope: "shared" },
-  { key: "pumpLine", label: "Pump", color: "#ff007a", scope: "pot" },
+  { key: "air_temperature", labelKey: "charts.airTemperature", color: "#36d45d", scope: "shared" },
+  { key: "soil_temperature", labelKey: "charts.soilTemperature", color: "#22c7d6", scope: "pot" },
+  { key: "air_humidity", labelKey: "charts.airHumidity", color: "#2962ff", scope: "shared" },
+  { key: "moisture_percent", labelKey: "charts.soilMoisture", color: "#ff7b00", scope: "pot" },
+  { key: "light_lux", labelKey: "charts.lightIntensity", color: "#a855f7", scope: "shared" },
+  { key: "pressure_hpa", labelKey: "charts.pressure", color: "#8b4513", scope: "shared" },
+  { key: "pumpLine", labelKey: "charts.pump", color: "#ff007a", scope: "pot" },
 ];
 
-const makeSeriesName = (config, sourcePot) => {
+const makeSeriesName = (config, sourcePot, t) => {
   const source = config.scope === "shared"
-    ? `shared, source P${sourcePot ?? "-"}`
+    ? t('charts.sharedSource', { pot: sourcePot ?? "-" })
     : `P${sourcePot ?? "-"}`;
-  return `${config.label} (${source})`;
+  return `${t(config.labelKey)} (${source})`;
 };
 
 export default function ExperimentChart({ measurements = [], selectedPot = null }) {
+  const { t, i18n } = useTranslation();
   const [leftSensor, setLeftSensor] = useState("air_temperature");
   const [rightSensor, setRightSensor] = useState("air_humidity");
   const [startDate, setStartDate] = useState("");
@@ -70,22 +73,22 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
     <div className="chart-panel">
       <div className="sensor-selectors">
         <div className="sensor-selector">
-          <label htmlFor="left-chart-sensor">Left</label>
+          <label htmlFor="left-chart-sensor">{t('charts.left')}</label>
           <select id="left-chart-sensor" value={leftSensor} onChange={(event) => setLeftSensor(event.target.value)}>
             {sensors.map((sensor) => (
               <option key={sensor.key} value={sensor.key} disabled={sensor.key === rightSensor}>
-                {sensor.label} ({sensor.scope === "shared" ? "shared" : `P${selectedPot ?? "-"}`})
+                {t(sensor.labelKey)} ({sensor.scope === "shared" ? t('charts.shared') : `P${selectedPot ?? "-"}`})
               </option>
             ))}
           </select>
         </div>
 
         <div className="sensor-selector">
-          <label htmlFor="right-chart-sensor">Right</label>
+          <label htmlFor="right-chart-sensor">{t('charts.right')}</label>
           <select id="right-chart-sensor" value={rightSensor} onChange={(event) => setRightSensor(event.target.value)}>
             {sensors.map((sensor) => (
               <option key={sensor.key} value={sensor.key} disabled={sensor.key === leftSensor}>
-                {sensor.label} ({sensor.scope === "shared" ? "shared" : `P${selectedPot ?? "-"}`})
+                {t(sensor.labelKey)} ({sensor.scope === "shared" ? t('charts.shared') : `P${selectedPot ?? "-"}`})
               </option>
             ))}
           </select>
@@ -93,20 +96,20 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
       </div>
 
       <div className="date-range-picker">
-        <input type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} aria-label="Chart start date" />
+        <LocalizedDateInput includeTime value={startDate} onChange={setStartDate} ariaLabel={t('charts.startDate')} />
         <span>—</span>
-        <input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} aria-label="Chart end date" />
+        <LocalizedDateInput includeTime value={endDate} onChange={setEndDate} ariaLabel={t('charts.endDate')} />
       </div>
 
       <p className="chart-data-note">
-        Lines use actual measurement times. A break in a line means that measurements were missing for longer than expected.
+        {t('charts.dataNote')}
       </p>
       {(!leftHasData || !rightHasData) && (
         <p className="chart-data-warning">
-          No data in the selected range for: {[
-            !leftHasData && makeSeriesName(leftConfig, leftSourcePot),
-            !rightHasData && makeSeriesName(rightConfig, rightSourcePot),
-          ].filter(Boolean).join(", ")}.
+          {t('charts.noData', { series: [
+            !leftHasData && makeSeriesName(leftConfig, leftSourcePot, t),
+            !rightHasData && makeSeriesName(rightConfig, rightSourcePot, t),
+          ].filter(Boolean).join(", ") })}
         </p>
       )}
 
@@ -121,20 +124,20 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
               domain={["dataMin", "dataMax"]}
               minTickGap={20}
               tick={{ fill: "#666", fontSize: 12 }}
-              tickFormatter={formatChartTime}
+              tickFormatter={(value) => formatChartTime(value, i18n.resolvedLanguage)}
             />
             <YAxis yAxisId="left" orientation="left" stroke={leftConfig.color} tick={{ fill: leftConfig.color, fontSize: 12 }} domain={["auto", "auto"]} />
             <YAxis yAxisId="right" orientation="right" stroke={rightConfig.color} tick={{ fill: rightConfig.color, fontSize: 12 }} domain={["auto", "auto"]} />
             <Tooltip
-              labelFormatter={formatChartTime}
-              formatter={(value, name) => [name.startsWith("Pump") ? (value ? "ON" : "OFF") : value, name]}
+              labelFormatter={(value) => formatChartTime(value, i18n.resolvedLanguage)}
+              formatter={(value, name) => [name.includes(t('charts.pump')) ? (value ? "ON" : "OFF") : value, name]}
             />
             <Legend />
             <Line
               data={leftData}
               dataKey="value"
               yAxisId="left"
-              name={makeSeriesName(leftConfig, leftSourcePot)}
+              name={makeSeriesName(leftConfig, leftSourcePot, t)}
               stroke={leftConfig.color}
               strokeWidth={3}
               dot={false}
@@ -145,7 +148,7 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
               data={rightData}
               dataKey="value"
               yAxisId="right"
-              name={makeSeriesName(rightConfig, rightSourcePot)}
+              name={makeSeriesName(rightConfig, rightSourcePot, t)}
               stroke={rightConfig.color}
               strokeWidth={3}
               dot={false}

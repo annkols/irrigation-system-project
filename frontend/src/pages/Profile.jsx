@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -9,16 +10,23 @@ const MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
 const PROFILE_PICTURE_UPLOAD_TARGET = 800 * 1024;
 const PROFILE_PICTURE_MAX_DIMENSION = 1200;
 const ALLOWED_PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ROLE_TRANSLATION_KEYS = {
+    student: "student",
+    doctoral_student: "doctoralStudent",
+    academic_employee: "academicEmployee",
+    administrative_worker: "administrativeWorker",
+    other: "other",
+};
 
-const canvasToBlob = (canvas, quality) => new Promise((resolve, reject) => {
+const canvasToBlob = (canvas, quality, errorMessage) => new Promise((resolve, reject) => {
     canvas.toBlob(
-        blob => blob ? resolve(blob) : reject(new Error("Could not process the selected image.")),
+        blob => blob ? resolve(blob) : reject(new Error(errorMessage)),
         "image/jpeg",
         quality
     );
 });
 
-const optimizeProfilePicture = async (file) => {
+const optimizeProfilePicture = async (file, messages) => {
     if (file.size <= PROFILE_PICTURE_UPLOAD_TARGET) return file;
 
     const bitmap = await createImageBitmap(file);
@@ -37,7 +45,7 @@ const optimizeProfilePicture = async (file) => {
             context.fillRect(0, 0, canvas.width, canvas.height);
             context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-            const blob = await canvasToBlob(canvas, quality);
+            const blob = await canvasToBlob(canvas, quality, messages.processingError);
             if (blob.size <= PROFILE_PICTURE_UPLOAD_TARGET) {
                 const baseName = file.name.replace(/\.[^.]+$/, "") || "profile-picture";
                 return new File([blob], `${baseName}.jpg`, {
@@ -57,11 +65,12 @@ const optimizeProfilePicture = async (file) => {
         bitmap.close();
     }
 
-    throw new Error("The image could not be reduced enough. Please select a smaller file.");
+    throw new Error(messages.reductionError);
 };
 
 export default function Profile() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -72,13 +81,15 @@ export default function Profile() {
     const [isRemovingPicture, setIsRemovingPicture] = useState(false);
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
     const pictureInputRef = useRef(null);
+    const roleKey = ROLE_TRANSLATION_KEYS[user?.profile?.role];
+    const roleLabel = roleKey ? t(`register.roles.${roleKey}`) : user?.profile?.role;
 
     useEffect(() => {
         const fetchUserProfile = async () => {
             const accessToken = localStorage.getItem("token");
 
             if (!accessToken || accessToken === "undefined") {
-                setError("No access token found. Please log in.");
+                setError(t("profile.noToken"));
                 setLoading(false);
                 return;
             }
@@ -94,26 +105,26 @@ export default function Profile() {
 
                 if (response.status === 401) {
                     localStorage.removeItem("token");
-                    setError("Session expired. Please log in again.");
+                    setError(t("profile.sessionExpired"));
                     return;
                 }
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch profile (Status: ${response.status})`);
+                    throw new Error(t("profile.fetchFailed", { status: response.status }));
                 }
 
                 const data = await response.json();
                 setUser(data);
             } catch (err) {
                 console.error("Error fetching user profile:", err);
-                setError(err.message || "Something went wrong.");
+                setError(err.message || t("profile.genericError"));
             } finally {
                 setLoading(false);
             }
         };
 
         fetchUserProfile();
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         if (!user?.profile?.profile_picture) {
@@ -131,7 +142,7 @@ export default function Profile() {
                         "Authorization": `Bearer ${localStorage.getItem("token")}`,
                     },
                 });
-                if (!response.ok) throw new Error("Failed to load profile picture.");
+                if (!response.ok) throw new Error(t("profile.imageLoadError"));
 
                 const blob = await response.blob();
                 if (!cancelled) {
@@ -149,7 +160,7 @@ export default function Profile() {
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [user?.profile?.profile_picture]);
+    }, [user?.profile?.profile_picture, t]);
 
     const handleProfilePictureChange = async (event) => {
         const input = event.target;
@@ -160,13 +171,13 @@ export default function Profile() {
         setPictureError("");
 
         if (!ALLOWED_PROFILE_PICTURE_TYPES.includes(file.type)) {
-            setPictureError("Please select a JPEG, PNG or WEBP image.");
+            setPictureError(t("profile.invalidImageType"));
             input.value = "";
             return;
         }
 
         if (file.size > MAX_PROFILE_PICTURE_SIZE) {
-            setPictureError("The profile picture cannot be larger than 5 MB.");
+            setPictureError(t("profile.imageTooLarge"));
             input.value = "";
             return;
         }
@@ -174,7 +185,10 @@ export default function Profile() {
         setIsSavingPicture(true);
 
         try {
-            const optimizedFile = await optimizeProfilePicture(file);
+            const optimizedFile = await optimizeProfilePicture(file, {
+                processingError: t("profile.imageProcessingError"),
+                reductionError: t("profile.imageReductionError"),
+            });
             const formData = new FormData();
             formData.append("profile_picture", optimizedFile);
 
@@ -191,15 +205,15 @@ export default function Profile() {
                 throw new Error(
                     data?.profile_picture?.[0]
                     || data?.detail
-                    || "Failed to update profile picture."
+                    || t("profile.updateFailed")
                 );
             }
 
             setUser(data.user);
             window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
-            setPictureMessage("Profile picture updated successfully.");
+            setPictureMessage(t("profile.updateSuccess"));
         } catch (err) {
-            setPictureError(err.message || "Failed to update profile picture.");
+            setPictureError(err.message || t("profile.updateFailed"));
         } finally {
             setIsSavingPicture(false);
             input.value = "";
@@ -221,14 +235,14 @@ export default function Profile() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data?.detail || "Failed to remove profile picture.");
+                throw new Error(data?.detail || t("profile.removeFailed"));
             }
 
             setUser(data.user);
             window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
-            setPictureMessage("Profile picture removed successfully.");
+            setPictureMessage(t("profile.removeSuccess"));
         } catch (err) {
-            setPictureError(err.message || "Failed to remove profile picture.");
+            setPictureError(err.message || t("profile.removeFailed"));
         } finally {
             setIsRemovingPicture(false);
         }
@@ -242,27 +256,27 @@ export default function Profile() {
                 <TopBar />
 
                 <header className="profile-header">
-                    <h1>My profile</h1>
+                    <h1>{t("profile.myProfile")}</h1>
 
                     <div className="header-actions">
                         {/* przycisk edytuj - na przyszłosć */}
                         <button className="edit-account-btn">
-                            Edit profile
+                            {t("profile.editProfile")}
                         </button>
 
                         {/* przycisk usuń - na przyszlość */}
                         <button className="delete-account-btn">
-                            Delete profile
+                            {t("profile.deleteProfile")}
                         </button>
                     </div>
                 </header>
 
                 {loading ? (
-                    <div className="loading">Loading profile...</div>
+                    <div className="loading">{t("profile.loading")}</div>
                 ) : error ? (
                     <div className="error-message">
                         <p>{error}</p>
-                        <button onClick={() => navigate("/")}>Go to Login</button>
+                        <button onClick={() => navigate("/")}>{t("profile.goToLogin")}</button>
                     </div>
                 ) : (
                     <div className="profile-container" style={{ padding: "1.5rem" }}>
@@ -272,15 +286,15 @@ export default function Profile() {
                                 
                                 {/* info o użytkowniku */}
                                 <div style={{ flex: 1 }}>
-                                    <h2 style={{ marginTop: 0 }}>Account Details</h2>
+                                    <h2 style={{ marginTop: 0 }}>{t("profile.accountDetails")}</h2>
                                     <ul className="my-profile-info-list">
-                                        <li><strong>First Name:</strong> {user?.first_name || "-"}</li>
-                                        <li><strong>Last Name:</strong> {user?.last_name || "-"}</li>
-                                        <li><strong>Email:</strong> {user?.email || "-"}</li>
-                                        <li><strong>Active Account:</strong> {user?.is_active ? "Yes" : "No"}</li>
-                                        <li><strong>University:</strong> {user?.profile?.university || "-"}</li>
-                                        <li><strong>Department:</strong> {user?.profile?.department || "-"}</li>
-                                        <li><strong>Role:</strong> {user?.profile?.role || "-"}</li>
+                                        <li><strong>{t("profile.firstName")}</strong> {user?.first_name || "-"}</li>
+                                        <li><strong>{t("profile.lastName")}</strong> {user?.last_name || "-"}</li>
+                                        <li><strong>{t("profile.email")}</strong> {user?.email || "-"}</li>
+                                        <li><strong>{t("profile.activeAccount")}</strong> {user?.is_active ? t("profile.yes") : t("profile.no")}</li>
+                                        <li><strong>{t("profile.university")}</strong> {user?.profile?.university || "-"}</li>
+                                        <li><strong>{t("profile.department")}</strong> {user?.profile?.department || "-"}</li>
+                                        <li><strong>{t("profile.role")}</strong> {roleLabel || "-"}</li>
                                     </ul>
                                 </div>
 
@@ -289,7 +303,7 @@ export default function Profile() {
                                     {profilePictureUrl ? (
                                         <img 
                                             src={profilePictureUrl}
-                                            alt="Profile" 
+                                            alt={t("profile.imageAlt")}
                                             className="my-profile-avatar-img"
                                         />
                                     ) : (
@@ -313,10 +327,10 @@ export default function Profile() {
                                         onClick={() => pictureInputRef.current?.click()}
                                     >
                                         {isSavingPicture
-                                            ? "Saving..."
+                                            ? t("profile.saving")
                                             : user?.profile?.profile_picture
-                                                ? "Change picture"
-                                                : "Add picture"}
+                                                ? t("profile.changePicture")
+                                                : t("profile.addPicture")}
                                     </button>
                                     {user?.profile?.profile_picture && (
                                         <button
@@ -325,11 +339,11 @@ export default function Profile() {
                                             disabled={isSavingPicture || isRemovingPicture}
                                             onClick={handleProfilePictureRemove}
                                         >
-                                            {isRemovingPicture ? "Removing..." : "Remove picture"}
+                                            {isRemovingPicture ? t("profile.removing") : t("profile.removePicture")}
                                         </button>
                                     )}
                                     <small className="my-profile-picture-help">
-                                        JPEG, PNG or WEBP, up to 5 MB
+                                        {t("profile.imageRequirements")}
                                     </small>
                                     {pictureMessage && (
                                         <p className="my-profile-picture-success" role="status">

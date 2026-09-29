@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function TopBar({ experimentName }) {
 
-    const today = new Date();
+    const { t, i18n } = useTranslation();
 
     const location = useLocation();
-    const isExperimentDetails = location.pathname.startsWith('/experiment/');
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -46,12 +46,21 @@ export default function TopBar({ experimentName }) {
 
             const isExperimentId = paths[index - 1] === 'experiment';
 
+            const translatedSegments = {
+                profile: t("navigation.profile"),
+                reports: t("navigation.reports"),
+                "search-experiments": t("navigation.searchExperiments"),
+                "search-people": t("navigation.searchPeople"),
+                "new-experiment": t("navigation.newExperiment"),
+                edit: t("editExperiment.edit"),
+            };
+
             if (isExperimentId && experimentName) {
                 formattedName = experimentName;
             } else if (segment.toLowerCase() === 'experiment') {
                 return null;
             } else {
-                formattedName = segment
+                formattedName = translatedSegments[segment] || segment
                     .replace(/-/g, " ")
                     .replace(/^./, (str) => str.toUpperCase());
             }
@@ -191,7 +200,7 @@ export default function TopBar({ experimentName }) {
                     className="topbar-breadcrumb-link" 
                     onClick={() => navigate('/dashboard')}
                 >
-                    Dashboard
+                    {t("navigation.dashboard")}
                 </span>
             
                 {breadcrumbs.map((crumb) => (
@@ -220,7 +229,7 @@ export default function TopBar({ experimentName }) {
                         type="button" 
                         className="topbar-btn" 
                         onClick={toggleNotifications}
-                        aria-label="Notifications"
+                        aria-label={t("topbar.notifications")}
                     >
                         <span className="material-symbols-outlined">
                             notifications
@@ -228,7 +237,7 @@ export default function TopBar({ experimentName }) {
                     </button>
                     {isNotificationsOpen && (
                         <div className="notifications-dropdown">
-                            <span className="notifications-empty">No unread notifications</span>
+                            <span className="notifications-empty">{t("topbar.noNotifications")}</span>
                         </div>
                     )}
                 </div>
@@ -239,7 +248,7 @@ export default function TopBar({ experimentName }) {
                         type="button" 
                         className="topbar-btn" 
                         onClick={toggleSettings}
-                        aria-label="Settings"
+                        aria-label={t("topbar.settings")}
                     >
                         <span className="material-symbols-outlined">
                             settings
@@ -250,23 +259,35 @@ export default function TopBar({ experimentName }) {
                             {/* jezyk */}
                             <div className="settings-item center-item">
                                 <div className="settings-options">
-                                    <button type="button" className="lang-btn" title="English">
-                                        <img src="https://flagcdn.com/w40/gb.png" alt="UK flag" className="flag-icon" />
+                                    <button
+                                        type="button"
+                                        className={`lang-btn ${i18n.resolvedLanguage === "en" ? "active" : ""}`}
+                                        title={t("topbar.english")}
+                                        aria-pressed={i18n.resolvedLanguage === "en"}
+                                        onClick={() => i18n.changeLanguage("en")}
+                                    >
+                                        <img src="https://flagcdn.com/w40/gb.png" alt={t("topbar.englishFlag")} className="flag-icon" />
                                     </button>
-                                    <button type="button" className="lang-btn" title="Polski">
-                                        <img src="https://flagcdn.com/w40/pl.png" alt="Poland flag" className="flag-icon" />
+                                    <button
+                                        type="button"
+                                        className={`lang-btn ${i18n.resolvedLanguage === "pl" ? "active" : ""}`}
+                                        title={t("topbar.polish")}
+                                        aria-pressed={i18n.resolvedLanguage === "pl"}
+                                        onClick={() => i18n.changeLanguage("pl")}
+                                    >
+                                        <img src="https://flagcdn.com/w40/pl.png" alt={t("topbar.polishFlag")} className="flag-icon" />
                                     </button>
                                 </div>
                             </div>
                             {/* motyw */}
                             <div className="settings-item center-item">
                                 <div className="settings-options">
-                                    <button type="button" className="theme-toggle-btn" title="Light mode">
+                                    <button type="button" className="theme-toggle-btn" title={t("topbar.lightMode")}>
                                         <span className="material-symbols-outlined">
                                             light_mode
                                         </span>
                                     </button>
-                                    <button type="button" className="theme-toggle-btn" title="Dark mode">
+                                    <button type="button" className="theme-toggle-btn" title={t("topbar.darkMode")}>
                                         <span className="material-symbols-outlined">
                                             dark_mode
                                         </span>
@@ -283,7 +304,7 @@ export default function TopBar({ experimentName }) {
                         type="button" 
                         className="topbar-btn" 
                         onClick={toggleMenu}
-                        aria-label="User profile"
+                        aria-label={t("topbar.userProfile")}
                     >
                         <span className="material-symbols-outlined">
                             account_circle
@@ -298,7 +319,7 @@ export default function TopBar({ experimentName }) {
                                     {profilePictureUrl ? (
                                         <img 
                                             src={profilePictureUrl}
-                                            alt="Profile" 
+                                            alt={t("topbar.profileImage")}
                                             className="dropdown-avatar-img"
                                         />
                                     ) : (
@@ -315,7 +336,7 @@ export default function TopBar({ experimentName }) {
                                         ? (user.first_name && user.last_name 
                                             ? `${user.first_name} ${user.last_name}` 
                                             : user.username || user.email)
-                                        : "Loading..."}
+                                        : t("common.loading")}
                                 </span>
                                 {user?.email && (
                                     <span className="user-email">
@@ -332,7 +353,7 @@ export default function TopBar({ experimentName }) {
                                     navigate("/profile");
                                 }}
                             >
-                                My profile
+                                {t("topbar.myProfile")}
                             </button>
 
                             <button 
@@ -341,7 +362,7 @@ export default function TopBar({ experimentName }) {
                                 onClick={logout} 
                                 disabled={loading}
                             >
-                                {loading ? "Logging out..." : "Log out"}
+                                {loading ? t("topbar.loggingOut") : t("topbar.logOut")}
                             </button>
                         </div>
                     )}

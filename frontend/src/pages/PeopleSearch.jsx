@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -9,6 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function PeopleSearch() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const [search, setSearch] = useState("");
     const [users, setUsers] = useState([]);
@@ -58,7 +60,7 @@ export default function PeopleSearch() {
             }
 
             if (!response.ok) {
-                throw new Error("Could not fetch users.");
+                throw new Error(t("peopleSearch.loadError"));
             }
 
             const data = await response.json();
@@ -67,13 +69,13 @@ export default function PeopleSearch() {
         } catch (error) {
             console.error("Error loading users:", error);
 
-            toast.error("Error loading users.");
+            toast.error(t("peopleSearch.loadError"));
 
             setUsers([]);
         } finally {
             setLoading(false);
         }
-    }, [search, navigate]);
+    }, [search, navigate, t]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -97,14 +99,14 @@ export default function PeopleSearch() {
                 <main className="people-search-page">
 
                     <header className="people-search-header">
-                        <h1>People Search</h1>
+                        <h1>{t("peopleSearch.title")}</h1>
                     </header>
 
                     <section className="people-search-filters">
 
                         <div className="people-search-field">
                             <label htmlFor="people-search">
-                                Search users
+                                {t("peopleSearch.searchLabel")}
                             </label>
 
                             <div className="search-input-wrapper">
@@ -116,7 +118,7 @@ export default function PeopleSearch() {
                                 <input
                                     id="people-search"
                                     type="text"
-                                    placeholder="Name, username, university..."
+                                    placeholder={t("peopleSearch.searchPlaceholder")}
                                     value={search}
                                     onChange={(e) =>
                                         setSearch(e.target.value)
@@ -132,7 +134,7 @@ export default function PeopleSearch() {
 
                         {loading ? (
                             <div className="loading">
-                                Loading...
+                                {t("common.loading")}
                             </div>
                         ) : users.length > 0 ? (
 
@@ -166,7 +168,7 @@ export default function PeopleSearch() {
                                                         user.profile
                                                             .profile_picture
                                                     }
-                                                    alt="Profile"
+                                                    alt={t("profile.imageAlt")}
                                                 />
                                             ) : (
                                                 <span className="material-symbols-outlined">
@@ -216,13 +218,13 @@ export default function PeopleSearch() {
                         ) : search.trim().length >= 2 ? (
 
                             <p>
-                                No users found.
+                                {t("peopleSearch.notFound")}
                             </p>
 
                         ) : (
 
                             <p>
-                                Start typing to search for people.
+                                {t("peopleSearch.startTyping")}
                             </p>
 
                         )}

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -11,6 +12,7 @@ export default function ExperimentCard({
 }) {
 
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const potNumbers = useMemo(() => {
         const fromPlan = experiment.pot_numbers || [];
         const fromMeasurements = measurements.map((measurement) => measurement.pot_number);
@@ -49,6 +51,19 @@ export default function ExperimentCard({
 
     };
 
+    const getStatusLabel = (status) => {
+        switch (status?.toLowerCase()) {
+            case "completed":
+                return t("experimentCard.status.completed");
+            case "in progress":
+                return t("experimentCard.status.inProgress");
+            case "not started":
+                return t("experimentCard.status.notStarted");
+            default:
+                return status?.toUpperCase() || "-";
+        }
+    };
+
     const daysAgo = () => {
 
         if (!experiment.started_at) return "-";
@@ -78,7 +93,7 @@ export default function ExperimentCard({
 
                 <img
                     src={`${API_BASE_URL}/experiments/${experiment.id}/frames/latest/image/`}
-                    alt="Latest camera frame"
+                    alt={t("experimentCard.latestFrame")}
                     className="camera-stream"
                     onError={e => {
                         e.target.style.display = 'none';
@@ -92,7 +107,7 @@ export default function ExperimentCard({
 
                 <span className={`status-badge ${getStatusClass(experiment.status)}`}>
 
-                    {experiment.status?.toUpperCase()}
+                    {getStatusLabel(experiment.status)}
 
                 </span>
 
@@ -109,14 +124,14 @@ export default function ExperimentCard({
                 <div className="card-divider"></div>
 
                 <div className="pot-selector pot-selector--card" onClick={(event) => event.stopPropagation()}>
-                    <label htmlFor={`dashboard-pot-${experiment.id}`}>Pot</label>
+                    <label htmlFor={`dashboard-pot-${experiment.id}`}>{t("experimentCard.pot")}</label>
                     <select
                         id={`dashboard-pot-${experiment.id}`}
                         value={activePot ?? ""}
                         onChange={(event) => setSelectedPot(Number(event.target.value))}
                         disabled={!potNumbers.length}
                     >
-                        {!potNumbers.length && <option value="">No pots</option>}
+                        {!potNumbers.length && <option value="">{t("experimentCard.noPots")}</option>}
                         {potNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
                     </select>
                 </div>
@@ -127,7 +142,7 @@ export default function ExperimentCard({
 
                         <span className="label">
 
-                            air temp.
+                            {t("experimentCard.airTemperature")}
 
                         </span>
 
@@ -143,7 +158,7 @@ export default function ExperimentCard({
 
                         <span className="label">
 
-                            air humidity
+                            {t("experimentCard.airHumidity")}
 
                         </span>
 
@@ -159,7 +174,7 @@ export default function ExperimentCard({
 
                         <span className="label">
 
-                            soil moisture
+                            {t("experimentCard.soilMoisture")}
 
                         </span>
 
@@ -184,9 +199,9 @@ export default function ExperimentCard({
                         {(() => {
                             const d = daysAgo();
                             if (d === null) return "-";
-                            if (d === 0) return "Starting today";
-                            if (d > 0) return `Started ${d} ${d === 1 ? "day" : "days"} ago`;
-                            return `Starts in ${Math.abs(d)} ${Math.abs(d) === 1 ? "day" : "days"}`;
+                            if (d === 0) return t("experimentCard.startingToday");
+                            if (d > 0) return t("experimentCard.startedAgo", { count: d });
+                            return t("experimentCard.startsIn", { count: Math.abs(d) });
                         })()}
 
                     </span>
@@ -202,7 +217,7 @@ export default function ExperimentCard({
                         }}
                     >
 
-                        Experiment Overview
+                        {t("experimentCard.overview")}
 
                     </button>
 

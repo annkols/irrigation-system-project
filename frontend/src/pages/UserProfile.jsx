@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function UserProfile() {
     const { id } = useParams();
+    const { t } = useTranslation();
 
     const [user, setUser] = useState(null);
 
@@ -34,7 +36,7 @@ export default function UserProfile() {
     }, [id]);
 
     if (!user) {
-        return <p>Loading...</p>;
+        return <p>{t("common.loading")}</p>;
     }
 
     return (
@@ -43,10 +45,10 @@ export default function UserProfile() {
                 {user.first_name} {user.last_name}
             </h1>
 
-            <p>Email: {user.email}</p>
+            <p>{t("profile.email")} {user.email}</p>
 
             {user.username && (
-                <p>Username: {user.username}</p>
+                <p>{t("profile.username")} {user.username}</p>
             )}
         </div>
     );

@@ -1710,6 +1710,77 @@ body {
   gap:10px;
 }
 
+.localized-date-input-wrapper {
+  width: 100%;
+}
+
+.localized-date-input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 42px 10px 12px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+}
+
+.localized-date-input:focus {
+  border-color: var(--color-primary, #007f4e);
+  outline: 2px solid rgba(0, 127, 78, 0.14);
+}
+
+.react-datepicker {
+  border-color: #d7e2dc;
+  font-family: Inter, sans-serif;
+}
+
+.react-datepicker__header {
+  background: #f2f8f5;
+  border-bottom-color: #d7e2dc;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: var(--color-primary, #007f4e);
+  color: #fff;
+}
+
+.react-datepicker__day:hover {
+  background-color: #dff1e8;
+}
+
+.localized-date-input-wrapper .react-datepicker__close-icon {
+  top: 50% !important;
+  right: 8px !important;
+  width: 16px !important;
+  height: 16px !important;
+  padding: 0 !important;
+  display: block !important;
+  border-radius: 50% !important;
+  background: #dc2626 !important;
+  transform: translateY(-50%) !important;
+}
+
+.localized-date-input-wrapper .react-datepicker__close-icon::before,
+.localized-date-input-wrapper .react-datepicker__close-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 1.5px;
+  padding: 0;
+  border-radius: 1px;
+  background: #fff !important;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.localized-date-input-wrapper .react-datepicker__close-icon::before {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
 .topbar-btn{
   display:inline-flex;
   align-items:center;
@@ -1828,6 +1899,159 @@ body {
 
 .lang-btn:hover {
   border-color: var(--color-primary,);
+}
+
+.lang-btn.active {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.start-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.start-title-second-line {
+  display: block;
+  white-space: nowrap;
+}
+
+.start-language-switcher {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  background: transparent;
+}
+
+.start-lang-btn {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.start-lang-btn:hover {
+  border-color: #fff;
+}
+
+.start-lang-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
+
+.start-about-section {
+  width: 100%;
+  min-height: 75vh;
+  padding: 80px 10%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  background: #fff;
+}
+
+.start-about-heading {
+  flex: 0 0 285px;
+}
+
+.start-about-heading h2 {
+  margin: 0;
+  color: #000;
+  font-family: Inter, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.start-about-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.start-about-description {
+  margin: 0;
+  color: #374151;
+  font-family: Inter, sans-serif;
+  font-size: 18px;
+  line-height: 1.75;
+}
+
+.start-about-description-line {
+  display: block;
+}
+
+.start-contact {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: #374151;
+  font-family: Inter, sans-serif;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.start-contact a {
+  color: var(--color-primary, #007f4e);
+  font: inherit;
+  text-decoration: none;
+}
+
+.start-contact a:hover {
+  text-decoration: underline;
+}
+
+.start-contact-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #374151 !important;
+}
+
+.start-contact-action .material-symbols-outlined {
+  color: #006d3d;
+  font-size: 22px;
+}
+
+
+@media (max-width: 600px) {
+  .start-brand img:first-child {
+    height: 48px !important;
+  }
+
+  .start-brand img:last-child {
+    height: 24px !important;
+  }
+
+  .start-language-switcher {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .start-title-second-line {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 800px) {
+  .start-about-section {
+    min-height: auto;
+    padding: 56px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 28px;
+  }
+
+  .start-about-heading {
+    flex-basis: auto;
+  }
+
+  .start-about-heading h2 {
+    font-size: 30px;
+  }
 }
 
 .theme-toggle-btn {
@@ -4368,6 +4592,7 @@ body {
 }
 .experiment-designer .form-section > input,
 .experiment-designer .description-textarea { width: 100%; }
+.experiment-designer .form-section { gap: 0; }
 .experiment-designer .description-textarea { min-height: 122px; height: 122px; }
 .experiment-designer .date-choice { gap: 0; }
 .experiment-designer .keyword-input-wrapper { align-items: center; }
@@ -4391,7 +4616,7 @@ body {
 .designer-row > input, .designer-row > select, .level-row > input { flex: 1 1 180px; min-width: 0; }
 .level-row label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .designer-remove { border: 0; background: transparent; color: #a33; cursor: pointer; padding: 8px; }
-.compact-field { display: flex; gap: 14px; align-items: center; max-width: 420px; }
+.compact-field { display: flex; gap: 11px; align-items: flex-start; max-width: 420px; }
 .compact-field input { width: 120px; }
 .combination-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
 .pot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 150px)); justify-content: center; gap: 10px; }
@@ -4412,6 +4637,7 @@ body {
 .pot-grid--reference .pot-card { min-height: 72px; }
 .pot-assignment-treatment { flex: 1; color: #66736a; font-size: 12px; margin-left: 4px; }
 .hardware-help { margin: -4px 0 12px; color: #66736a; font-size: 13px; }
+.designer-help { color: #66736a; }
 .hardware-fields { align-items: flex-end; }
 .hardware-field { flex: 1 1 190px; display: flex; flex-direction: column; gap: 6px; color: #4f5a53; font-size: 12px; font-weight: 600; }
 .hardware-field input, .hardware-field select { width: 100%; }
