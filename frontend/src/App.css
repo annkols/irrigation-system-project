@@ -1656,6 +1656,7 @@ body {
   padding:0 14px;
   cursor:pointer;
   color:#6f6f6f;
+  text-align: left;
   font-size:14px;
 }
 
@@ -4354,6 +4355,110 @@ body {
   border-radius: 6px;
   overflow-x: auto;
   font-size: 0.9rem;
+}
+
+/* profil - usuwanie konta */
+
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Właściwe okienko modala */
+.delete-modal-content {
+    background-color: var(--color-bg-card);
+    padding: 32px;
+    border-radius: var(--radius-card);
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.delete-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1.5px solid var(--color-border-input);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: var(--font-main);
+    color: var(--color-text-main);
+    background: var(--color-bg-main);
+}
+
+.delete-modal-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.delete-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.delete-modal-confirm-btn {
+  padding: 8px 12px;
+  background-color: var(--color-error);
+  color: var(--color-text-white);
+  border: none;
+  border-radius: var(--radius-normal);
+  font-size:15px;
+  font-weight:600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 0.2s ease;
+  margin-top: 8px;
+  white-space: nowrap;
+}
+.delete-modal-confirm-btn:hover {
+    color: var(--color-text-white);
+    background-color: var(--color-error);
+    filter: brightness(0.8);
+}
+
+.delete-modal-cancel-btn {
+  padding: 8px 12px;
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
+  border-radius: var(--radius-normal);
+  font-family: var(--font-main);
+  font-size:15px;
+  font-weight:600;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 0.2s ease;
+  margin-top: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.delete-modal-cancel-btn:hover {
+  background-color: var(--color-primary-hover);
+  color: var(--color-text-white);
+}
+
+.delete-modal-error {
+    color: var(--color-error);
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+    font-weight: 500;
 }
 
 /* ALERTY TOAST */

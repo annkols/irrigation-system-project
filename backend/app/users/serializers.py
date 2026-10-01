@@ -141,3 +141,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             UserProfile.objects.create(**profile_data)
 
         return user
+
+class UserDeleteConfirmSerializer(serializers.Serializer):
+    confirmation_text = serializers.CharField(required=True)
+
+    def validate_confirmation_text(self, value):
+        allowed_texts = ["usuń moje konto", "delete my account"]
+        if value.strip().lower() not in allowed_texts:
+            raise serializers.ValidationError("Invalid confirmation text.")
+        return value

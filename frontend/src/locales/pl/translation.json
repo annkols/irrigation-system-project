@@ -191,7 +191,14 @@
     "addPicture": "Dodaj zdjęcie",
     "removing": "Usuwanie...",
     "removePicture": "Usuń zdjęcie",
-    "imageRequirements": "JPEG, PNG lub WEBP, maks. 5 MB"
+    "imageRequirements": "JPEG, PNG lub WEBP, maks. 5 MB",
+    "deleteModalTitle": "Usuń konto",
+    "deleteModalText": "Czy na pewno chcesz usunąć konto? Ta operacja jest nieodwracalna, a informacje o Twoich doświadczeniach szklarniowych zostaną zachowane w bazie danych.",
+    "deleteModalPlaceholder": "Wpisz \"usuń moje konto\" aby potwierdzić",
+    "cancel": "Anuluj",
+    "deleting": "Usuwanie...",
+    "confirmDelete": "Usuń",
+    "deleteFailed": "Nie udało się usunąć konta. Spróbuj ponownie."
   },
   "experimentForm": {
     "experiment": "Doświadczenie",

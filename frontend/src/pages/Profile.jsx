@@ -83,6 +83,11 @@ export default function Profile() {
     const pictureInputRef = useRef(null);
     const roleKey = ROLE_TRANSLATION_KEYS[user?.profile?.role];
     const roleLabel = roleKey ? t(`register.roles.${roleKey}`) : user?.profile?.role;
+    // do usuwania konta
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteAccountError, setDeleteAccountError] = useState("");
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -248,6 +253,41 @@ export default function Profile() {
         }
     };
 
+    const handleAccountDelete = async () => {
+        setDeleteAccountError("");
+        setIsDeletingAccount(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me/delete/`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    confirmation_text: deleteConfirmationText,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.confirmation_text?.[0] 
+                    || data?.detail 
+                    || t("profile.deleteFailed")
+                );
+            }
+
+            localStorage.removeItem("token");
+            navigate("/");
+        } catch (err) {
+            setDeleteAccountError(err.message || t("profile.deleteFailed"));
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
+
     return (
         <div className="dashboard-page">
             <Sidebar />
@@ -264,8 +304,15 @@ export default function Profile() {
                             {t("profile.editProfile")}
                         </button>
 
-                        {/* przycisk usuń - na przyszlość */}
-                        <button className="delete-account-btn">
+                        {/* przycisk usuń */}
+                        <button 
+                            className="delete-account-btn"
+                            onClick={() => {
+                                setDeleteConfirmationText("");
+                                setDeleteAccountError("");
+                                setIsDeleteModalOpen(true);
+                            }}
+                        >
                             {t("profile.deleteProfile")}
                         </button>
                     </div>
@@ -357,6 +404,57 @@ export default function Profile() {
                                     )}
                                 </div>
 
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* modal usuwanie konta */}
+                {isDeleteModalOpen && (
+                    <div className="delete-modal-overlay">
+                        <div className="delete-modal-content">
+                            <h2>{t("profile.deleteModalTitle", "Usuń konto")}</h2>
+                            <p>
+                                {t(
+                                    "profile.deleteModalText",
+                                    "Czy na pewno chcesz usunąć konto? Wpisz \"usuń moje konto\" lub \"delete my account\", aby potwierdzić."
+                                )}
+                            </p>
+
+                            <input
+                                type="text"
+                                className="delete-modal-input"
+                                placeholder={t("profile.deleteModalPlaceholder", "Wpisz tekst potwierdzenia")}
+                                value={deleteConfirmationText}
+                                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                disabled={isDeletingAccount}
+                            />
+
+                            {deleteAccountError && (
+                                <p className="delete-modal-error" role="alert">
+                                    {deleteAccountError}
+                                </p>
+                            )}
+
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-modal-cancel-btn"
+                                    onClick={() => setIsDeleteModalOpen(false)}
+                                    disabled={isDeletingAccount}
+                                >
+                                    {t("profile.cancel", "Anuluj")}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="delete-modal-confirm-btn"
+                                    onClick={handleAccountDelete}
+                                    disabled={isDeletingAccount || !deleteConfirmationText.trim()}
+                                >
+                                    {isDeletingAccount 
+                                        ? t("profile.deleting", "Usuwanie...") 
+                                        : t("profile.confirmDelete", "Usuń")}
+                                </button>
                             </div>
                         </div>
                     </div>
