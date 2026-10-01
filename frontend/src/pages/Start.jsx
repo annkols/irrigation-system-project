@@ -205,8 +205,7 @@ function Start() {
 
         <div className="start-about-content">
           <p className="start-about-description">
-            <span>{t("start.aboutTextLine1")}</span>
-            <span className="start-about-description-line">{t("start.aboutTextLine2")}</span>
+            {t("start.aboutTextLine1")}{t("start.aboutTextLine2")}
           </p>
           <div className="start-contact">
             <a className="start-contact-action" href="mailto:anna.kolanos@up.poznan.pl">

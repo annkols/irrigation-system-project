@@ -187,7 +187,14 @@
     "addPicture": "Add picture",
     "removing": "Removing...",
     "removePicture": "Remove picture",
-    "imageRequirements": "JPEG, PNG or WEBP, up to 5 MB"
+    "imageRequirements": "JPEG, PNG or WEBP, up to 5 MB",
+    "deleteModalTitle": "Delete account",
+    "deleteModalText": "Are you certain you want to delete your account? This action is irreversible and your greenhouse experiment will remain in the database.",
+    "deleteModalPlaceholder": "Type \"delete my account\" to confirm",
+    "cancel": "Cancel",
+    "deleting": "Deleting...",
+    "confirmDelete": "Delete",
+    "deleteFailed": "Failed to delete account. Please try again."
   },
   "experimentForm": {
     "experiment": "Experiment",
