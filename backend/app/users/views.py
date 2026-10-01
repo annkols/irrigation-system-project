@@ -23,7 +23,8 @@ from .serializers import (
     RegisterSerializer,
     UserSearchSerializer,
     UserSerializer,
-    ProfilePictureUploadSerializer
+    ProfilePictureUploadSerializer,
+    UserDeleteConfirmSerializer
 )
 
 from .models import UserProfile
@@ -141,6 +142,24 @@ class UserDeleteView(generics.DestroyAPIView):
 
         return super().destroy(request, *args, **kwargs)
 
+class UserSelfDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserDeleteConfirmSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def delete(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = self.get_object()
+        self.perform_destroy(user)
+
+        return Response(
+            {"detail": "Your account has been deleted, and your experiments have been preserved."},
+            status=status.HTTP_200_OK
+        )
     
 class UserDeactivateView(generics.UpdateAPIView):
     queryset = User.objects.all()
