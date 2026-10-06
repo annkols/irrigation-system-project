@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +21,8 @@ from .serializers import MeasurementSerializer
 class MeasurementListCreateView(generics.ListCreateAPIView):
     serializer_class = MeasurementSerializer
 
+    MAX_LIMIT = 5000
+
     def get_permissions(self):
         if self.request.method == 'POST':
             return [AllowAny()]
@@ -34,6 +36,8 @@ class MeasurementListCreateView(generics.ListCreateAPIView):
         pot_number = self.request.query_params.get('pot_number')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
+        after_id = self.request.query_params.get('after_id')
+        limit = self.request.query_params.get('limit')
 
         if self.request.method == 'GET' and experiment_id:
             experiment = get_object_or_404(Experiment, pk=experiment_id)
@@ -58,6 +62,26 @@ class MeasurementListCreateView(generics.ListCreateAPIView):
 
         if date_to:
             queryset = queryset.filter(created_at__lte=date_to)
+
+        if after_id:
+            try:
+                after_id = int(after_id)
+            except (TypeError, ValueError):
+                raise ValidationError({'after_id': 'after_id musi być liczbą całkowitą.'})
+            if after_id < 0:
+                raise ValidationError({'after_id': 'after_id nie może być ujemne.'})
+            queryset = queryset.filter(id__gt=after_id)
+
+        if limit:
+            try:
+                limit = int(limit)
+            except (TypeError, ValueError):
+                raise ValidationError({'limit': 'limit musi być liczbą całkowitą.'})
+            if limit < 1 or limit > self.MAX_LIMIT:
+                raise ValidationError({
+                    'limit': f'limit musi być w zakresie 1-{self.MAX_LIMIT}.'
+                })
+            queryset = queryset[:limit]
 
         return queryset
 

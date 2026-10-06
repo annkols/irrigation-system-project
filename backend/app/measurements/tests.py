@@ -77,6 +77,48 @@ class MeasurementApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["id"] for item in response.data], [expected.id])
 
+    def test_list_can_limit_initial_measurements_and_fetch_only_new_ones(self):
+        owner = User.objects.create_user(username="owner", password="test-password")
+        experiment = Experiment.objects.create(name="Owned", owner=owner, sensor_set_id=1)
+        oldest = Measurement.objects.create(experiment=experiment, station_number=1, pot_number=1)
+        middle = Measurement.objects.create(experiment=experiment, station_number=1, pot_number=2)
+        newest = Measurement.objects.create(experiment=experiment, station_number=1, pot_number=3)
+        self.client.force_authenticate(owner)
+
+        initial_response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id, "limit": 2},
+        )
+        incremental_response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id, "after_id": middle.id, "limit": 10},
+        )
+
+        self.assertEqual(initial_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["id"] for item in initial_response.data],
+            [newest.id, middle.id],
+        )
+        self.assertNotIn(oldest.id, [item["id"] for item in initial_response.data])
+        self.assertEqual(incremental_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["id"] for item in incremental_response.data],
+            [newest.id],
+        )
+
+    def test_list_rejects_limit_above_safe_maximum(self):
+        owner = User.objects.create_user(username="owner", password="test-password")
+        experiment = Experiment.objects.create(name="Owned", owner=owner, sensor_set_id=1)
+        self.client.force_authenticate(owner)
+
+        response = self.client.get(
+            reverse("measurement-list-create"),
+            {"experiment_id": experiment.id, "limit": 5001},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("limit", response.data)
+
     def test_create_measurement_with_experiment_id(self):
         experiment = Experiment.objects.create(
             name="Sensor measurement test",

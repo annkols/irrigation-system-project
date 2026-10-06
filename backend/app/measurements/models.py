@@ -31,6 +31,10 @@ class Measurement(models.Model):
         # default sortowanie
         ordering = ['-created_at']
         indexes = [
+            models.Index(
+                fields=['experiment', '-created_at'],
+                name='meas_exp_created_idx',
+            ),
             models.Index(fields=['station_number', 'pot_number', 'created_at']),
             models.Index(fields=['created_at']),
         ]

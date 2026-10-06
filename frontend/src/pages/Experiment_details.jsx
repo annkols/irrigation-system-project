@@ -10,6 +10,8 @@ import PotComparisonChart from "./PotComparisonChart";
 import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const MEASUREMENT_REFRESH_MS = 10000;
+const INITIAL_MEASUREMENT_LIMIT = 5000;
 
 const pumpCommands = ["ON", "OFF", "AUTO"];
 const latestNonNull = rows => rows.length ? rows.reduceRight((result, row) => ({ ...result, ...Object.fromEntries(Object.entries(row).filter(([, value]) => value != null)) }), {}) : null;
@@ -64,6 +66,7 @@ function Experiment_details() {
     pump_on: true,
   });
   const lastSuccessTime = useRef(null);
+  const latestMeasurementId = useRef(0);
   const [errors, setErrors] = useState({});
   const [errorTime, setErrorTime] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -237,33 +240,68 @@ function Experiment_details() {
       .then(data => setNotes(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
 
-    const fetchMeasurements = () => {
+    let cancelled = false;
+    let refreshTimer;
+
+    const fetchMeasurements = async (initial = false) => {
       const currentTime = new Date().toLocaleString();
-      fetch(`${API_BASE_URL}/measurements/?experiment_id=${id}`, { headers: getAuthHeaders() })
-        .then(res => {
-          if (!res.ok) throw new Error("Server error");
-          return res.json();
-        })
-        .then(data => {
-          if (!data || data.length === 0) throw new Error("No measurements available");
-          setMeasurements(data);
-          lastSuccessTime.current = currentTime;
-          setErrors(prev => ({ ...prev, measurements: null }));
-          setErrorTime(null);
-        })
-        .catch(() => {
-          const successString = lastSuccessTime.current ?? t('experimentDetails.never');
-          setErrorTime(new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" }));
-          setErrors(prev => ({
-            ...prev,
-            measurements: t('experimentDetails.errors.measurements', { time: successString })
-          }));
-        });
+      const query = new URLSearchParams({
+        experiment_id: id,
+        limit: String(INITIAL_MEASUREMENT_LIMIT),
+      });
+      if (!initial && latestMeasurementId.current > 0) {
+        query.set('after_id', String(latestMeasurementId.current));
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/measurements/?${query}`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error("Server error");
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data)) return;
+
+        if (data.length > 0) {
+          latestMeasurementId.current = Math.max(
+            latestMeasurementId.current,
+            ...data.map(measurement => measurement.id)
+          );
+          if (initial) {
+            setMeasurements(data);
+          } else {
+            setMeasurements(previous => {
+              const knownIds = new Set(previous.map(measurement => measurement.id));
+              const newMeasurements = data.filter(measurement => !knownIds.has(measurement.id));
+              return newMeasurements.length ? [...newMeasurements, ...previous] : previous;
+            });
+          }
+        } else if (initial) {
+          setMeasurements([]);
+        }
+
+        lastSuccessTime.current = currentTime;
+        setErrors(prev => ({ ...prev, measurements: null }));
+        setErrorTime(null);
+      } catch {
+        if (cancelled) return;
+        const successString = lastSuccessTime.current ?? t('experimentDetails.never');
+        setErrorTime(new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" }));
+        setErrors(prev => ({
+          ...prev,
+          measurements: t('experimentDetails.errors.measurements', { time: successString })
+        }));
+      } finally {
+        if (!cancelled) {
+          refreshTimer = setTimeout(() => fetchMeasurements(false), MEASUREMENT_REFRESH_MS);
+        }
+      }
     };
 
-    fetchMeasurements();
-    const interval = setInterval(fetchMeasurements, 10000);
-    return () => clearInterval(interval);
+    latestMeasurementId.current = 0;
+    setMeasurements([]);
+    fetchMeasurements(true);
+    return () => {
+      cancelled = true;
+      clearTimeout(refreshTimer);
+    };
   }, [id, i18n.resolvedLanguage, t]);
 
   useEffect(() => {
