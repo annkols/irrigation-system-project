@@ -205,7 +205,7 @@ function Start() {
 
         <div className="start-about-content">
           <p className="start-about-description">
-            {t("start.aboutTextLine1")}{t("start.aboutTextLine2")}
+            {t("start.aboutTextLine1")}{" "}{t("start.aboutTextLine2")}
           </p>
           <div className="start-contact">
             <a className="start-contact-action" href="mailto:anna.kolanos@up.poznan.pl">

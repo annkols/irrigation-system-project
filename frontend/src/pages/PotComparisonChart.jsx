@@ -126,12 +126,12 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
               scale="time"
               domain={["dataMin", "dataMax"]}
               minTickGap={20}
-              tick={{ fill: "#666", fontSize: 12 }}
+              tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
               tickFormatter={(value) => formatChartTime(value, i18n.resolvedLanguage)}
             />
             <YAxis
               unit={selectedFeature.unit}
-              tick={{ fill: "#666", fontSize: 12 }}
+              tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
               domain={["auto", "auto"]}
             />
             <Tooltip

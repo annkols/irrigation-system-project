@@ -123,7 +123,7 @@ export default function ExperimentChart({ measurements = [], selectedPot = null 
               scale="time"
               domain={["dataMin", "dataMax"]}
               minTickGap={20}
-              tick={{ fill: "#666", fontSize: 12 }}
+              tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
               tickFormatter={(value) => formatChartTime(value, i18n.resolvedLanguage)}
             />
             <YAxis yAxisId="left" orientation="left" stroke={leftConfig.color} tick={{ fill: leftConfig.color, fontSize: 12 }} domain={["auto", "auto"]} />

@@ -2,8 +2,8 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: var(--bg-main);
-  color: var(--text-main);
+  background: var(--color-bg-main);
+  color: var(--color-text-main);
 }
 
 /* ===== PO ZMIANIE WYGLĄDU FRONTENDU 09.07.2026 ===== */
@@ -42,26 +42,27 @@ body {
 
 
 :root[data-theme="dark"] {
-  --color-primary: #35C985;
-  --color-primary-hover: #49D994;
-  --color-primary-light: #123A29;
-  --color-primary-border-hover: #286B4D;
+  color-scheme: dark;
+  --color-primary: #4ADE92;
+  --color-primary-hover: #6EE7A8;
+  --color-primary-light: #1D4937;
+  --color-primary-border-hover: #3C7A5E;
 
-  --color-secondary: #F3F4F6;
+  --color-secondary: #F1F5F3;
   
-  --color-bg-main: #0B1110;
-  --color-bg-card: #151D1A;
-  --color-bg-hover: #1D2924;
+  --color-bg-main: #17201D;
+  --color-bg-card: #202B27;
+  --color-bg-hover: #2A3832;
 
   --color-text-main: var(--color-secondary); 
-  --color-text-muted: #9CA3AF;
-  --color-text-light: #D1D5DB;
+  --color-text-muted: #B5C0BB;
+  --color-text-light: #D9E1DD;
   --color-text-white: #FFFFFF;
   
-  --color-border-light: #374151;
-  --color-border-card: #374151;
-  --color-border-input: #4B5563;
-  --color-border-divider: #273344;
+  --color-border-light: #3B4A44;
+  --color-border-card: #46564F;
+  --color-border-input: #5A6B64;
+  --color-border-divider: #33413C;
   --color-error: #F87171;
 
   --font-main: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
@@ -69,8 +70,14 @@ body {
   --radius-card: 8px;
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.02);
 
-  --action-bg: #2A2222 ;
-  --back: #6B7280;
+  --action-bg: #2A3832;
+  --back: #7B8782;
+}
+
+:root[data-theme="dark"] .sidebar-name,
+:root[data-theme="dark"] .exp-sidebar-logo-text {
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
 }
 
 /* ===== Add new experiment ===== */
@@ -820,7 +827,7 @@ body {
 }
 
 .start-contact a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .start-contact-action {
@@ -833,6 +840,12 @@ body {
 .start-contact-action .material-symbols-outlined {
   color: #006d3d;
   font-size: 22px;
+  text-decoration: none;
+}
+
+.start-contact-action:hover span:last-child,
+.start-contact-action:focus-visible span:last-child {
+  text-decoration: underline;
 }
 
 
@@ -1016,7 +1029,7 @@ body {
 /* exp card */
 .experiment-card{
   background:var(--color-bg-card);
-  border:1px solid var(--color-border-divider);
+  border:1px solid var(--color-border-card);
   border-radius:12px;
   overflow:hidden;
   cursor:pointer;
@@ -1036,6 +1049,7 @@ body {
   font-size:20px;
   margin:0 0 18px;
   line-height:1.3;
+  color: var(--color-text-main);
 }
 .card-stats{
   display:grid;
@@ -1048,7 +1062,7 @@ body {
   display:block;
   font-size:11px;
   text-transform:uppercase;
-  color:#888;
+  color:var(--color-text-muted);
   margin-bottom:5px;
 }
 
@@ -1096,8 +1110,8 @@ body {
   height: 100%;
   align-items: center;
   justify-content: center;
-  background: var(--action-bg);
-  color: #9ca3af;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
   position: absolute;
   inset: 0;
 }
@@ -1163,8 +1177,8 @@ body {
 }
 
 .overview-btn {
-  background: #006D3D;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-text-white);
   border: none;
   padding: 10px 18px;
   border-radius: 6px;
@@ -1175,7 +1189,7 @@ body {
 }
 
 .overview-btn:hover {
-  background: #2c9b69;
+  background: var(--color-primary-hover);
 }
 
 .card-footer {
@@ -1210,8 +1224,12 @@ body {
 
 .saved-frames-btn {
   border: 1px solid var(--color-primary);
-  background: white;
+  background: var(--color-bg-card);
   color: var(--color-primary);
+}
+
+.saved-frames-btn:hover {
+  background: var(--color-primary-light);
 }
 
 .capture-frame-btn:disabled {
@@ -1582,7 +1600,7 @@ body {
   width: 250px;
   flex-shrink: 0;
   background: var(--color-bg-card);
-  border-right: 1px solid #ececec;
+  border-right: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
@@ -1803,6 +1821,7 @@ body {
   font-size: 20px;
   font-weight: 700;
   margin: 0 0 20px 0;
+  color: var(--color-text-main);
 }
 
 .exp-tab-actions {
@@ -2335,7 +2354,8 @@ body {
   aspect-ratio: 16/9;
   border-radius: 10px;
   overflow: hidden;
-  background: #E5E7EB;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-card);
 }
 
 .exp-camera-stream {
@@ -2354,7 +2374,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #9CA3AF;
+  color: var(--color-text-muted);
 }
 
 .exp-camera-placeholder .material-symbols-outlined {
@@ -2976,6 +2996,7 @@ body {
   font-size:34px;
   font-weight:700;
   margin:0;
+  color: var(--color-text-main);
 }
 
 .profile-header p{
@@ -3041,10 +3062,12 @@ body {
 }
 
 .my-profile-card {
-  background-color: #ffffff;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: var(--color-text-main);
 }
 
 .my-profile-card-inner {
@@ -3058,6 +3081,11 @@ body {
   list-style-type: none;
   padding: 0;
   line-height: 2rem;
+  color: var(--color-text-light);
+}
+
+.my-profile-info-list strong {
+  color: var(--color-text-main);
 }
 
 .my-profile-picture-wrapper {
@@ -3075,6 +3103,7 @@ body {
   height: 160px;
   border-radius: 50%;
   object-fit: cover;
+  border: 1px solid var(--color-border-card);
 }
 
 .my-profile-avatar-placeholder {
@@ -3126,7 +3155,7 @@ body {
   padding: 8px 12px;
   border: 1px solid var(--color-error);
   border-radius: var(--radius-normal);
-  background-color: #ffffff;
+  background-color: var(--color-bg-card);
   color: var(--color-error);
   font-family: var(--font-main);
   font-size: 14px;
@@ -3172,6 +3201,12 @@ body {
   border-radius: 6px;
   overflow-x: auto;
   font-size: 0.9rem;
+}
+
+:root[data-theme="dark"] .edit-account-btn,
+:root[data-theme="dark"] .my-profile-picture-btn,
+:root[data-theme="dark"] .delete-modal-cancel-btn {
+  color: #102019;
 }
 
 /* profil - usuwanie konta */
@@ -3372,13 +3407,13 @@ body {
 
 .people-search-header h1 {
   margin: 0;
-  color: #064d3b;
+  color: var(--color-text-main);
   font-size: 22px;
 }
 
 .people-search-header p {
   margin: 4px 0 0;
-  color: #6f7c78;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -3389,10 +3424,10 @@ body {
 
   padding: 14px;
 
-  border: 1px solid #d8dedb;
+  border: 1px solid var(--color-border-card);
   border-radius: 8px;
 
-  background: #fafcfb;
+  background: var(--color-bg-card);
 }
 
 .people-search-field {
@@ -3403,7 +3438,7 @@ body {
 
 .people-search-field label {
   font-size: 10px;
-  color: #42504c;
+  color: var(--color-text-light);
 }
 
 .people-search-field input {
@@ -3414,23 +3449,24 @@ body {
 
   padding: 0 10px;
 
-  border: 1px solid #d4dad7;
+  border: 1px solid var(--color-border-input);
   border-radius: 5px;
 
-  background: white;
+  background: var(--color-bg-main);
 
   font-size: 11px;
-  color: #34423e;
+  color: var(--color-text-main);
 
   outline: none;
 }
 
 .people-search-field input::placeholder {
-  color: #a2aaa7;
+  color: var(--color-text-muted);
 }
 
 .people-search-field input:focus {
-  border-color: #76b59c;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .search-input-wrapper {
@@ -3450,13 +3486,14 @@ body {
   transform: translateY(-50%);
 
   font-size: 16px;
-  color: #75817d;
+  color: var(--color-text-muted);
 
   pointer-events: none;
 }
 
 .people-results {
   min-height: 250px;
+  margin-top: 20px;
 }
 .people-navigation {
   display: flex;
@@ -3466,27 +3503,53 @@ body {
   gap: 10px;
 
   font-size: 11px;
-  color: #68746f;
+  color: var(--color-text-muted);
 }
 
 .navigation-button {
   width: 28px;
   height: 28px;
 
-  border: 1px solid #d6ddda;
+  border: 1px solid var(--color-border-input);
   border-radius: 5px;
 
-  background: white;
+  background: var(--color-bg-card);
 
-  color: #42504c;
+  color: var(--color-text-main);
 
   cursor: pointer;
 }
 
 .navigation-button:disabled {
-  color: #b8c0bd;
-  background: #fafafa;
+  color: var(--color-text-muted);
+  background: var(--color-bg-hover);
   cursor: default;
+}
+
+.navigation-button:not(:disabled):hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+:root[data-theme="dark"] .status-badge.progress {
+  background: #214B38;
+  color: #83F0B7;
+}
+
+:root[data-theme="dark"] .status-badge.completed {
+  background: #233B55;
+  color: #93C5FD;
+}
+
+:root[data-theme="dark"] .status-badge.not-started {
+  background: #36413D;
+  color: var(--color-text-light);
+}
+
+:root[data-theme="dark"] .overview-btn,
+:root[data-theme="dark"] .new-experiment-btn {
+  color: #102019;
 }
 
 /* Elastyczny kreator doświadczenia */
@@ -3564,9 +3627,9 @@ body {
 .hardware-field { flex: 1 1 190px; display: flex; flex-direction: column; gap: 6px; color: #4f5a53; font-size: 12px; font-weight: 600; }
 .hardware-field input, .hardware-field select { width: 100%; }
 .pot-selector { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
-.pot-selector label { color: #68716b; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-.pot-selector select { min-width: 74px; height: 32px; padding: 4px 26px 4px 9px; border: 1px solid #cfd5d1; border-radius: 7px; background: #fff; color: #26302a; font-size: 12px; outline: none; }
-.pot-selector select:focus { border-color: #7f8d84; box-shadow: 0 0 0 2px rgba(90, 105, 96, .1); }
+.pot-selector label { color: var(--color-text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.pot-selector select { min-width: 74px; height: 32px; padding: 4px 26px 4px 9px; border: 1px solid var(--color-border-input); border-radius: 7px; background: var(--color-bg-card); color: var(--color-text-main); font-size: 12px; outline: none; }
+.pot-selector select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent); }
 .pot-selector--card { margin: 0 0 12px; justify-content: flex-start; }
 .pot-selector--section { margin: 0 0 12px; }
 .experiment-layout-card .pot-grid { width: 100%; margin-top: 14px; }
@@ -3693,6 +3756,69 @@ body {
 .design-summary { border: 1px solid #cfe0d4; background: #f5faf6; border-radius: 12px; padding: 18px; }
 .designer-error { display: block; margin: 14px 0; }
 .designer-navigation { margin-top: 24px; }
+
+/* Dark theme for every step of the experiment wizard. */
+:root[data-theme="dark"] .experiment-designer {
+  border-color: var(--color-border-card);
+  background: var(--color-bg-card);
+}
+
+:root[data-theme="dark"] .experiment-designer input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] .experiment-designer select,
+:root[data-theme="dark"] .experiment-designer textarea {
+  background: var(--color-bg-main);
+  border-color: var(--color-border-input);
+  color: var(--color-text-main);
+  caret-color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .experiment-designer input::placeholder,
+:root[data-theme="dark"] .experiment-designer textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+:root[data-theme="dark"] .experiment-designer input:not([type="checkbox"]):not([type="radio"]):focus,
+:root[data-theme="dark"] .experiment-designer select:focus,
+:root[data-theme="dark"] .experiment-designer textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+:root[data-theme="dark"] .experiment-designer .designer-navigation {
+  border-color: var(--color-border-light);
+}
+
+:root[data-theme="dark"] .experiment-designer .btn-create {
+  color: #102019;
+}
+
+:root[data-theme="dark"] .factor-card,
+:root[data-theme="dark"] .hardware-layout-preview,
+:root[data-theme="dark"] .combination-card,
+:root[data-theme="dark"] .pot-assignment,
+:root[data-theme="dark"] .design-summary {
+  background: var(--color-bg-main);
+  border-color: var(--color-border-card);
+  color: var(--color-text-main);
+}
+
+:root[data-theme="dark"] .combination-card.selected,
+:root[data-theme="dark"] .pot-assignment.monitored {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .pot-card small,
+:root[data-theme="dark"] .frequency-grid small,
+:root[data-theme="dark"] .hardware-layout-preview-header span,
+:root[data-theme="dark"] .hardware-layout-preview > p,
+:root[data-theme="dark"] .pot-assignment-treatment,
+:root[data-theme="dark"] .hardware-help,
+:root[data-theme="dark"] .designer-help,
+:root[data-theme="dark"] .hardware-field {
+  color: var(--color-text-muted);
+}
 
 @media (max-width: 720px) {
   .designer-row, .level-row { align-items: stretch; flex-direction: column; }
@@ -3894,6 +4020,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  color: var(--color-text-main);
 }
 
 .sensor-selectors {
@@ -3923,7 +4050,7 @@ body {
   padding: 9px 12px;
   font-size: 14px;
   font-family: var(--font-main);
-  background: var(--color-bg-main);
+  background: var(--color-bg-card);
   color: var(--color-text-main);
 }
 
@@ -3965,7 +4092,7 @@ body {
   padding: 9px 12px;
   font-size: 14px;
   font-family: var(--font-main);
-  background: var(--color-bg-main);
+  background: var(--color-bg-card);
   color: var(--color-text-main);
 }
 
@@ -3986,7 +4113,7 @@ body {
   padding: 9px 12px;
   font-size: 14px;
   font-family: var(--font-main);
-  background: var(--color-bg-main);
+  background: var(--color-bg-card);
   color: var(--color-text-main);
 }
 
@@ -4008,6 +4135,53 @@ body {
   font-weight: 600;
 }
 
+:root[data-theme="dark"] .exp-tab-analytics .recharts-cartesian-axis-tick-value,
+:root[data-theme="dark"] .exp-tab-analytics .recharts-legend-item-text {
+  fill: var(--color-text-muted);
+  color: var(--color-text-muted) !important;
+}
+
+:root[data-theme="dark"] .exp-tab-analytics .recharts-cartesian-grid line {
+  stroke: var(--color-border-light);
+}
+
+:root[data-theme="dark"] .exp-tab-analytics .recharts-default-tooltip {
+  background: var(--color-bg-card) !important;
+  border: 1px solid var(--color-border-card) !important;
+  border-radius: 8px;
+  color: var(--color-text-main) !important;
+}
+
+:root[data-theme="dark"] .react-datepicker,
+:root[data-theme="dark"] .react-datepicker__header,
+:root[data-theme="dark"] .react-datepicker__time-container,
+:root[data-theme="dark"] .react-datepicker__time-container .react-datepicker__time,
+:root[data-theme="dark"] .react-datepicker__time-container .react-datepicker__time-box {
+  background: var(--color-bg-card);
+  border-color: var(--color-border-card);
+  color: var(--color-text-main);
+}
+
+:root[data-theme="dark"] .react-datepicker__current-month,
+:root[data-theme="dark"] .react-datepicker-time__header,
+:root[data-theme="dark"] .react-datepicker__day-name,
+:root[data-theme="dark"] .react-datepicker__day,
+:root[data-theme="dark"] .react-datepicker__time-name,
+:root[data-theme="dark"] .react-datepicker__time-list-item {
+  color: var(--color-text-main);
+}
+
+:root[data-theme="dark"] .react-datepicker__day:hover,
+:root[data-theme="dark"] .react-datepicker__time-list-item:hover {
+  background: var(--color-bg-hover) !important;
+}
+
+:root[data-theme="dark"] .react-datepicker__day--selected,
+:root[data-theme="dark"] .react-datepicker__time-list-item--selected {
+  background: var(--color-primary) !important;
+  color: #07110d !important;
+}
+
 
 .keyword-input-wrapper {
   display: flex;
@@ -4026,13 +4200,21 @@ body {
   margin-top: 4px;
 }
 
+.exp-details-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .exp-keyword {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background-color: var(--action-bg);
   border: 1px solid var(--back);
-  color: var(--text-main);
+  color: var(--color-text-main);
   padding: 4px 10px;
   border-radius: 16px;
   font-size: 13px;
@@ -4072,7 +4254,7 @@ body {
   gap: 6px;
   background-color: var(--action-bg);
   border: 1px solid var(--back);
-  color: var(--text-main);
+  color: var(--color-text-main);
   padding: 4px 10px;
   border-radius: 16px;
   font-size: 13px;
@@ -4085,7 +4267,7 @@ body {
   padding: 0 2px;
   line-height: 1;
   font-size: 16px;
-  color: var(--text-main);
+  color: var(--color-text-main);
   display: flex;
   align-items: center;
   justify-content: center;
