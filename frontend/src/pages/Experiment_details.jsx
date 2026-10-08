@@ -675,7 +675,7 @@ function Experiment_details() {
                   </div>
                 </div>
                 {experiment.started_at && !experiment.finished_at && (
-                  <button className="end-experiment-btn end-experiment-btn--new" onClick={handleEndExperiment}>
+                  <button className="end-experiment-btn--new" onClick={handleEndExperiment}>
                     <span className="material-symbols-outlined">check</span>
                     {t('experimentDetails.endExperiment')}
                   </button>
