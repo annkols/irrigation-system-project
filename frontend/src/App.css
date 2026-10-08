@@ -2220,6 +2220,18 @@ body {
   color: #FFFFFF;
 }
 
+:root[data-theme="dark"] .exp-pump-btn.active {
+  background: #294438;
+  border-color: var(--color-primary);
+  color: #E4F8ED;
+}
+
+:root[data-theme="dark"] .exp-pump-btn.active:hover {
+  background: #315343;
+  border-color: var(--color-primary-hover);
+  color: #FFFFFF;
+}
+
 .exp-pump-btn:disabled {
   cursor: wait;
   opacity: 0.65;
