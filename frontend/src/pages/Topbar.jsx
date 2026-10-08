@@ -15,6 +15,8 @@ export default function TopBar({ experimentName }) {
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+    const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
@@ -28,6 +30,15 @@ export default function TopBar({ experimentName }) {
     const toggleMenu = () => setIsMenuOpen((prev) => !prev);
     const toggleNotifications = () => setIsNotificationsOpen((prev) => !prev);
     const toggleSettings = () => setIsSettingsOpen((prev) => !prev);
+
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+        }, [theme]);
+
+    const setLightMode = () => {setTheme("light");};
+        
+    const setDarkMode = () => {setTheme("dark");};
 
     const generateBreadcrumbs = () => {
         const paths = location.pathname.split("/").filter(Boolean);
@@ -282,12 +293,12 @@ export default function TopBar({ experimentName }) {
                             {/* motyw */}
                             <div className="settings-item center-item">
                                 <div className="settings-options">
-                                    <button type="button" className="theme-toggle-btn" title={t("topbar.lightMode")}>
+                                    <button type="button" className={`theme-toggle-btn ${theme === "light" ? "active" : ""}`} title={t("topbar.lightMode")} onClick={setLightMode} aria-pressed={theme === "light"}>
                                         <span className="material-symbols-outlined">
                                             light_mode
                                         </span>
                                     </button>
-                                    <button type="button" className="theme-toggle-btn" title={t("topbar.darkMode")}>
+                                    <button type="button" className={`theme-toggle-btn ${theme === "dark" ? "active" : ""}`} title={t("topbar.darkMode")} onClick={setDarkMode} aria-pressed={theme === "dark"}>
                                         <span className="material-symbols-outlined">
                                             dark_mode
                                         </span>
