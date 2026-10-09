@@ -12,7 +12,8 @@ from .views import (
     UserDetailView,
     UserListView,
     UserSearchView,
-    CurrentUserProfilePictureView
+    CurrentUserProfilePictureView,
+    UserNotificationsView
 )
 
 urlpatterns = [
@@ -28,5 +29,6 @@ urlpatterns = [
     path("auth/me/delete/", UserSelfDeleteView.as_view(), name="user-self-delete"),
     path("users/<int:pk>/deactivate/", UserDeactivateView.as_view(), name="user-deactivate"),
     path("users/<int:pk>/activate/", UserActivateView.as_view(), name="user-activate"),
-    path("auth/me/avatar/", CurrentUserProfilePictureView.as_view(), name="auth-me-avatar")
+    path("auth/me/avatar/", CurrentUserProfilePictureView.as_view(), name="auth-me-avatar"),
+    path('notifications/', UserNotificationsView.as_view(), name='user-notifications'),
 ]

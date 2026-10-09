@@ -2,7 +2,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.db.models import Q
 from django.http import FileResponse, Http404
+from django.utils import timezone
 import mimetypes
+
+from experiments.models import Experiment
 
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -278,3 +281,59 @@ class CurrentUserProfilePictureView(APIView):
                 context={"request": request}
             ).data
         }, status=status.HTTP_200_OK)
+
+class UserNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        now = timezone.now()
+        notifications = []
+
+        user_experiments = Experiment.objects.filter(
+            Q(owner=user) | Q(collaborator_memberships__user=user)
+        ).distinct()
+
+        for exp in user_experiments:
+            
+            # Koniec eksperymentu (planned_end nadszedł)
+            if exp.planned_end_at and exp.planned_end_at <= now and not exp.finished_at:
+                notifications.append({
+                    "id": f"exp_ended_{exp.id}",
+                    "type": "experiment_ended",
+                    "title": "Koniec eksperymentu",
+                    "message": f"Doświadczenie '{exp.name}' osiągnęło planowany czas zakończenia.",
+                    "experiment_id": exp.id,
+                    "created_at": exp.planned_end_at
+                })
+
+            # Błąd od czujników
+            # Miejsce na Twoją logikę błędów pomiarów dla eksperymentu, np.:
+            # if getattr(exp, 'has_measurement_error', False):
+            #     notifications.append({
+            #         "id": f"sensor_error_{exp.id}",
+            #         "type": "sensor_error",
+            #         "title": "Błąd pomiarów",
+            #         "message": f"Wykryto problem z odczytami w '{exp.name}'.",
+            #         "experiment_id": exp.id,
+            #     })
+
+            # Błąd od kamery
+            # Miejsce na logikę błędów kamery dla eksperymentu, np.:
+            # if getattr(exp, 'has_camera_error', False):
+            #     notifications.append({
+            #         "id": f"camera_error_{exp.id}",
+            #         "type": "camera_error",
+            #         "title": "Błąd kamery",
+            #         "message": f"Wystąpił problem z rejestracją obrazu w '{exp.name}'.",
+            #         "experiment_id": exp.id,
+            #     })
+
+            # POTENCJALNEI DODATKOWE POWIADOMIENIA (TODO):
+            # 24h przed planowanym końcem
+            # 24h przed planowanym rozpoczęciem
+            # w momencie rozpoczęcia eksperymentu (?)
+            # Dodano użytkownika jako collabolator
+            # Anomalie w wynikach (np. mega wysoka tempertura)
+
+        return Response(notifications)
