@@ -65,7 +65,23 @@ export default function TopBar({ experimentName }) {
         return () => clearInterval(interval);
     }, []);
 
-    const handleNotificationClick = (notification) => {
+    const handleNotificationClick = async (notification) => {
+        const accessToken = localStorage.getItem("token");
+        try {
+            await fetch(`${API_BASE_URL}/notifications/dismiss/`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ notification_id: notification.id }),
+            });
+        } catch (err) {
+            console.error("Error dismissing notification:", err);
+        }
+
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
         setIsNotificationsOpen(false);
         if (notification.experiment_id) {
             navigate(`/experiment/${notification.experiment_id}`);
@@ -301,7 +317,10 @@ export default function TopBar({ experimentName }) {
                                             <strong>{t(`notifications.${notif.type}_title`)}</strong>
                                         </p>
                                         <p className="notification-message">
-                                            {t(`notifications.${notif.type}_message`, notif.params)}
+                                            {t(`notifications.${notif.type}_message`, {
+                                                ...notif.params,
+                                                name: notif.params?.name ? notif.params.name.replace(/-/g, " ") : ""
+                                            })}
                                         </p>
                                     </div>
                                 ))

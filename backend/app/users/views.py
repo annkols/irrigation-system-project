@@ -6,6 +6,7 @@ from django.utils import timezone
 import mimetypes
 
 from experiments.models import Experiment
+from .models import DismissedNotification
 
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -290,6 +291,11 @@ class UserNotificationsView(APIView):
         now = timezone.now()
         notifications = []
 
+        dismissed_ids = set(
+            DismissedNotification.objects.filter(user=user)
+            .values_list("notification_id", flat=True)
+        )
+
         user_experiments = Experiment.objects.filter(
             Q(owner=user) | Q(collaborator_memberships__user=user)
         ).distinct()
@@ -297,23 +303,27 @@ class UserNotificationsView(APIView):
         for exp in user_experiments:
             
             # Koniec eksperymentu (planned_end nadszedł)
+            notif_id = f"exp_ended_{exp.id}"
             if exp.planned_end_at and exp.planned_end_at <= now and not exp.finished_at:
-                notifications.append({
-                    "id": f"exp_ended_{exp.id}",
-                    "type": "experiment_ended",
-                    "experiment_id": exp.id,
-                    "params": {"name": exp.name},
-                    "created_at": exp.planned_end_at
-                })
+                if notif_id not in dismissed_ids:
+                    notifications.append({
+                        "id": notif_id,
+                        "type": "experiment_ended",
+                        "experiment_id": exp.id,
+                        "params": {"name": exp.name},
+                        "created_at": exp.planned_end_at
+                    })
 
+            # Błąd od czujników
+            sensor_notif_id = f"sensor_error_{exp.id}"
             is_in_progress = exp.started_at and exp.started_at <= now and not exp.finished_at
 
             if is_in_progress:
-                # Błąd od czujników
                 freq_seconds = getattr(exp, 'measurement_frequency_seconds', 900)
-                # Dopuszczalny bufor: 2x częstotliwość pomiarów, ale nie mniej niż 30 minut
+		        # Dopuszczalny bufor: 2x częstotliwość pomiarów, ale nie mniej niż 30 minut
                 threshold_seconds = max(freq_seconds * 2, 1800)
                 latest_measurement = exp.measurements.first()
+                
                 has_sensor_error = False
                 if not latest_measurement:
                     if (now - exp.started_at).total_seconds() > threshold_seconds:
@@ -322,9 +332,9 @@ class UserNotificationsView(APIView):
                     if (now - latest_measurement.created_at).total_seconds() > threshold_seconds:
                         has_sensor_error = True
 
-                if has_sensor_error:
+                if has_sensor_error and sensor_notif_id not in dismissed_ids:
                     notifications.append({
-                        "id": f"sensor_error_{exp.id}",
+                        "id": sensor_notif_id,
                         "type": "sensor_error",
                         "experiment_id": exp.id,
                         "params": {"name": exp.name},
@@ -341,3 +351,17 @@ class UserNotificationsView(APIView):
             # Anomalie w wynikach (np. mega wysoka tempertura)
 
         return Response(notifications)
+
+class DismissNotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        notification_id = request.data.get("notification_id")
+        if not notification_id:
+            return Response({"detail": "notification_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        DismissedNotification.objects.get_or_create(
+            user=request.user,
+            notification_id=notification_id
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
