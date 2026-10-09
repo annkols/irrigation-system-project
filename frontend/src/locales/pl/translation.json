@@ -38,6 +38,12 @@
     "logOut": "Wyloguj się",
     "loggingOut": "Wylogowywanie..."
   },
+  "notifications": {
+    "experiment_ended_title": "Koniec eksperymentu",
+    "experiment_ended_message": "Doświadczenie \"{{name}}\" osiągnęło planowany czas zakończenia.",
+    "sensor_error_title": "Błąd odczytów",
+    "sensor_error_message": "Wykryto problem z czujnikami w \"{{name}}\"."
+  },
   "start": {
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
     "titleLine1": "System zarządzania",

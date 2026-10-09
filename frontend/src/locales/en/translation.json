@@ -38,6 +38,12 @@
     "logOut": "Log out",
     "loggingOut": "Logging out..."
   },
+  "notifications": {
+    "experiment_ended_title": "Experiment Ended",
+    "experiment_ended_message": "The experiment \"{{name}}\" has reached its planned end time.",
+    "sensor_error_title": "Sensor Error",
+    "sensor_error_message": "A sensor issue was detected in \"{{name}}\"."
+  },
   "start": {
     "sessionExpired": "Your session has expired. Please sign in again.",
     "titleLine1": "Greenhouse experiment",

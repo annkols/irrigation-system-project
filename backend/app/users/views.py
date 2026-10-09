@@ -301,33 +301,14 @@ class UserNotificationsView(APIView):
                 notifications.append({
                     "id": f"exp_ended_{exp.id}",
                     "type": "experiment_ended",
-                    "title": "Koniec eksperymentu",
-                    "message": f"Doświadczenie '{exp.name}' osiągnęło planowany czas zakończenia.",
                     "experiment_id": exp.id,
+                    "params": {"name": exp.name},
                     "created_at": exp.planned_end_at
                 })
 
             # Błąd od czujników
-            # Miejsce na Twoją logikę błędów pomiarów dla eksperymentu, np.:
-            # if getattr(exp, 'has_measurement_error', False):
-            #     notifications.append({
-            #         "id": f"sensor_error_{exp.id}",
-            #         "type": "sensor_error",
-            #         "title": "Błąd pomiarów",
-            #         "message": f"Wykryto problem z odczytami w '{exp.name}'.",
-            #         "experiment_id": exp.id,
-            #     })
 
             # Błąd od kamery
-            # Miejsce na logikę błędów kamery dla eksperymentu, np.:
-            # if getattr(exp, 'has_camera_error', False):
-            #     notifications.append({
-            #         "id": f"camera_error_{exp.id}",
-            #         "type": "camera_error",
-            #         "title": "Błąd kamery",
-            #         "message": f"Wystąpił problem z rejestracją obrazu w '{exp.name}'.",
-            #         "experiment_id": exp.id,
-            #     })
 
             # POTENCJALNEI DODATKOWE POWIADOMIENIA (TODO):
             # 24h przed planowanym końcem
