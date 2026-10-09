@@ -306,7 +306,30 @@ class UserNotificationsView(APIView):
                     "created_at": exp.planned_end_at
                 })
 
-            # Błąd od czujników
+            is_in_progress = exp.started_at and exp.started_at <= now and not exp.finished_at
+
+            if is_in_progress:
+                # Błąd od czujników
+                freq_seconds = getattr(exp, 'measurement_frequency_seconds', 900)
+                # Dopuszczalny bufor: 2x częstotliwość pomiarów, ale nie mniej niż 30 minut
+                threshold_seconds = max(freq_seconds * 2, 1800)
+                latest_measurement = exp.measurements.first()
+                has_sensor_error = False
+                if not latest_measurement:
+                    if (now - exp.started_at).total_seconds() > threshold_seconds:
+                        has_sensor_error = True
+                else:
+                    if (now - latest_measurement.created_at).total_seconds() > threshold_seconds:
+                        has_sensor_error = True
+
+                if has_sensor_error:
+                    notifications.append({
+                        "id": f"sensor_error_{exp.id}",
+                        "type": "sensor_error",
+                        "experiment_id": exp.id,
+                        "params": {"name": exp.name},
+                        "created_at": latest_measurement.created_at if latest_measurement else exp.started_at
+                    })
 
             # Błąd od kamery
 
