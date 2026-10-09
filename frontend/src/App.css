@@ -6201,3 +6201,126 @@ body {
     width: 100%;
   }
 }
+
+/* Klasyczne, czytelne proporcje strony startowej na telefonie. */
+@media (max-width: 600px) {
+  .start-hero-content {
+    gap: 20px;
+    padding: 20px 18px 36px;
+    transform: translateY(-10px);
+  }
+
+  .start-title {
+    width: min(100%, 340px);
+    font-size: clamp(27px, 8vw, 32px);
+    line-height: 1.16;
+  }
+
+  .start-auth-actions {
+    width: min(100%, 330px);
+    gap: 12px;
+  }
+
+  .start-auth-button {
+    min-height: 48px;
+    padding: 11px 18px;
+    font-size: 16px;
+  }
+
+  .start-copyright {
+    width: min(100%, 330px);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .start-more > span {
+    font-size: 11px;
+  }
+
+  .start-about-section {
+    padding: 44px 20px;
+    gap: 22px;
+  }
+
+  .start-about-heading h2 {
+    font-size: 27px;
+  }
+
+  .start-about-description {
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .start-contact {
+    margin-top: 26px;
+    font-size: 17px;
+  }
+
+  .start-contact-action .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .login-box {
+    width: min(340px, 100%);
+    padding: 26px 20px 22px;
+    gap: 14px;
+  }
+
+  .login-box h2 {
+    font-size: 24px;
+  }
+
+  .login-box form {
+    gap: 12px;
+  }
+
+  .login-box input {
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .login-box button[type="submit"] {
+    min-height: 46px;
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .login-password-field .password-toggle {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .start-title {
+    width: min(100%, 300px);
+    font-size: 26px;
+  }
+
+  .start-about-heading h2 {
+    font-size: 25px;
+  }
+
+  .start-about-description,
+  .start-contact {
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 560px) and (max-width: 600px) {
+  .start-hero-content {
+    gap: 12px;
+    padding-top: 10px;
+    padding-bottom: 16px;
+  }
+
+  .start-title {
+    font-size: 24px;
+  }
+
+  .start-auth-button {
+    min-height: 42px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
