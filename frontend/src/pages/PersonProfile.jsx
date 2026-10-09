@@ -118,15 +118,12 @@ export default function PersonProfile() {
                         </button>
                     </div>
                 ) : (
-                    <div
-                        className="profile-container"
-                        style={{ padding: "1.5rem" }}
-                    >
+                    <div className="profile-container">
                         <div className="my-profile-card">
                             <div className="my-profile-card-inner">
 
-                                <div style={{ flex: 1 }}>
-                                    <h2 style={{ marginTop: 0 }}>
+                                <div className="my-profile-details">
+                                    <h2>
                                         {t("profile.accountDetails")}
                                     </h2>
 

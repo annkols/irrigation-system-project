@@ -26,10 +26,9 @@ export default function Dashboard() {
                 ? { Authorization: `Bearer ${token}` }
                 : {};
 
-            const [ownedRes, collaboratedRes, measRes] = await Promise.all([
+            const [ownedRes, collaboratedRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/experiments/owned/`, { headers }),
-                fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers }),
-                fetch(`${API_BASE_URL}/measurements/`, { headers })
+                fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers })
             ]);
 
             if (ownedRes.status === 401 || collaboratedRes.status === 401) {
@@ -38,14 +37,13 @@ export default function Dashboard() {
                 return;
             }
 
-            if (!ownedRes.ok || !collaboratedRes.ok || !measRes.ok) {
+            if (!ownedRes.ok && !collaboratedRes.ok) {
                 throw new Error(t("dashboard.loadError"));
             }
 
-            const [ownedData, collaboratedData, measData] = await Promise.all([
-                ownedRes.json(),
-                collaboratedRes.json(),
-                measRes.json()
+            const [ownedData, collaboratedData] = await Promise.all([
+                ownedRes.ok ? ownedRes.json() : [],
+                collaboratedRes.ok ? collaboratedRes.json() : []
             ]);
             const experimentData = [
                 ...(Array.isArray(ownedData) ? ownedData : []),
@@ -56,7 +54,19 @@ export default function Dashboard() {
             ).values()];
 
             setExperiments(uniqueExperiments);
-            setMeasurements(Array.isArray(measData) ? measData : []);
+            setLoading(false);
+
+            try {
+                const measRes = await fetch(`${API_BASE_URL}/measurements/?limit=5000`, { headers });
+                if (!measRes.ok) {
+                    console.warn("Dashboard measurements could not be loaded.", measRes.status);
+                    return;
+                }
+                const measData = await measRes.json();
+                setMeasurements(Array.isArray(measData) ? measData : []);
+            } catch (measurementError) {
+                console.warn("Dashboard measurements could not be loaded.", measurementError);
+            }
         } catch (err) {
             console.error(err);
             toast.error(t("dashboard.loadError"));
@@ -200,7 +210,7 @@ function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPa
                 </table>
 
                 {totalPages > 1 && (
-                    <div className="pagination-controls" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginTop: "15px" }}>
+                    <div className="pagination-controls">
                         <button
                             className="exp-btn exp-btn--ghost"
                             onClick={() => onPageChange(currentPage - 1)}

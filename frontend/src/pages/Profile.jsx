@@ -326,14 +326,14 @@ export default function Profile() {
                         <button onClick={() => navigate("/")}>{t("profile.goToLogin")}</button>
                     </div>
                 ) : (
-                    <div className="profile-container" style={{ padding: "1.5rem" }}>
+                    <div className="profile-container">
                         
                         <div className="my-profile-card">
                             <div className="my-profile-card-inner">
                                 
                                 {/* info o użytkowniku */}
-                                <div style={{ flex: 1 }}>
-                                    <h2 style={{ marginTop: 0 }}>{t("profile.accountDetails")}</h2>
+                                <div className="my-profile-details">
+                                    <h2>{t("profile.accountDetails")}</h2>
                                     <ul className="my-profile-info-list">
                                         <li><strong>{t("profile.firstName")}</strong> {user?.first_name || "-"}</li>
                                         <li><strong>{t("profile.lastName")}</strong> {user?.last_name || "-"}</li>

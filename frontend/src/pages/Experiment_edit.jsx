@@ -239,7 +239,16 @@ function Experiment_edit() {
         >
           <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
         </button>
-        <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
+        <div
+          className="exp-sidebar-logo"
+          onClick={() => navigate('/dashboard')}
+          data-sidebar-tooltip={t("navigation.dashboard")}
+          tabIndex={0}
+          role="button"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") navigate('/dashboard');
+          }}
+        >
           <img src={logo} alt="Logo" className="exp-sidebar-logo-mark" />
           <img src={logoName} alt="PlantStalker" className="exp-sidebar-logo-text" />
         </div>
@@ -263,6 +272,9 @@ function Experiment_edit() {
               key={item.key}
               className="exp-nav-item"
               onClick={() => navigate(`/experiment/${id}`)}
+              data-sidebar-tooltip={t(`experimentForm.${item.key}`)}
+              aria-label={t(`experimentForm.${item.key}`)}
+              title={t(`experimentForm.${item.key}`)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
               <span className="exp-nav-item-label">{t(`experimentForm.${item.key}`)}</span>

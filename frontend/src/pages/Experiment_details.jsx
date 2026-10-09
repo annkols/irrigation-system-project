@@ -391,9 +391,9 @@ function Experiment_details() {
   const handleEndExperiment = () => {
     toast(
       ({ closeToast }) => (
-        <div>
+        <div className="confirmation-toast">
           <p>{t('experimentDetails.confirmEnd')}</p>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <div className="confirmation-toast-actions">
             <button
               onClick={async () => {
                 closeToast();
@@ -410,9 +410,9 @@ function Experiment_details() {
                   toast.error(t('experimentForm.errors.connection'));
                 }
               }}
-              style={{ padding: '4px 12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              className="confirmation-toast-btn confirmation-toast-btn--confirm"
             >{t('profile.yes')}</button>
-            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>{t('experimentForm.cancel')}</button>
+            <button className="confirmation-toast-btn confirmation-toast-btn--cancel" onClick={closeToast}>{t('experimentForm.cancel')}</button>
           </div>
         </div>
       ),
@@ -423,9 +423,9 @@ function Experiment_details() {
   const handleDeleteExperiment = () => {
     toast(
       ({ closeToast }) => (
-        <div>
+        <div className="confirmation-toast">
           <p>{t('experimentDetails.confirmDelete')}</p>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <div className="confirmation-toast-actions">
             <button
               onClick={async () => {
                 closeToast();
@@ -451,9 +451,9 @@ function Experiment_details() {
                   toast.error(t('experimentForm.errors.connection'));
                 }
               }}
-              style={{ padding: '4px 12px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              className="confirmation-toast-btn confirmation-toast-btn--danger"
             >{t('experimentDetails.delete')}</button>
-            <button onClick={closeToast} style={{ padding: '4px 12px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>{t('experimentForm.cancel')}</button>
+            <button className="confirmation-toast-btn confirmation-toast-btn--cancel" onClick={closeToast}>{t('experimentForm.cancel')}</button>
           </div>
         </div>
       ),
@@ -533,7 +533,16 @@ function Experiment_details() {
         >
           <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
         </button>
-        <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
+        <div
+          className="exp-sidebar-logo"
+          onClick={() => navigate('/dashboard')}
+          data-sidebar-tooltip={t('navigation.dashboard')}
+          tabIndex={0}
+          role="button"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") navigate('/dashboard');
+          }}
+        >
           <img src={logo} alt="Logo" className="exp-sidebar-logo-mark" />
           <img src={logoName} alt="PlantStalker" className="exp-sidebar-logo-text" />
         </div>
@@ -557,6 +566,9 @@ function Experiment_details() {
               key={item.key}
               className={`exp-nav-item ${activeTab === item.key ? 'active' : ''}`}
               onClick={() => setActiveTab(item.key)}
+              data-sidebar-tooltip={t(item.labelKey)}
+              aria-label={t(item.labelKey)}
+              title={t(item.labelKey)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
               <span className="exp-nav-item-label">{t(item.labelKey)}</span>
@@ -689,7 +701,6 @@ function Experiment_details() {
                     <span className="exp-alerts-title">{t('experimentDetails.alerts')}</span>
                     {errors.measurements && <span className="exp-alerts-badge">{t('experimentDetails.oneCritical')}</span>}
                   </div>
-                  <span className="exp-alerts-view-all">{t('experimentDetails.viewNotifications')}</span>
                 </div>
 
                 {errors.measurements ? (

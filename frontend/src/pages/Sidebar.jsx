@@ -64,6 +64,12 @@ export default function Sidebar() {
             <div
                 className="sidebar-logo"
                 onClick={() => navigate("/dashboard")}
+                data-sidebar-tooltip={t("navigation.dashboard")}
+                tabIndex={0}
+                role="button"
+                onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") navigate("/dashboard");
+                }}
             >
 
                 <img
@@ -95,6 +101,9 @@ export default function Sidebar() {
                         }
 
                         onClick={() => navigate(item.path)}
+                        data-sidebar-tooltip={item.title}
+                        aria-label={item.title}
+                        title={item.title}
 
                     >
 

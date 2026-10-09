@@ -30,37 +30,15 @@ function Start() {
   return (
     <>
       {/* hero section */}
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        height: '100vh',
-        overflow: 'hidden',
-        backgroundImage: `url(${back_img})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <div className="start-hero" style={{ '--start-background': `url(${back_img})` }}>
         {/* nakładka przyciemniająca */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.45)',
-        }} />
+        <div className="start-hero-overlay" />
 
         {/* header z logo */}
-        <div style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '20px 40px',
-        }}>
+        <header className="start-header">
           <div className="start-brand">
-            <img src={logo} alt="PlantStalker logo" style={{ height: '64px', width: 'auto' }} />
-            <img src={name} alt="PlantStalker" style={{ height: '32px', width: 'auto' }} />
+            <img src={logo} alt="PlantStalker logo" className="start-brand-logo" />
+            <img src={name} alt="PlantStalker" className="start-brand-name" />
           </div>
           <div className="start-language-switcher" aria-label={t("topbar.languageSelection")}>
             <button
@@ -84,48 +62,20 @@ function Start() {
               <img src="https://flagcdn.com/w40/pl.png" alt={t("topbar.polishFlag")} className="flag-icon" />
             </button>
           </div>
-        </div>
+        </header>
 
         {/* środkowy blok: tytuł + przyciski */}
-        <div style={{
-          position: 'relative',
-          zIndex: 1,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          gap: '32px',
-          paddingBottom: '80px',
-        }}>
-          <h1 style={{
-            fontSize: '42px',
-            fontWeight: 900,
-            fontFamily: 'Inter, sans-serif',
-            color: 'white',
-            maxWidth: '760px',
-            margin: 0,
-            lineHeight: 1.2,
-          }}>
+        <main className="start-hero-content">
+          <h1 className="start-title">
             <span style={{ display: 'block' }}>{t("start.titleLine1")}</span>
             <span className="start-title-second-line">{t("start.titleLine2")}</span>
           </h1>
 
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div className="start-auth-actions">
             <button
+              className="start-auth-button"
               style={{
-                width: '160px',
-                padding: '14px 0',
-                fontSize: '16px',
-                fontWeight: 600,
-                fontFamily: 'Inter, sans-serif',
                 backgroundColor: hoverSignIn ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
-                color: 'white',
-                border: '2px solid white',
-                borderRadius: '50px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
               }}
               onMouseEnter={() => setHoverSignIn(true)}
               onMouseLeave={() => setHoverSignIn(false)}
@@ -135,18 +85,9 @@ function Start() {
             </button>
 
             <button
+              className="start-auth-button"
               style={{
-                width: '160px',
-                padding: '14px 0',
-                fontSize: '16px',
-                fontWeight: 600,
-                fontFamily: 'Inter, sans-serif',
                 backgroundColor: hoverSignUp ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)',
-                color: 'white',
-                border: '2px solid white',
-                borderRadius: '50px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
               }}
               onMouseEnter={() => setHoverSignUp(true)}
               onMouseLeave={() => setHoverSignUp(false)}
@@ -156,41 +97,20 @@ function Start() {
             </button>
           </div>
 
-          <p style={{
-            fontSize: '12px',
-            fontFamily: 'Inter, sans-serif',
-            color: 'rgba(255,255,255,0.7)',
-            margin: 0,
-          }}>
+          <p className="start-copyright">
             {t("start.copyright")}
           </p>
-        </div>
+        </main>
 
         {/* MORE + strzałka na dole */}
         <div
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            paddingBottom: '32px',
-            cursor: 'pointer',
-            opacity: 0.8,
-            transition: 'opacity 0.2s',
-          }}
+          className="start-more"
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.8')}
           onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
         >
-          <span style={{
-            fontSize: '13px',
-            fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-            color: 'white',
-            letterSpacing: '2px',
-          }}>{t("start.more")}</span>
-          <img src={arrow} alt={t("start.scrollDown")} style={{ width: '32px', height: 'auto', marginTop: '6px' }} />
+          <span>{t("start.more")}</span>
+          <img src={arrow} alt={t("start.scrollDown")} />
         </div>
       </div>
 
