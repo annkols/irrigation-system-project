@@ -17,6 +17,8 @@ export default function TopBar({ experimentName }) {
 
     const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
 
+    const [notifications, setNotifications] = useState([]);
+
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
     const [profilePictureUrl, setProfilePictureUrl] = useState(null);
@@ -35,6 +37,56 @@ export default function TopBar({ experimentName }) {
         document.documentElement.setAttribute("data-theme", theme);
         localStorage.setItem("theme", theme);
         }, [theme]);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            const accessToken = localStorage.getItem("token");
+            if (!accessToken || accessToken === "undefined") return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/notifications/`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setNotifications(data);
+                }
+            } catch (err) {
+                console.error("Error fetching notifications:", err);
+            }
+        };
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleNotificationClick = async (notification) => {
+        const accessToken = localStorage.getItem("token");
+        try {
+            await fetch(`${API_BASE_URL}/notifications/dismiss/`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ notification_id: notification.id }),
+            });
+        } catch (err) {
+            console.error("Error dismissing notification:", err);
+        }
+
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
+        setIsNotificationsOpen(false);
+        if (notification.experiment_id) {
+            navigate(`/experiment/${notification.experiment_id}`);
+        }
+    };
 
     const setLightMode = () => {setTheme("light");};
         
@@ -238,17 +290,41 @@ export default function TopBar({ experimentName }) {
                 <div className="notifications-wrapper" ref={notificationsRef}>
                     <button 
                         type="button" 
-                        className="topbar-btn" 
+                        className={`topbar-btn ${notifications.length > 0 ? "has-notifications" : ""}`} 
                         onClick={toggleNotifications}
                         aria-label={t("topbar.notifications")}
                     >
                         <span className="material-symbols-outlined">
                             notifications
                         </span>
+                        {notifications.length > 0 && (
+                            <span className="notification-badge">{notifications.length}</span>
+                        )}
                     </button>
+
                     {isNotificationsOpen && (
                         <div className="notifications-dropdown">
-                            <span className="notifications-empty">{t("topbar.noNotifications")}</span>
+                            {notifications.length === 0 ? (
+                                <span className="notifications-empty">{t("topbar.noNotifications")}</span>
+                            ) : (
+                                notifications.map((notif) => (
+                                    <div 
+                                        key={notif.id} 
+                                        className="notification-item"
+                                        onClick={() => handleNotificationClick(notif)}
+                                    >
+                                        <p className="notification-title">
+                                            <strong>{t(`notifications.${notif.type}_title`)}</strong>
+                                        </p>
+                                        <p className="notification-message">
+                                            {t(`notifications.${notif.type}_message`, {
+                                                ...notif.params,
+                                                name: notif.params?.name ? notif.params.name.replace(/-/g, " ") : ""
+                                            })}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
