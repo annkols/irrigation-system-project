@@ -51,6 +51,11 @@ function Experiment_edit() {
   const [endDate, setEndDate] = useState("");
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [collaborators, setCollaborators] = useState([]);
+  const [collaboratorQuery, setCollaboratorQuery] = useState("");
+  const [collaboratorResults, setCollaboratorResults] = useState([]);
+  const [collaboratorSearchLoading, setCollaboratorSearchLoading] = useState(false);  
+  const [collaboratorError, setCollaboratorError] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
@@ -81,6 +86,15 @@ function Experiment_edit() {
         setDescription(data.description || "");
         setIsPublic(data.is_public || false);
         setKeywords(data.keywords || []);
+
+        setCollaborators(
+          (data.collaborators || []).map((item) => ({
+            user_id: item.user?.id ?? item.user_id,
+            email: item.user?.email ?? item.user?.username ?? "",
+            can_edit_experiment: item.can_edit_experiment ?? false,
+            can_end_experiment: item.can_end_experiment ?? false,
+          }))
+        );
 
         if (data.started_at) setStartDate(data.started_at.split('T')[0]);
         if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
@@ -116,6 +130,84 @@ function Experiment_edit() {
   const handleFreqChange = (sensor, value) => {
     setFrequencies(prev => ({ ...prev, [sensor]: value }));
   };
+
+  
+const handleSearchCollaborators = async () => {
+  const query = collaboratorQuery.trim();
+
+  if (!query) {
+    setCollaboratorResults([]);
+    return;
+  }
+
+  setCollaboratorSearchLoading(true);
+  setCollaboratorError("");
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/users/search/?q=${encodeURIComponent(query)}`,
+      { headers: getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      throw new Error(t("experimentForm.errors.find"));
+    }
+
+    const data = await response.json();
+    const results = Array.isArray(data) ? data : data.results || [];
+
+    setCollaboratorResults(results);
+  } catch (error) {
+    console.error(error);
+    setCollaboratorError(t("experimentForm.errors.find"));
+  } finally {
+    setCollaboratorSearchLoading(false);
+  }
+};
+
+const handleAddCollaborator = (user) => {
+  const userId = user.id ?? user.user_id;
+
+  if (!userId) return;
+
+  if (collaborators.some((item) => String(item.user_id) === String(userId))) {
+    setCollaboratorError(t("experimentForm.errors.collab_yes"));
+    return;
+  }
+
+  setCollaborators((current) => [
+    ...current,
+    {
+      user_id: userId,
+      email: user.email ?? user.username ?? `User ${userId}`,
+      can_edit_experiment: false,
+      can_end_experiment: false,
+    },
+  ]);
+
+  setCollaboratorResults((current) =>
+    current.filter((item) => String(item.id ?? item.user_id) !== String(userId))
+  );
+
+  setCollaboratorQuery("");
+  setCollaboratorError("");
+};
+
+const handleRemoveCollaborator = (userId) => {
+  setCollaborators((current) =>
+    current.filter((item) => String(item.user_id) !== String(userId))
+  );
+};
+
+const handleCollaboratorPermissionChange = (userId, permission, checked) => {
+  setCollaborators((current) =>
+    current.map((item) =>
+      String(item.user_id) === String(userId)
+        ? { ...item, [permission]: checked }
+        : item
+    )
+  );
+};
 
   const handleSave = () => {
     setErrors({});
@@ -185,6 +277,11 @@ function Experiment_edit() {
       description,
       plant_name: plantName,
       keywords,
+      collaborators: collaborators.map((collaborator) => ({
+        user_id: collaborator.user_id,
+        can_edit_experiment: collaborator.can_edit_experiment,
+        can_end_experiment: collaborator.can_end_experiment,
+      })),
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
@@ -402,6 +499,73 @@ function Experiment_edit() {
                   {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
                 </div>
 
+                <div className="exp-overview-card">
+                  <div className="exp-overview-field exp-overview-field--last">
+                    <span className="exp-info-label">Collaborators</span>
+                    <div className="exp-edit-keyword-row">
+                      <input
+                      className="exp-edit-input"
+                      type="text"
+                      placeholder={t("experimentForm.find_mail")}
+                      value={collaboratorQuery}
+                      onChange={(e) => setCollaboratorQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchCollaborators();}}}/>
+
+                      <button type="button" className="exp-btn exp-btn--primary" onClick={handleSearchCollaborators} disabled={collaboratorSearchLoading}>
+                      {collaboratorSearchLoading ? t("common.loading") : t("common.find")}
+                      </button>
+                    </div>
+
+                    {collaboratorError && (
+                      <span className="error-text">{collaboratorError}</span>)}
+                    {collaboratorResults.length > 0 && (
+                      <div className="exp-collaborator-search-results">
+                        {collaboratorResults.map((user) => {
+                        const userId = user.id ?? user.user_id;
+                        return (
+                          <div key={userId} className="exp-collaborator-edit-row">
+                            <span>{user.email ?? user.username ?? `User ${userId}`}</span>
+                            <button type="button" className="exp-btn exp-btn--ghost" onClick={() => handleAddCollaborator(user)} >
+                              {t("experimentForm.add")}
+                            </button>
+                          </div>
+                        );})}
+                      </div>)}
+
+                      <div className="exp-collaborator-edit-list">
+                        {collaborators.length === 0 ? ( <p> {t("experimentDetails.none")} </p>
+                        ) : ( collaborators.map((collaborator) => (
+                          <div key={collaborator.user_id} className="exp-collaborator-edit-item">
+                            <div className="exp-collaborator-edit-header">
+                              <strong>{collaborator.email || `User ${collaborator.user_id}`}</strong>
+                              <button type="button" className="btn-remove-tag" onClick={() =>
+                                handleRemoveCollaborator(collaborator.user_id)}
+                                aria-label={`t("experimentDetails.delete") ${collaborator.email || t("experimentForm.collaborator")}`}>
+                                &times;
+                              </button>
+                            </div>
+                            <label className="exp-edit-checkbox">
+                            <input type="checkbox" checked={collaborator.can_edit_experiment}
+                              onChange={(e) =>
+                              handleCollaboratorPermissionChange( collaborator.user_id, "can_edit_experiment", e.target.checked)}/>
+                              <span>{t("experimentForm.can_edit")}</span>
+                            </label>
+
+                            <label className="exp-edit-checkbox">
+                            <input 
+                              type="checkbox"
+                              checked={collaborator.can_end_experiment}
+                              onChange={(e) =>
+                              handleCollaboratorPermissionChange( collaborator.user_id, "can_end_experiment", e.target.checked)}/>
+                            <span>{t("experimentForm.can_end")}</span>
+                            </label>
+                          </div>)))}
+                        </div>
+                      </div>
+                    </div>
                 <div className="exp-overview-field exp-overview-field--last">
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">

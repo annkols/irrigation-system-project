@@ -4,7 +4,8 @@
     "next": "Dalej",
     "show": "Pokaż",
     "hide": "Ukryj",
-    "loading": "Ładowanie..."
+    "loading": "Ładowanie...",
+    "find": "Szukaj"
   },
   "dates": {
     "datePlaceholder": "DD-MM-RRRR",
@@ -207,6 +208,10 @@
     "deleteFailed": "Nie udało się usunąć konta. Spróbuj ponownie."
   },
   "experimentForm": {
+    "can_end":"Can end the experiment.",
+    "can_edit": "Can edit the experiment.",
+    "collaborator": "collaborator",
+    "find_mail":"Search for a user by email",
     "experiment": "Doświadczenie",
     "public": "Publiczne",
     "private": "Prywatne",
@@ -223,6 +228,7 @@
     "startDate": "Data rozpoczęcia",
     "plannedEndDate": "Planowana data zakończenia",
     "add": "Dodaj",
+    "Adding":"Dodawanie...",
     "cancel": "Anuluj",
     "back": "Wstecz",
     "next": "Dalej",
@@ -242,6 +248,8 @@
       "perPot": "dla doniczki"
     },
     "errors": {
+      "collab_yes":"Ten użytkownik jest już współpracownikiem.",
+      "find":"Nie udało się wyszukać użytkowników.",
       "required": "To pole jest wymagane.",
       "nameLength": "Nazwa może mieć maksymalnie 100 znaków.",
       "plantLength": "Nazwa rośliny może mieć maksymalnie 100 znaków.",
@@ -331,6 +339,8 @@
     }
   },
   "experimentDetails": {
+    "lost_user":"Nie znaleziono użytkownika.",
+    "already_user":"Ten użytkownik został już dodany.",
     "delete": "Usuń",
     "noKeywords": "To doświadczenie nie ma słów kluczowych",
     "collaborators": "Współpracownicy",

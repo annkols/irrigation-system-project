@@ -4,7 +4,8 @@
     "next": "Next",
     "show": "Show",
     "hide": "Hide",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "find": "Find"
   },
   "dates": {
     "datePlaceholder": "DD-MM-YYYY",
@@ -203,6 +204,10 @@
     "deleteFailed": "Failed to delete account. Please try again."
   },
   "experimentForm": {
+    "can_end":"Może zakończyć eksperyment",
+    "can_edit": "Może edytować eksperyment",
+    "collaborator": "współpracownik",
+    "find_mail":"Wyszukaj użytkownika po e-mailu",
     "experiment": "Experiment",
     "public": "Public",
     "private": "Private",
@@ -218,7 +223,8 @@
     "keywords": "Keywords",
     "startDate": "Start date",
     "plannedEndDate": "Planned end date",
-    "add": "Add",
+    "add": "ADD",
+    "Adding":"Adding...",
     "cancel": "Cancel",
     "back": "Back",
     "next": "Next",
@@ -238,6 +244,8 @@
       "perPot": "per pot"
     },
     "errors": {
+      "collab_yes":"This user is already a collaborator.",
+      "find":"Failed to search for users.",
       "required": "This field is required.",
       "nameLength": "Ensure the name has no more than 100 characters.",
       "plantLength": "Ensure the plant type has no more than 100 characters.",
@@ -325,6 +333,8 @@
     }
   },
   "experimentDetails": {
+    "lost_user":"User not found.",
+    "already_user":"This user has already been added.",
     "delete": "Delete",
     "noKeywords": "This experiment does not have keywords",
     "collaborators": "Collaborators",
