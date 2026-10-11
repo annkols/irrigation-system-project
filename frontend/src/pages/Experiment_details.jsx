@@ -634,12 +634,13 @@ function Experiment_details() {
                   </div>
                 </div>
                 <div className="exp-overview-field exp-overview-field--last">
-                  <span className="exp-info-label">{t('experimentDetails.collaborators')}</span>
+                <span className="exp-info-label">{t('experimentDetails.collaborators')}</span>
                   <div className="exp-collaborators">
-                    {experiment.collaborators?.length > 0
-                      ? experiment.collaborators.map((c, i) => <span key={i} className="collab-chip">{c}</span>)
-                      : <span style={{ color: '#888', fontSize: '14px' }}>{t('experimentDetails.none')}</span>
-                    }
+                    {experiment.collaborators?.length > 0 ? (experiment.collaborators.map((collaborator) => (
+                    <span key={collaborator.id} className="collab-chip">
+                      {collaborator.user?.email ?? collaborator.user?.username ?? `User ${collaborator.user?.id ?? collaborator.id}`}
+                    </span>))) : (
+                    <span>{t('experimentDetails.none')}</span>)}
                   </div>
                 </div>
               </div>

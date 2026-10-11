@@ -51,6 +51,10 @@ function New_experiment() {
   const [endDate, setEndDate] = useState("");
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [collaboratorEmail, setCollaboratorEmail] = useState("");
+  const [collaborators, setCollaborators] = useState([]);
+  const [addingCollaborator, setAddingCollaborator] = useState(false);
+  const [collaboratorError, setCollaboratorError] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [sensorSetId, setSensorSetId] = useState(1);
   const [frequencies, setFrequencies] = useState(Object.fromEntries(SENSORS.map(([id]) => [id, "1"])));
@@ -62,6 +66,72 @@ function New_experiment() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
+  const addCollaborator = async () => {
+    const email = collaboratorEmail.trim();
+  
+    if (!email) return;
+  
+    setAddingCollaborator(true);
+    setCollaboratorError("");
+  
+    try {
+      const response = await fetch(
+        `${api}/users/search/?q=${encodeURIComponent(email)}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+  
+      const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(t("experimentDetails.lost_user"));
+}
+
+const users = Array.isArray(data) ? data : data.results ?? [];
+
+const user = users.find(
+  (u) => u.email?.toLowerCase() === email.toLowerCase()
+);
+  
+      if (!user) {
+        setCollaboratorError(t("experimentDetails.lost_user"));
+        return;
+      }
+  
+      const alreadyExists = collaborators.some(
+        (c) => c.user_id === user.id
+      );
+  
+      if (alreadyExists) {
+        setCollaboratorError(t("experimentDetails.already_user"));
+        return;
+      }
+  
+      setCollaborators((prev) => [
+        ...prev,
+        {
+          user_id: user.id,
+          email: user.email,
+          can_edit_experiment: true,
+          can_end_experiment: true,
+        },
+      ]);
+  
+      setCollaboratorEmail("");
+    } catch (err) {
+      setCollaboratorError(err.message);
+    } finally {
+      setAddingCollaborator(false);
+    }
+  };
+
+  const removeCollaborator = (userId) => {
+    setCollaborators((current) =>
+      current.filter((item) => item.user_id !== userId)
+    );
+  };
+  
   const combinations = useMemo(() => {
     if (factors.some((factor) => !factor.name.trim() || factor.levels.some((item) => !item.label.trim()))) return [];
     return cartesian(factors.map((factor) => factor.levels));
@@ -145,7 +215,12 @@ function New_experiment() {
           measurement_frequency_seconds: Math.min(...Object.values(numericFrequencies)),
           sensor_frequencies: numericFrequencies,
           started_at: startDate, planned_end_at: endDate, finished_at: null,
-          owner: null, collaborators: [], is_public: isPublic,
+          owner: null,
+          initial_collaborators: collaborators.map((collaborator) => ({
+            user_id: collaborator.user_id,
+            can_edit_experiment: collaborator.can_edit_experiment,
+            can_end_experiment: collaborator.can_end_experiment,
+          })),is_public: isPublic,
         }),
       });
       const experiment = await experimentResponse.json();
@@ -197,6 +272,23 @@ function New_experiment() {
               <div className="dates-choices"><div className="date-choice"><label>{t("experimentForm.startDate")}</label><LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} /></div><div className="date-choice"><label>{t("experimentForm.plannedEndDate")}</label><LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} /></div></div>
               <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
               <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
+              <div className="form-section collaborators-section">
+              <p>{t("experimentDetails.Collaborators")}</p>
+              <div className="keyword-input-wrapper">
+                <input type="email" placeholder="Enter collaborator's email" value={collaboratorEmail}
+                  onChange={(event) => { setCollaboratorEmail(event.target.value); setCollaboratorError("");}}
+                  onKeyDown={(event) => { if (event.key === "Enter") {
+                  event.preventDefault(); 
+                  addCollaborator();}}}/>
+              <button className="btn-create" type="button" onClick={addCollaborator} disabled={addingCollaborator || !collaboratorEmail.trim()}> {addingCollaborator ? t("experimentForm.Adding") : t("experimentForm.add")}</button>
+              </div>
+              {collaboratorError && (<p className="error-text">{collaboratorError}</p>)}
+              <div className="collaborators-list"> 
+                {collaborators.map((collaborator) => (
+              <div className="collaborator-item" key={collaborator.user_id}>
+              <span>{collaborator.email}</span>
+              <button type="button" className="btn-remove-tag" onClick={() => removeCollaborator(collaborator.user_id)} aria-label={`Remove ${collaborator.email}`}> &times;
+              </button></div>))}</div></div>
             </div>}
 
             {step === 2 && <div className="step-content">
