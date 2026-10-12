@@ -1,6 +1,6 @@
 const MIN_GAP_THRESHOLD_MS = 60 * 1000;
 
-export const formatChartTime = (value) => new Date(value).toLocaleString("pl-PL", {
+export const formatChartTime = (value, locale) => new Date(value).toLocaleString(locale, {
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",

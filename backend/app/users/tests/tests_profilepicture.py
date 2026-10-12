@@ -76,6 +76,33 @@ class UserProfilePictureTests(APITestCase):
 
         self.assertFalse(profile.profile_picture)
 
+    # LOGGED IN USER CAN DOWNLOAD THEIR AVATAR -> 200
+    def test_authenticated_user_can_download_avatar(self):
+        self.client.force_authenticate(user=self.user)
+
+        profile, created = UserProfile.objects.get_or_create(user=self.user)
+        profile.profile_picture = create_test_avatar_file()
+        profile.save()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "image/jpeg")
+
+    # USER WITHOUT AN AVATAR GETS 404
+    def test_user_without_avatar_gets_not_found(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # ANONYMOUS USER CANNOT DOWNLOAD AN AVATAR -> 401
+    def test_unauthenticated_user_cannot_download_avatar(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
     # ANONYMOUS TRIES TO DELETE AN AVATAR -> 401
     def test_unauthenticated_user_cannot_delete_avatar(self):

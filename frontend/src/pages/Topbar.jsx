@@ -1,22 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function TopBar({ experimentName }) {
 
-    const today = new Date();
+    const { t, i18n } = useTranslation();
 
     const location = useLocation();
-    const isExperimentDetails = location.pathname.startsWith('/experiment/');
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+    const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+
+    const [notifications, setNotifications] = useState([]);
+
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
+    const [profilePictureUrl, setProfilePictureUrl] = useState(null);
 
     const dropdownRef = useRef(null);
     const notificationsRef = useRef(null);
@@ -27,6 +32,65 @@ export default function TopBar({ experimentName }) {
     const toggleMenu = () => setIsMenuOpen((prev) => !prev);
     const toggleNotifications = () => setIsNotificationsOpen((prev) => !prev);
     const toggleSettings = () => setIsSettingsOpen((prev) => !prev);
+
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+        }, [theme]);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            const accessToken = localStorage.getItem("token");
+            if (!accessToken || accessToken === "undefined") return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/notifications/`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setNotifications(data);
+                }
+            } catch (err) {
+                console.error("Error fetching notifications:", err);
+            }
+        };
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleNotificationClick = async (notification) => {
+        const accessToken = localStorage.getItem("token");
+        try {
+            await fetch(`${API_BASE_URL}/notifications/dismiss/`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ notification_id: notification.id }),
+            });
+        } catch (err) {
+            console.error("Error dismissing notification:", err);
+        }
+
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
+        setIsNotificationsOpen(false);
+        if (notification.experiment_id) {
+            navigate(`/experiment/${notification.experiment_id}`);
+        }
+    };
+
+    const setLightMode = () => {setTheme("light");};
+        
+    const setDarkMode = () => {setTheme("dark");};
 
     const generateBreadcrumbs = () => {
         const paths = location.pathname.split("/").filter(Boolean);
@@ -45,12 +109,21 @@ export default function TopBar({ experimentName }) {
 
             const isExperimentId = paths[index - 1] === 'experiment';
 
+            const translatedSegments = {
+                profile: t("navigation.profile"),
+                reports: t("navigation.reports"),
+                "search-experiments": t("navigation.searchExperiments"),
+                "search-people": t("navigation.searchPeople"),
+                "new-experiment": t("navigation.newExperiment"),
+                edit: t("editExperiment.edit"),
+            };
+
             if (isExperimentId && experimentName) {
                 formattedName = experimentName;
             } else if (segment.toLowerCase() === 'experiment') {
                 return null;
             } else {
-                formattedName = segment
+                formattedName = translatedSegments[segment] || segment
                     .replace(/-/g, " ")
                     .replace(/^./, (str) => str.toUpperCase());
             }
@@ -90,7 +163,50 @@ export default function TopBar({ experimentName }) {
         };
 
         fetchUserData();
+
+        const handleCurrentUserUpdated = (event) => setUser(event.detail);
+        window.addEventListener("current-user-updated", handleCurrentUserUpdated);
+
+        return () => {
+            window.removeEventListener("current-user-updated", handleCurrentUserUpdated);
+        };
     }, []);
+
+    useEffect(() => {
+        if (!user?.profile?.profile_picture) {
+            setProfilePictureUrl(null);
+            return undefined;
+        }
+
+        let objectUrl;
+        let cancelled = false;
+
+        const fetchProfilePicture = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });
+                if (!response.ok) return;
+
+                const blob = await response.blob();
+                if (!cancelled) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setProfilePictureUrl(objectUrl);
+                }
+            } catch (err) {
+                console.error("Error while fetching profile picture:", err);
+            }
+        };
+
+        fetchProfilePicture();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [user?.profile?.profile_picture]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -147,7 +263,7 @@ export default function TopBar({ experimentName }) {
                     className="topbar-breadcrumb-link" 
                     onClick={() => navigate('/dashboard')}
                 >
-                    Dashboard
+                    {t("navigation.dashboard")}
                 </span>
             
                 {breadcrumbs.map((crumb) => (
@@ -174,17 +290,41 @@ export default function TopBar({ experimentName }) {
                 <div className="notifications-wrapper" ref={notificationsRef}>
                     <button 
                         type="button" 
-                        className="topbar-btn" 
+                        className={`topbar-btn ${notifications.length > 0 ? "has-notifications" : ""}`} 
                         onClick={toggleNotifications}
-                        aria-label="Notifications"
+                        aria-label={t("topbar.notifications")}
                     >
                         <span className="material-symbols-outlined">
                             notifications
                         </span>
+                        {notifications.length > 0 && (
+                            <span className="notification-badge">{notifications.length}</span>
+                        )}
                     </button>
+
                     {isNotificationsOpen && (
                         <div className="notifications-dropdown">
-                            <span className="notifications-empty">No unread notifications</span>
+                            {notifications.length === 0 ? (
+                                <span className="notifications-empty">{t("topbar.noNotifications")}</span>
+                            ) : (
+                                notifications.map((notif) => (
+                                    <div 
+                                        key={notif.id} 
+                                        className="notification-item"
+                                        onClick={() => handleNotificationClick(notif)}
+                                    >
+                                        <p className="notification-title">
+                                            <strong>{t(`notifications.${notif.type}_title`)}</strong>
+                                        </p>
+                                        <p className="notification-message">
+                                            {t(`notifications.${notif.type}_message`, {
+                                                ...notif.params,
+                                                name: notif.params?.name ? notif.params.name.replace(/-/g, " ") : ""
+                                            })}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
@@ -195,7 +335,7 @@ export default function TopBar({ experimentName }) {
                         type="button" 
                         className="topbar-btn" 
                         onClick={toggleSettings}
-                        aria-label="Settings"
+                        aria-label={t("topbar.settings")}
                     >
                         <span className="material-symbols-outlined">
                             settings
@@ -206,23 +346,35 @@ export default function TopBar({ experimentName }) {
                             {/* jezyk */}
                             <div className="settings-item center-item">
                                 <div className="settings-options">
-                                    <button type="button" className="lang-btn" title="English">
-                                        <img src="https://flagcdn.com/w40/gb.png" alt="UK flag" className="flag-icon" />
+                                    <button
+                                        type="button"
+                                        className={`lang-btn ${i18n.resolvedLanguage === "en" ? "active" : ""}`}
+                                        title={t("topbar.english")}
+                                        aria-pressed={i18n.resolvedLanguage === "en"}
+                                        onClick={() => i18n.changeLanguage("en")}
+                                    >
+                                        <img src="https://flagcdn.com/w40/gb.png" alt={t("topbar.englishFlag")} className="flag-icon" />
                                     </button>
-                                    <button type="button" className="lang-btn" title="Polski">
-                                        <img src="https://flagcdn.com/w40/pl.png" alt="Poland flag" className="flag-icon" />
+                                    <button
+                                        type="button"
+                                        className={`lang-btn ${i18n.resolvedLanguage === "pl" ? "active" : ""}`}
+                                        title={t("topbar.polish")}
+                                        aria-pressed={i18n.resolvedLanguage === "pl"}
+                                        onClick={() => i18n.changeLanguage("pl")}
+                                    >
+                                        <img src="https://flagcdn.com/w40/pl.png" alt={t("topbar.polishFlag")} className="flag-icon" />
                                     </button>
                                 </div>
                             </div>
                             {/* motyw */}
                             <div className="settings-item center-item">
                                 <div className="settings-options">
-                                    <button type="button" className="theme-toggle-btn" title="Light mode">
+                                    <button type="button" className={`theme-toggle-btn ${theme === "light" ? "active" : ""}`} title={t("topbar.lightMode")} onClick={setLightMode} aria-pressed={theme === "light"}>
                                         <span className="material-symbols-outlined">
                                             light_mode
                                         </span>
                                     </button>
-                                    <button type="button" className="theme-toggle-btn" title="Dark mode">
+                                    <button type="button" className={`theme-toggle-btn ${theme === "dark" ? "active" : ""}`} title={t("topbar.darkMode")} onClick={setDarkMode} aria-pressed={theme === "dark"}>
                                         <span className="material-symbols-outlined">
                                             dark_mode
                                         </span>
@@ -239,7 +391,7 @@ export default function TopBar({ experimentName }) {
                         type="button" 
                         className="topbar-btn" 
                         onClick={toggleMenu}
-                        aria-label="User profile"
+                        aria-label={t("topbar.userProfile")}
                     >
                         <span className="material-symbols-outlined">
                             account_circle
@@ -251,10 +403,10 @@ export default function TopBar({ experimentName }) {
                             <div className="user-info">
 
                                 <div className="dropdown-avatar-wrapper">
-                                    {user?.profile?.profile_picture ? (
+                                    {profilePictureUrl ? (
                                         <img 
-                                            src={user.profile.profile_picture} 
-                                            alt="Profile" 
+                                            src={profilePictureUrl}
+                                            alt={t("topbar.profileImage")}
                                             className="dropdown-avatar-img"
                                         />
                                     ) : (
@@ -271,7 +423,7 @@ export default function TopBar({ experimentName }) {
                                         ? (user.first_name && user.last_name 
                                             ? `${user.first_name} ${user.last_name}` 
                                             : user.username || user.email)
-                                        : "Loading..."}
+                                        : t("common.loading")}
                                 </span>
                                 {user?.email && (
                                     <span className="user-email">
@@ -288,7 +440,7 @@ export default function TopBar({ experimentName }) {
                                     navigate("/profile");
                                 }}
                             >
-                                My profile
+                                {t("topbar.myProfile")}
                             </button>
 
                             <button 
@@ -297,7 +449,7 @@ export default function TopBar({ experimentName }) {
                                 onClick={logout} 
                                 disabled={loading}
                             >
-                                {loading ? "Logging out..." : "Log out"}
+                                {loading ? t("topbar.loggingOut") : t("topbar.logOut")}
                             </button>
                         </div>
                     )}

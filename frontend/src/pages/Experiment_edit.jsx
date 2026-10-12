@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
+import LocalizedDateInput from "./LocalizedDateInput";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -21,24 +23,25 @@ const secondsToHours = (value) => {
 };
 
 const SENSORS = [
-  { key: 'air_temperature', label: 'air temperature (shared)' },
-  { key: 'air_humidity', label: 'air humidity (shared)' },
-  { key: 'pressure', label: 'pressure (shared)' },
-  { key: 'light', label: 'light intensity (shared)' },
-  { key: 'soil_moisture', label: 'soil moisture (per pot)' },
-  { key: 'soil_temperature', label: 'soil temperature (per pot)' },
+  { key: 'air_temperature', labelKey: 'airTemperature', scopeKey: 'shared' },
+  { key: 'air_humidity', labelKey: 'airHumidity', scopeKey: 'shared' },
+  { key: 'pressure', labelKey: 'pressure', scopeKey: 'shared' },
+  { key: 'light', labelKey: 'light', scopeKey: 'shared' },
+  { key: 'soil_moisture', labelKey: 'soilMoisture', scopeKey: 'perPot' },
+  { key: 'soil_temperature', labelKey: 'soilTemperature', scopeKey: 'perPot' },
 ];
 
 const NAV_ITEMS = [
-  { key: 'overview', label: 'Overview', icon: 'dashboard' },
-  { key: 'camera', label: 'Camera view', icon: 'videocam' },
-  { key: 'analytics', label: 'Analytics', icon: 'bar_chart' },
-  { key: 'notes', label: 'Notes', icon: 'edit_note' },
-  { key: 'history', label: 'Historical data', icon: 'table_rows' },
+  { key: 'overview', icon: 'dashboard' },
+  { key: 'camera', icon: 'videocam' },
+  { key: 'analytics', icon: 'bar_chart' },
+  { key: 'notes', icon: 'edit_note' },
+  { key: 'history', icon: 'table_rows' },
 ];
 
 function Experiment_edit() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { id } = useParams();
   const [experimentName, setExperimentName] = useState("");
   const [name, setName] = useState("");
@@ -48,6 +51,11 @@ function Experiment_edit() {
   const [endDate, setEndDate] = useState("");
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [collaborators, setCollaborators] = useState([]);
+  const [collaboratorQuery, setCollaboratorQuery] = useState("");
+  const [collaboratorResults, setCollaboratorResults] = useState([]);
+  const [collaboratorSearchLoading, setCollaboratorSearchLoading] = useState(false);  
+  const [collaboratorError, setCollaboratorError] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
   const [frequencies, setFrequencies] = useState({});
@@ -64,11 +72,11 @@ function Experiment_edit() {
     })
       .then((res) => {
         if (res.status === 403) {
-          toast.error("You do not have permission to perform this action.");
+          toast.error(t("experimentForm.errors.permission"));
           navigate(`/experiment/${id}`);
           throw new Error("Forbidden");
         }
-        if (!res.ok) throw new Error("Failed to fetch experiment data");
+        if (!res.ok) throw new Error(t("experimentForm.errors.load"));
         return res.json();
       })
       .then((data) => {
@@ -78,6 +86,15 @@ function Experiment_edit() {
         setDescription(data.description || "");
         setIsPublic(data.is_public || false);
         setKeywords(data.keywords || []);
+
+        setCollaborators(
+          (data.collaborators || []).map((item) => ({
+            user_id: item.user?.id ?? item.user_id,
+            email: item.user?.email ?? item.user?.username ?? "",
+            can_edit_experiment: item.can_edit_experiment ?? false,
+            can_end_experiment: item.can_end_experiment ?? false,
+          }))
+        );
 
         if (data.started_at) setStartDate(data.started_at.split('T')[0]);
         if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
@@ -93,10 +110,10 @@ function Experiment_edit() {
       })
       .catch((err) => {
         console.error(err);
-        toast.error("Error loading experiment details.");
+        toast.error(t("experimentForm.errors.load"));
         navigate('/dashboard');
       });
-  }, [id, navigate]);
+  }, [id, navigate, t]);
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -114,36 +131,114 @@ function Experiment_edit() {
     setFrequencies(prev => ({ ...prev, [sensor]: value }));
   };
 
+  
+const handleSearchCollaborators = async () => {
+  const query = collaboratorQuery.trim();
+
+  if (!query) {
+    setCollaboratorResults([]);
+    return;
+  }
+
+  setCollaboratorSearchLoading(true);
+  setCollaboratorError("");
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/users/search/?q=${encodeURIComponent(query)}`,
+      { headers: getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      throw new Error(t("experimentForm.errors.find"));
+    }
+
+    const data = await response.json();
+    const results = Array.isArray(data) ? data : data.results || [];
+
+    setCollaboratorResults(results);
+  } catch (error) {
+    console.error(error);
+    setCollaboratorError(t("experimentForm.errors.find"));
+  } finally {
+    setCollaboratorSearchLoading(false);
+  }
+};
+
+const handleAddCollaborator = (user) => {
+  const userId = user.id ?? user.user_id;
+
+  if (!userId) return;
+
+  if (collaborators.some((item) => String(item.user_id) === String(userId))) {
+    setCollaboratorError(t("experimentForm.errors.collab_yes"));
+    return;
+  }
+
+  setCollaborators((current) => [
+    ...current,
+    {
+      user_id: userId,
+      email: user.email ?? user.username ?? `User ${userId}`,
+      can_edit_experiment: false,
+      can_end_experiment: false,
+    },
+  ]);
+
+  setCollaboratorResults((current) =>
+    current.filter((item) => String(item.id ?? item.user_id) !== String(userId))
+  );
+
+  setCollaboratorQuery("");
+  setCollaboratorError("");
+};
+
+const handleRemoveCollaborator = (userId) => {
+  setCollaborators((current) =>
+    current.filter((item) => String(item.user_id) !== String(userId))
+  );
+};
+
+const handleCollaboratorPermissionChange = (userId, permission, checked) => {
+  setCollaborators((current) =>
+    current.map((item) =>
+      String(item.user_id) === String(userId)
+        ? { ...item, [permission]: checked }
+        : item
+    )
+  );
+};
+
   const handleSave = () => {
     setErrors({});
     const localErrors = {};
 
     if (!name.trim()) {
-      localErrors.name = ["This field is required."];
+      localErrors.name = [t("experimentForm.errors.required")];
     } else if (name.length > 100) {
-      localErrors.name = ["Ensure the name has no more than 100 characters."];
+      localErrors.name = [t("experimentForm.errors.nameLength")];
     }
 
     if (!plantName.trim()) {
-      localErrors.plant_name = ["This field is required."];
+      localErrors.plant_name = [t("experimentForm.errors.required")];
     } else if (plantName.length > 100) {
-      localErrors.plant_name = ["Ensure the plant type has no more than 100 characters."];
+      localErrors.plant_name = [t("experimentForm.errors.plantLength")];
     }
 
     if (description.length > 2000) {
-      localErrors.description = ["Ensure the description has no more than 2000 characters."];
+      localErrors.description = [t("experimentForm.errors.descriptionLength")];
     }
 
     if (!keywords || keywords.length === 0) {
-      localErrors.keywords = ["At least one keyword is required."];
+      localErrors.keywords = [t("experimentForm.errors.keywordRequired")];
     } else if (keywords.length > 15) {
-      localErrors.keywords = ["Ensure there are no more than 15 keywords."];
+      localErrors.keywords = [t("experimentForm.errors.keywordCount")];
     } else if (keywords.some(kw => kw.length > 50)) {
-      localErrors.keywords = ["Ensure each keyword has no more than 50 characters."];
+      localErrors.keywords = [t("experimentForm.errors.keywordLength")];
     }
 
     if (!selectedSetup) {
-      localErrors.sensor_set_id = ["Hardware set ID is missing."];
+      localErrors.sensor_set_id = [t("experimentForm.errors.hardwareMissing")];
     } else {
       const invalidSensors = SENSORS.some(sensor => {
         const val = frequencies[sensor.key];
@@ -154,18 +249,18 @@ function Experiment_edit() {
         return isEmpty || isNotNumber || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = ["Frequencies must be positive numbers of hours, for example 1 or 0,3."];
+        localErrors.sensor_set_id = [t("experimentForm.errors.frequency")];
       }
     }
 
     if (!startDate) {
-      localErrors.started_at = ["Start date is required."];
+      localErrors.started_at = [t("experimentForm.errors.startRequired")];
     }
 
     if (!endDate) {
-      localErrors.planned_end_at = ["Planned end date is required."];
+      localErrors.planned_end_at = [t("experimentForm.errors.endRequired")];
     } else if (startDate && new Date(endDate) < new Date(startDate)) {
-      localErrors.planned_end_at = ["Planned end date cannot be earlier than start date."];
+      localErrors.planned_end_at = [t("experimentForm.errors.endBeforeStart")];
     }
 
     if (Object.keys(localErrors).length > 0) {
@@ -182,6 +277,11 @@ function Experiment_edit() {
       description,
       plant_name: plantName,
       keywords,
+      collaborators: collaborators.map((collaborator) => ({
+        user_id: collaborator.user_id,
+        can_edit_experiment: collaborator.can_edit_experiment,
+        can_end_experiment: collaborator.can_end_experiment,
+      })),
       measurement_frequency_seconds: Math.min(...Object.values(sensorFrequencies)),
       sensor_frequencies: sensorFrequencies,
       started_at: startDate || null,
@@ -199,23 +299,23 @@ function Experiment_edit() {
         const data = await res.json();
 
         if (res.status === 403) {
-          toast.error("You do not have permission to perform this action.");
+          toast.error(t("experimentForm.errors.permission"));
           navigate(`/experiment/${id}`);
           return;
         }
 
         if (res.ok) {
           navigate(`/experiment/${id}`, {
-            state: { message: "Experiment updated successfully!" },
+            state: { message: t("editExperiment.updated") },
           });
         } else {
           setErrors(data);
-          toast.error("Please fix the highlighted fields.");
+          toast.error(t("editExperiment.fixFields"));
         }
       })
       .catch((err) => {
         console.error("Error updating experiment:", err);
-        toast.error("Server connection error.");
+        toast.error(t("experimentForm.errors.connection"));
       })
       .finally(() => setIsSaving(false));
   };
@@ -231,28 +331,37 @@ function Experiment_edit() {
             localStorage.setItem("sidebar-collapsed", String(next));
             return next;
           })}
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={sidebarCollapsed ? t("navigation.expandSidebar") : t("navigation.collapseSidebar")}
+          title={sidebarCollapsed ? t("navigation.expandSidebar") : t("navigation.collapseSidebar")}
         >
           <span className="material-symbols-outlined">{sidebarCollapsed ? "chevron_right" : "chevron_left"}</span>
         </button>
-        <div className="exp-sidebar-logo" onClick={() => navigate('/dashboard')}>
+        <div
+          className="exp-sidebar-logo"
+          onClick={() => navigate('/dashboard')}
+          data-sidebar-tooltip={t("navigation.dashboard")}
+          tabIndex={0}
+          role="button"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") navigate('/dashboard');
+          }}
+        >
           <img src={logo} alt="Logo" className="exp-sidebar-logo-mark" />
           <img src={logoName} alt="PlantStalker" className="exp-sidebar-logo-text" />
         </div>
 
         <div className="exp-sidebar-meta">
-          <p className="exp-sidebar-exp-name">{experimentName || "Experiment"}</p>
+          <p className="exp-sidebar-exp-name">{experimentName || t("experimentForm.experiment")}</p>
           <p className="exp-sidebar-exp-sub">
             {plantName && <span>{plantName}</span>}
             {isPublic
-              ? <span className="exp-sidebar-badge exp-sidebar-badge--public">Public</span>
-              : <span className="exp-sidebar-badge exp-sidebar-badge--private">Private</span>
+              ? <span className="exp-sidebar-badge exp-sidebar-badge--public">{t("experimentForm.public")}</span>
+              : <span className="exp-sidebar-badge exp-sidebar-badge--private">{t("experimentForm.private")}</span>
             }
           </p>
         </div>
 
-        <p className="exp-sidebar-section-label">EXPERIMENT CONTROLS</p>
+        <p className="exp-sidebar-section-label">{t("experimentForm.controls")}</p>
 
         <nav className="exp-sidebar-nav">
           {NAV_ITEMS.map(item => (
@@ -260,9 +369,12 @@ function Experiment_edit() {
               key={item.key}
               className="exp-nav-item"
               onClick={() => navigate(`/experiment/${id}`)}
+              data-sidebar-tooltip={t(`experimentForm.${item.key}`)}
+              aria-label={t(`experimentForm.${item.key}`)}
+              title={t(`experimentForm.${item.key}`)}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="exp-nav-item-label">{item.label}</span>
+              <span className="exp-nav-item-label">{t(`experimentForm.${item.key}`)}</span>
             </button>
           ))}
         </nav>
@@ -271,13 +383,13 @@ function Experiment_edit() {
       <div className="exp-main">
         <div className="exp-topbar">
           <div className="exp-breadcrumb">
-            <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>Dashboard</span>
+            <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>{t("navigation.dashboard")}</span>
             <span className="exp-breadcrumb-sep">›</span>
             <span className="exp-breadcrumb-link" onClick={() => navigate(`/experiment/${id}`)}>
-              {experimentName || "Experiment"}
+              {experimentName || t("experimentForm.experiment")}
             </span>
             <span className="exp-breadcrumb-sep">›</span>
-            <span>Edit</span>
+            <span>{t("editExperiment.edit")}</span>
           </div>
           <div className="exp-topbar-actions">
             <span className="material-symbols-outlined exp-topbar-icon">notifications</span>
@@ -288,33 +400,33 @@ function Experiment_edit() {
 
         <div className="exp-content">
           {isLoading ? (
-            <div className="exp-tab-overview"><p>Loading experiment data...</p></div>
+            <div className="exp-tab-overview"><p>{t("editExperiment.loading")}</p></div>
           ) : (
             <div className="exp-tab-overview exp-edit">
               <div className="exp-tab-header">
-                <h1 className="exp-tab-title">Edit experiment</h1>
+                <h1 className="exp-tab-title">{t("editExperiment.title")}</h1>
                 <div className="exp-tab-actions">
                   <button
                     className="exp-btn exp-btn--ghost"
                     onClick={() => navigate(`/experiment/${id}`)}
                     disabled={isSaving}
                   >
-                    Cancel
+                    {t("experimentForm.cancel")}
                   </button>
                   <button className="exp-btn exp-btn--primary" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? "Saving…" : "Save changes"}
+                    {isSaving ? t("editExperiment.saving") : t("editExperiment.save")}
                   </button>
                 </div>
               </div>
 
               <div className="exp-overview-card">
                 <div className="exp-overview-field">
-                  <label className="exp-info-label" htmlFor="exp-name">Experiment name</label>
+                  <label className="exp-info-label" htmlFor="exp-name">{t("experimentForm.name")}</label>
                   <input
                     id="exp-name"
                     className={`exp-edit-input ${errors.name ? "exp-edit-input--error" : ""}`}
                     type="text"
-                    placeholder="Name your experiment"
+                    placeholder={t("editExperiment.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -322,12 +434,12 @@ function Experiment_edit() {
                 </div>
 
                 <div className="exp-overview-field">
-                  <label className="exp-info-label" htmlFor="exp-plant">Plant type</label>
+                  <label className="exp-info-label" htmlFor="exp-plant">{t("experimentForm.plant")}</label>
                   <input
                     id="exp-plant"
                     className={`exp-edit-input ${errors.plant_name ? "exp-edit-input--error" : ""}`}
                     type="text"
-                    placeholder="Type in type of plant"
+                    placeholder={t("editExperiment.plantPlaceholder")}
                     value={plantName}
                     onChange={(e) => setPlantName(e.target.value)}
                   />
@@ -335,11 +447,11 @@ function Experiment_edit() {
                 </div>
 
                 <div className="exp-overview-field exp-overview-field--last">
-                  <label className="exp-info-label" htmlFor="exp-desc">Description</label>
+                  <label className="exp-info-label" htmlFor="exp-desc">{t("experimentForm.description")}</label>
                   <textarea
                     id="exp-desc"
                     className={`exp-edit-input exp-edit-textarea ${errors.description ? "exp-edit-input--error" : ""}`}
-                    placeholder="Describe your experiment (optional)"
+                    placeholder={t("editExperiment.descriptionPlaceholder")}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
@@ -349,12 +461,12 @@ function Experiment_edit() {
 
               <div className="exp-overview-card">
                 <div className="exp-overview-field">
-                  <span className="exp-info-label">Keywords</span>
+                  <span className="exp-info-label">{t("experimentForm.keywords")}</span>
                   <div className="exp-edit-keyword-row">
                     <input
                       className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
                       type="text"
-                      placeholder="Add a keyword"
+                      placeholder={t("editExperiment.keywordPlaceholder")}
                       value={keywordInput}
                       onChange={(e) => setKeywordInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -365,7 +477,7 @@ function Experiment_edit() {
                       }}
                     />
                     <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
-                      Add
+                      {t("experimentForm.add")}
                     </button>
                   </div>
                   {keywords.length > 0 && (
@@ -387,28 +499,83 @@ function Experiment_edit() {
                   {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
                 </div>
 
+                <div className="exp-overview-card">
+                  <div className="exp-overview-field exp-overview-field--last">
+                    <span className="exp-info-label">Collaborators</span>
+                    <div className="exp-edit-keyword-row">
+                      <input
+                      className="exp-edit-input"
+                      type="text"
+                      placeholder={t("experimentForm.find_mail")}
+                      value={collaboratorQuery}
+                      onChange={(e) => setCollaboratorQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchCollaborators();}}}/>
+
+                      <button type="button" className="exp-btn exp-btn--primary" onClick={handleSearchCollaborators} disabled={collaboratorSearchLoading}>
+                      {collaboratorSearchLoading ? t("common.loading") : t("common.find")}
+                      </button>
+                    </div>
+
+                    {collaboratorError && (
+                      <span className="error-text">{collaboratorError}</span>)}
+                    {collaboratorResults.length > 0 && (
+                      <div className="exp-collaborator-search-results">
+                        {collaboratorResults.map((user) => {
+                        const userId = user.id ?? user.user_id;
+                        return (
+                          <div key={userId} className="exp-collaborator-edit-row">
+                            <span>{user.email ?? user.username ?? `User ${userId}`}</span>
+                            <button type="button" className="exp-btn exp-btn--ghost" onClick={() => handleAddCollaborator(user)} >
+                              {t("experimentForm.add")}
+                            </button>
+                          </div>
+                        );})}
+                      </div>)}
+
+                      <div className="exp-collaborator-edit-list">
+                        {collaborators.length === 0 ? ( <p> {t("experimentDetails.none")} </p>
+                        ) : ( collaborators.map((collaborator) => (
+                          <div key={collaborator.user_id} className="exp-collaborator-edit-item">
+                            <div className="exp-collaborator-edit-header">
+                              <strong>{collaborator.email || `User ${collaborator.user_id}`}</strong>
+                              <button type="button" className="btn-remove-tag" onClick={() =>
+                                handleRemoveCollaborator(collaborator.user_id)}
+                                aria-label={`t("experimentDetails.delete") ${collaborator.email || t("experimentForm.collaborator")}`}>
+                                &times;
+                              </button>
+                            </div>
+                            <label className="exp-edit-checkbox">
+                            <input type="checkbox" checked={collaborator.can_edit_experiment}
+                              onChange={(e) =>
+                              handleCollaboratorPermissionChange( collaborator.user_id, "can_edit_experiment", e.target.checked)}/>
+                              <span>{t("experimentForm.can_edit")}</span>
+                            </label>
+
+                            <label className="exp-edit-checkbox">
+                            <input 
+                              type="checkbox"
+                              checked={collaborator.can_end_experiment}
+                              onChange={(e) =>
+                              handleCollaboratorPermissionChange( collaborator.user_id, "can_end_experiment", e.target.checked)}/>
+                            <span>{t("experimentForm.can_end")}</span>
+                            </label>
+                          </div>)))}
+                        </div>
+                      </div>
+                    </div>
                 <div className="exp-overview-field exp-overview-field--last">
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">
-                      <label className="exp-info-label" htmlFor="start_date">Start date</label>
-                      <input
-                        className={`exp-edit-input ${errors.started_at ? "exp-edit-input--error" : ""}`}
-                        type="date"
-                        id="start_date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                      />
+                      <label className="exp-info-label" htmlFor="start_date">{t("experimentForm.startDate")}</label>
+                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} />
                       {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
                     </div>
                     <div className="exp-edit-col">
-                      <label className="exp-info-label" htmlFor="end_date">Planned end date</label>
-                      <input
-                        className={`exp-edit-input ${errors.planned_end_at ? "exp-edit-input--error" : ""}`}
-                        type="date"
-                        id="end_date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                      />
+                      <label className="exp-info-label" htmlFor="end_date">{t("experimentForm.plannedEndDate")}</label>
+                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} />
                       {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
                     </div>
                   </div>
@@ -418,16 +585,16 @@ function Experiment_edit() {
               <div className="exp-overview-card">
                 <div className="exp-overview-field exp-overview-field--last">
                   <span className="exp-info-label">
-                    Hardware set ID: <strong>{selectedSetup}</strong> · reading frequency (hours)
+                    {t("experimentForm.hardwareSetId")}: <strong>{selectedSetup}</strong> · {t("experimentForm.readingFrequency")}
                   </span>
                   <div className="frequency-grid">
                     {SENSORS.map((sensor) => (
                       <label key={sensor.key}>
-                        <span>{sensor.label}</span>
+                        <span>{t(`experimentForm.sensors.${sensor.labelKey}`)} ({t(`experimentForm.sensors.${sensor.scopeKey}`)})</span>
                         <input
                           type="text"
                           inputMode="decimal"
-                          placeholder="e.g. 0,3"
+                          placeholder={t("experimentForm.exampleDecimal")}
                           className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "exp-edit-input--error" : ""}
                           value={frequencies[sensor.key] || ""}
                           onKeyDown={(e) => {
@@ -450,7 +617,7 @@ function Experiment_edit() {
                       checked={isPublic}
                       onChange={(e) => setIsPublic(e.target.checked)}
                     />
-                    <span>Make my experiment public and let other users see the data.</span>
+                    <span>{t("experimentForm.makePublic")}</span>
                   </label>
                 </div>
               </div>
@@ -461,10 +628,10 @@ function Experiment_edit() {
                   onClick={() => navigate(`/experiment/${id}`)}
                   disabled={isSaving}
                 >
-                  Cancel
+                  {t("experimentForm.cancel")}
                 </button>
                 <button className="exp-btn exp-btn--primary" onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? "Saving…" : "Save changes"}
+                  {isSaving ? t("editExperiment.saving") : t("editExperiment.save")}
                 </button>
               </div>
             </div>

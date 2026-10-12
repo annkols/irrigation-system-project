@@ -15,7 +15,7 @@ from .views import (
     ExperimentCollaboratorDetailView,
     OwnedExperimentsListView,
     CollaboratedExperimentsListView
-)
+    )
 
 urlpatterns = [
     path('experiments/', ExperimentCreateView.as_view(), name='experiment-list-create'),

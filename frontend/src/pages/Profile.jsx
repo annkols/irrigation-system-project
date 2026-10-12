@@ -1,24 +1,100 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
+const PROFILE_PICTURE_UPLOAD_TARGET = 800 * 1024;
+const PROFILE_PICTURE_MAX_DIMENSION = 1200;
+const ALLOWED_PROFILE_PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ROLE_TRANSLATION_KEYS = {
+    student: "student",
+    doctoral_student: "doctoralStudent",
+    academic_employee: "academicEmployee",
+    administrative_worker: "administrativeWorker",
+    other: "other",
+};
+
+const canvasToBlob = (canvas, quality, errorMessage) => new Promise((resolve, reject) => {
+    canvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error(errorMessage)),
+        "image/jpeg",
+        quality
+    );
+});
+
+const optimizeProfilePicture = async (file, messages) => {
+    if (file.size <= PROFILE_PICTURE_UPLOAD_TARGET) return file;
+
+    const bitmap = await createImageBitmap(file);
+    const largestDimension = Math.max(bitmap.width, bitmap.height);
+    let scale = Math.min(1, PROFILE_PICTURE_MAX_DIMENSION / largestDimension);
+    let quality = 0.85;
+
+    try {
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+            const blob = await canvasToBlob(canvas, quality, messages.processingError);
+            if (blob.size <= PROFILE_PICTURE_UPLOAD_TARGET) {
+                const baseName = file.name.replace(/\.[^.]+$/, "") || "profile-picture";
+                return new File([blob], `${baseName}.jpg`, {
+                    type: "image/jpeg",
+                    lastModified: Date.now(),
+                });
+            }
+
+            if (quality > 0.55) {
+                quality -= 0.1;
+            } else {
+                scale *= 0.8;
+                quality = 0.75;
+            }
+        }
+    } finally {
+        bitmap.close();
+    }
+
+    throw new Error(messages.reductionError);
+};
 
 export default function Profile() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pictureMessage, setPictureMessage] = useState("");
+    const [pictureError, setPictureError] = useState("");
+    const [isSavingPicture, setIsSavingPicture] = useState(false);
+    const [isRemovingPicture, setIsRemovingPicture] = useState(false);
+    const [profilePictureUrl, setProfilePictureUrl] = useState(null);
+    const pictureInputRef = useRef(null);
+    const roleKey = ROLE_TRANSLATION_KEYS[user?.profile?.role];
+    const roleLabel = roleKey ? t(`register.roles.${roleKey}`) : user?.profile?.role;
+    // do usuwania konta
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteAccountError, setDeleteAccountError] = useState("");
 
     useEffect(() => {
         const fetchUserProfile = async () => {
             const accessToken = localStorage.getItem("token");
 
             if (!accessToken || accessToken === "undefined") {
-                setError("No access token found. Please log in.");
+                setError(t("profile.noToken"));
                 setLoading(false);
                 return;
             }
@@ -34,26 +110,183 @@ export default function Profile() {
 
                 if (response.status === 401) {
                     localStorage.removeItem("token");
-                    setError("Session expired. Please log in again.");
+                    setError(t("profile.sessionExpired"));
                     return;
                 }
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch profile (Status: ${response.status})`);
+                    throw new Error(t("profile.fetchFailed", { status: response.status }));
                 }
 
                 const data = await response.json();
                 setUser(data);
             } catch (err) {
                 console.error("Error fetching user profile:", err);
-                setError(err.message || "Something went wrong.");
+                setError(err.message || t("profile.genericError"));
             } finally {
                 setLoading(false);
             }
         };
 
         fetchUserProfile();
-    }, []);
+    }, [t]);
+
+    useEffect(() => {
+        if (!user?.profile?.profile_picture) {
+            setProfilePictureUrl(null);
+            return undefined;
+        }
+
+        let objectUrl;
+        let cancelled = false;
+
+        const fetchProfilePicture = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });
+                if (!response.ok) throw new Error(t("profile.imageLoadError"));
+
+                const blob = await response.blob();
+                if (!cancelled) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setProfilePictureUrl(objectUrl);
+                }
+            } catch (err) {
+                if (!cancelled) setPictureError(err.message);
+            }
+        };
+
+        fetchProfilePicture();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [user?.profile?.profile_picture, t]);
+
+    const handleProfilePictureChange = async (event) => {
+        const input = event.target;
+        const file = input.files?.[0];
+        if (!file) return;
+
+        setPictureMessage("");
+        setPictureError("");
+
+        if (!ALLOWED_PROFILE_PICTURE_TYPES.includes(file.type)) {
+            setPictureError(t("profile.invalidImageType"));
+            input.value = "";
+            return;
+        }
+
+        if (file.size > MAX_PROFILE_PICTURE_SIZE) {
+            setPictureError(t("profile.imageTooLarge"));
+            input.value = "";
+            return;
+        }
+
+        setIsSavingPicture(true);
+
+        try {
+            const optimizedFile = await optimizeProfilePicture(file, {
+                processingError: t("profile.imageProcessingError"),
+                reductionError: t("profile.imageReductionError"),
+            });
+            const formData = new FormData();
+            formData.append("profile_picture", optimizedFile);
+
+            const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                },
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.profile_picture?.[0]
+                    || data?.detail
+                    || t("profile.updateFailed")
+                );
+            }
+
+            setUser(data.user);
+            window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
+            setPictureMessage(t("profile.updateSuccess"));
+        } catch (err) {
+            setPictureError(err.message || t("profile.updateFailed"));
+        } finally {
+            setIsSavingPicture(false);
+            input.value = "";
+        }
+    };
+
+    const handleProfilePictureRemove = async () => {
+        setPictureMessage("");
+        setPictureError("");
+        setIsRemovingPicture(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me/avatar/`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                },
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data?.detail || t("profile.removeFailed"));
+            }
+
+            setUser(data.user);
+            window.dispatchEvent(new CustomEvent("current-user-updated", { detail: data.user }));
+            setPictureMessage(t("profile.removeSuccess"));
+        } catch (err) {
+            setPictureError(err.message || t("profile.removeFailed"));
+        } finally {
+            setIsRemovingPicture(false);
+        }
+    };
+
+    const handleAccountDelete = async () => {
+        setDeleteAccountError("");
+        setIsDeletingAccount(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me/delete/`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    confirmation_text: deleteConfirmationText,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.confirmation_text?.[0] 
+                    || data?.detail 
+                    || t("profile.deleteFailed")
+                );
+            }
+
+            localStorage.removeItem("token");
+            navigate("/");
+        } catch (err) {
+            setDeleteAccountError(err.message || t("profile.deleteFailed"));
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
 
     return (
         <div className="dashboard-page">
@@ -63,54 +296,61 @@ export default function Profile() {
                 <TopBar />
 
                 <header className="profile-header">
-                    <h1>My profile</h1>
+                    <h1>{t("profile.myProfile")}</h1>
 
                     <div className="header-actions">
                         {/* przycisk edytuj - na przyszłosć */}
                         <button className="edit-account-btn">
-                            Edit profile
+                            {t("profile.editProfile")}
                         </button>
 
-                        {/* przycisk usuń - na przyszlość */}
-                        <button className="delete-account-btn">
-                            Delete profile
+                        {/* przycisk usuń */}
+                        <button 
+                            className="delete-account-btn"
+                            onClick={() => {
+                                setDeleteConfirmationText("");
+                                setDeleteAccountError("");
+                                setIsDeleteModalOpen(true);
+                            }}
+                        >
+                            {t("profile.deleteProfile")}
                         </button>
                     </div>
                 </header>
 
                 {loading ? (
-                    <div className="loading">Loading profile...</div>
+                    <div className="loading">{t("profile.loading")}</div>
                 ) : error ? (
                     <div className="error-message">
                         <p>{error}</p>
-                        <button onClick={() => navigate("/")}>Go to Login</button>
+                        <button onClick={() => navigate("/")}>{t("profile.goToLogin")}</button>
                     </div>
                 ) : (
-                    <div className="profile-container" style={{ padding: "1.5rem" }}>
+                    <div className="profile-container">
                         
                         <div className="my-profile-card">
                             <div className="my-profile-card-inner">
                                 
                                 {/* info o użytkowniku */}
-                                <div style={{ flex: 1 }}>
-                                    <h2 style={{ marginTop: 0 }}>Account Details</h2>
+                                <div className="my-profile-details">
+                                    <h2>{t("profile.accountDetails")}</h2>
                                     <ul className="my-profile-info-list">
-                                        <li><strong>First Name:</strong> {user?.first_name || "-"}</li>
-                                        <li><strong>Last Name:</strong> {user?.last_name || "-"}</li>
-                                        <li><strong>Email:</strong> {user?.email || "-"}</li>
-                                        <li><strong>Active Account:</strong> {user?.is_active ? "Yes" : "No"}</li>
-                                        <li><strong>University:</strong> {user?.profile?.university || "-"}</li>
-                                        <li><strong>Department:</strong> {user?.profile?.department || "-"}</li>
-                                        <li><strong>Role:</strong> {user?.profile?.role || "-"}</li>
+                                        <li><strong>{t("profile.firstName")}</strong> {user?.first_name || "-"}</li>
+                                        <li><strong>{t("profile.lastName")}</strong> {user?.last_name || "-"}</li>
+                                        <li><strong>{t("profile.email")}</strong> {user?.email || "-"}</li>
+                                        <li><strong>{t("profile.activeAccount")}</strong> {user?.is_active ? t("profile.yes") : t("profile.no")}</li>
+                                        <li><strong>{t("profile.university")}</strong> {user?.profile?.university || "-"}</li>
+                                        <li><strong>{t("profile.department")}</strong> {user?.profile?.department || "-"}</li>
+                                        <li><strong>{t("profile.role")}</strong> {roleLabel || "-"}</li>
                                     </ul>
                                 </div>
 
                                 {/* zdjęcie profilowe/placeholder */}
                                 <div className="my-profile-picture-wrapper">
-                                    {user?.profile?.profile_picture ? (
+                                    {profilePictureUrl ? (
                                         <img 
-                                            src={user.profile.profile_picture} 
-                                            alt="Profile" 
+                                            src={profilePictureUrl}
+                                            alt={t("profile.imageAlt")}
                                             className="my-profile-avatar-img"
                                         />
                                     ) : (
@@ -120,8 +360,101 @@ export default function Profile() {
                                             </span>
                                         </div>
                                     )}
+                                    <input
+                                        ref={pictureInputRef}
+                                        className="my-profile-picture-input"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        onChange={handleProfilePictureChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="my-profile-picture-btn"
+                                        disabled={isSavingPicture || isRemovingPicture}
+                                        onClick={() => pictureInputRef.current?.click()}
+                                    >
+                                        {isSavingPicture
+                                            ? t("profile.saving")
+                                            : user?.profile?.profile_picture
+                                                ? t("profile.changePicture")
+                                                : t("profile.addPicture")}
+                                    </button>
+                                    {user?.profile?.profile_picture && (
+                                        <button
+                                            type="button"
+                                            className="my-profile-picture-remove-btn"
+                                            disabled={isSavingPicture || isRemovingPicture}
+                                            onClick={handleProfilePictureRemove}
+                                        >
+                                            {isRemovingPicture ? t("profile.removing") : t("profile.removePicture")}
+                                        </button>
+                                    )}
+                                    <small className="my-profile-picture-help">
+                                        {t("profile.imageRequirements")}
+                                    </small>
+                                    {pictureMessage && (
+                                        <p className="my-profile-picture-success" role="status">
+                                            {pictureMessage}
+                                        </p>
+                                    )}
+                                    {pictureError && (
+                                        <p className="my-profile-picture-error" role="alert">
+                                            {pictureError}
+                                        </p>
+                                    )}
                                 </div>
 
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* modal usuwanie konta */}
+                {isDeleteModalOpen && (
+                    <div className="delete-modal-overlay">
+                        <div className="delete-modal-content">
+                            <h2>{t("profile.deleteModalTitle", "Usuń konto")}</h2>
+                            <p>
+                                {t(
+                                    "profile.deleteModalText",
+                                    "Czy na pewno chcesz usunąć konto? Wpisz \"usuń moje konto\" lub \"delete my account\", aby potwierdzić."
+                                )}
+                            </p>
+
+                            <input
+                                type="text"
+                                className="delete-modal-input"
+                                placeholder={t("profile.deleteModalPlaceholder", "Wpisz tekst potwierdzenia")}
+                                value={deleteConfirmationText}
+                                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                disabled={isDeletingAccount}
+                            />
+
+                            {deleteAccountError && (
+                                <p className="delete-modal-error" role="alert">
+                                    {deleteAccountError}
+                                </p>
+                            )}
+
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-modal-cancel-btn"
+                                    onClick={() => setIsDeleteModalOpen(false)}
+                                    disabled={isDeletingAccount}
+                                >
+                                    {t("profile.cancel", "Anuluj")}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="delete-modal-confirm-btn"
+                                    onClick={handleAccountDelete}
+                                    disabled={isDeletingAccount || !deleteConfirmationText.trim()}
+                                >
+                                    {isDeletingAccount 
+                                        ? t("profile.deleting", "Usuwanie...") 
+                                        : t("profile.confirmDelete", "Usuń")}
+                                </button>
                             </div>
                         </div>
                     </div>

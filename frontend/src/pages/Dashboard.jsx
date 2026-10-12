@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
@@ -10,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const [experiments, setExperiments] = useState([]);
     const [measurements, setMeasurements] = useState([]);
@@ -24,10 +26,9 @@ export default function Dashboard() {
                 ? { Authorization: `Bearer ${token}` }
                 : {};
 
-            const [ownedRes, collaboratedRes, measRes] = await Promise.all([
+            const [ownedRes, collaboratedRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/experiments/owned/`, { headers }),
-                fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers }),
-                fetch(`${API_BASE_URL}/measurements/`, { headers })
+                fetch(`${API_BASE_URL}/experiments/collaborated/`, { headers })
             ]);
 
             if (ownedRes.status === 401 || collaboratedRes.status === 401) {
@@ -36,14 +37,13 @@ export default function Dashboard() {
                 return;
             }
 
-            if (!ownedRes.ok || !collaboratedRes.ok || !measRes.ok) {
-                throw new Error("Could not load dashboard data.");
+            if (!ownedRes.ok && !collaboratedRes.ok) {
+                throw new Error(t("dashboard.loadError"));
             }
 
-            const [ownedData, collaboratedData, measData] = await Promise.all([
-                ownedRes.json(),
-                collaboratedRes.json(),
-                measRes.json()
+            const [ownedData, collaboratedData] = await Promise.all([
+                ownedRes.ok ? ownedRes.json() : [],
+                collaboratedRes.ok ? collaboratedRes.json() : []
             ]);
             const experimentData = [
                 ...(Array.isArray(ownedData) ? ownedData : []),
@@ -54,14 +54,26 @@ export default function Dashboard() {
             ).values()];
 
             setExperiments(uniqueExperiments);
-            setMeasurements(Array.isArray(measData) ? measData : []);
+            setLoading(false);
+
+            try {
+                const measRes = await fetch(`${API_BASE_URL}/measurements/?limit=5000`, { headers });
+                if (!measRes.ok) {
+                    console.warn("Dashboard measurements could not be loaded.", measRes.status);
+                    return;
+                }
+                const measData = await measRes.json();
+                setMeasurements(Array.isArray(measData) ? measData : []);
+            } catch (measurementError) {
+                console.warn("Dashboard measurements could not be loaded.", measurementError);
+            }
         } catch (err) {
             console.error(err);
-            toast.error("Could not load dashboard data.");
+            toast.error(t("dashboard.loadError"));
         } finally {
             setLoading(false);
         }
-    }, [navigate]);
+    }, [navigate, t]);
 
     useEffect(() => {
         fetchData();
@@ -99,28 +111,28 @@ export default function Dashboard() {
                 <TopBar />
 
                 <header className="dashboard-header">
-                    <h1>Experiments</h1>
+                    <h1>{t("dashboard.title")}</h1>
 
                     <button
                         className="new-experiment-btn"
                         onClick={() => navigate("/new-experiment")}
                     >
-                        + Add New Experiment
+                        {t("dashboard.addExperiment")}
                     </button>
                 </header>
 
                 {loading ? (
-                    <div className="loading">Loading...</div>
+                    <div className="loading">{t("common.loading")}</div>
                 ) : (
                     <>
                         <ExperimentSection
-                            title="Active Experiments"
+                            title={t("dashboard.activeExperiments")}
                             cards={activeCards}
                         />
 
                         {completedCards.length > 0 && (
                             <CompletedExperimentsTable
-                                title="Completed Experiments"
+                                title={t("dashboard.completedExperiments")}
                                 cards={paginatedCompletedCards}
                                 currentPage={completedPage}
                                 totalPages={totalPages}
@@ -154,6 +166,9 @@ function ExperimentSection({ title, cards }) {
 }
 
 function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPageChange, navigate }) {
+    const { t, i18n } = useTranslation();
+    const locale = i18n.resolvedLanguage === "pl" ? "pl-PL" : "en-GB";
+
     return (
         <>
             <h2 className="section-title completed-title">{title}</h2>
@@ -162,10 +177,10 @@ function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPa
                 <table>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Started</th>
-                            <th>Finished</th>
-                            <th>Sensor set</th>
+                            <th>{t("dashboard.name")}</th>
+                            <th>{t("dashboard.started")}</th>
+                            <th>{t("dashboard.finished")}</th>
+                            <th>{t("dashboard.sensorSet")}</th>
                         </tr>
                     </thead>
 
@@ -179,13 +194,13 @@ function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPa
 
                                 <td>
                                     {experiment.started_at
-                                        ? new Date(experiment.started_at).toLocaleDateString()
+                                        ? new Date(experiment.started_at).toLocaleDateString(locale)
                                         : "-"}
                                 </td>
 
                                 <td>
                                     {experiment.finished_at
-                                        ? new Date(experiment.finished_at).toLocaleDateString()
+                                        ? new Date(experiment.finished_at).toLocaleDateString(locale)
                                         : "-"}
                                 </td>
                                 <td>{experiment.sensor_set_id ?? "-"}</td>
@@ -195,23 +210,23 @@ function CompletedExperimentsTable({ title, cards, currentPage, totalPages, onPa
                 </table>
 
                 {totalPages > 1 && (
-                    <div className="pagination-controls" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginTop: "15px" }}>
+                    <div className="pagination-controls">
                         <button
                             className="exp-btn exp-btn--ghost"
                             onClick={() => onPageChange(currentPage - 1)}
                             disabled={currentPage === 1}
                         >
-                            Previous
+                            {t("dashboard.previous")}
                         </button>
                         <span>
-                            Page {currentPage} of {totalPages}
+                            {t("dashboard.pageOf", { current: currentPage, total: totalPages })}
                         </span>
                         <button
                             className="exp-btn exp-btn--ghost"
                             onClick={() => onPageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
                         >
-                            Next
+                            {t("dashboard.next")}
                         </button>
                     </div>
                 )}

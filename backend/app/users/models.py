@@ -38,3 +38,23 @@ class UserProfile(models.Model):
             f"{self.user.first_name} {self.user.last_name}"
             f" | {self.department}"
         )
+
+class DismissedNotification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="dismissed_notifications"
+    )
+    notification_id = models.CharField(max_length=100)
+    dismissed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "notification_id"],
+                name="unique_user_dismissed_notification"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} dismissed {self.notification_id}"
