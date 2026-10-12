@@ -66,65 +66,78 @@ function New_experiment() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  const addCollaborator = async () => {
-    const email = collaboratorEmail.trim();
-  
-    if (!email) return;
-  
-    setAddingCollaborator(true);
-    setCollaboratorError("");
-  
-    try {
-      const response = await fetch(
-        `${api}/users/search/?q=${encodeURIComponent(email)}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
-  
-      const data = await response.json();
+const addCollaborator = async () => {
+  const query = collaboratorEmail.trim();
 
-if (!response.ok) {
-  throw new Error(t("experimentDetails.lost_user"));
-}
+  if (!query) return;
 
-const users = Array.isArray(data) ? data : data.results ?? [];
+  setAddingCollaborator(true);
+  setCollaboratorError("");
 
-const user = users.find(
-  (u) => u.email?.toLowerCase() === email.toLowerCase()
-);
-  
-      if (!user) {
-        setCollaboratorError(t("experimentDetails.lost_user"));
-        return;
+  try {
+    const response = await fetch(
+      `${api}/users/search/?q=${encodeURIComponent(query)}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
       }
-  
-      const alreadyExists = collaborators.some(
-        (c) => c.user_id === user.id
-      );
-  
-      if (alreadyExists) {
-        setCollaboratorError(t("experimentDetails.already_user"));
-        return;
-      }
-  
-      setCollaborators((prev) => [
-        ...prev,
-        {
-          user_id: user.id,
-          email: user.email,
-          can_edit_experiment: true,
-          can_end_experiment: true,
-        },
-      ]);
-  
-      setCollaboratorEmail("");
-    } catch (err) {
-      setCollaboratorError(err.message);
-    } finally {
-      setAddingCollaborator(false);
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(t("experimentDetails.lost_user"));
     }
-  };
+
+    const users = Array.isArray(data)
+      ? data
+      : data.results ?? [];
+
+    const normalizedQuery = query.toLowerCase();
+
+    const user = users.find((item) => {
+      const email = (item.email ?? "").trim().toLowerCase();
+      const username = (item.username ?? "").trim().toLowerCase();
+
+      return email === normalizedQuery || username === normalizedQuery;
+    });
+
+    if (!user) {
+      setCollaboratorError(t("experimentDetails.lost_user"));
+      return;
+    }
+
+    const userId = user.id ?? user.user_id;
+
+    if (
+      collaborators.some(
+        (item) => String(item.user_id) === String(userId)
+      )
+    ) {
+      setCollaboratorError(t("experimentDetails.already_user"));
+      return;
+    }
+
+    setCollaborators((current) => [
+      ...current,
+      {
+        user_id: userId,
+        email: user.email ?? user.username ?? query,
+        can_edit_experiment: true,
+        can_end_experiment: true,
+      },
+    ]);
+
+    setCollaboratorEmail("");
+  } catch (err) {
+    console.error("Error adding collaborator:", err);
+    setCollaboratorError(
+      err.message || t("experimentDetails.lost_user")
+    );
+  } finally {
+    setAddingCollaborator(false);
+  }
+};
 
   const removeCollaborator = (userId) => {
     setCollaborators((current) =>
@@ -273,7 +286,7 @@ const user = users.find(
               <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
               <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
               <div className="form-section collaborators-section">
-              <p>{t("experimentDetails.Collaborators")}</p>
+              <p>{t("experimentDetails.collaborators")}</p>
               <div className="keyword-input-wrapper">
                 <input type="email" placeholder="Enter collaborator's email" value={collaboratorEmail}
                   onChange={(event) => { setCollaboratorEmail(event.target.value); setCollaboratorError("");}}
