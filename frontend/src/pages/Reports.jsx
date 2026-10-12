@@ -132,9 +132,10 @@ export default function Reports() {
           .then((data) => (Array.isArray(data) ? data : []))
         : [];
 
-      const potNumbers = [...new Set(
-        experiment.pot_numbers?.length ? experiment.pot_numbers : measurements.map((m) => m.pot_number)
-      )].filter((n) => n != null).sort((a, b) => a - b);
+      const potNumbers = [...new Set([
+        ...(experiment.pot_numbers || []),
+        ...measurements.map((m) => m.pot_number),
+      ])].filter((n) => n != null).sort((a, b) => a - b);
 
       const cameraPotNumbers = (() => {
         if (!design?.camera_assignments?.length) return [];
@@ -178,7 +179,7 @@ export default function Reports() {
         noteThumbnails = new Map(entries);
       }
 
-      buildPdf({
+      await buildPdf({
         experiment,
         design,
         collaborators,
@@ -280,11 +281,11 @@ export default function Reports() {
   );
 }
 
-function buildPdf({
+async function buildPdf({
   experiment, design, collaborators, measurements, notes, noteThumbnails,
   potNumbers, cameraPotNumbers, cameraImages, sections, generatedBy,
 }) {
-  const ctx = createReport();
+  const ctx = await createReport();
   const generatedAt = new Date().toLocaleString("pl-PL", {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
   });
@@ -319,10 +320,10 @@ function buildPdf({
       addSubheading(ctx, `Experimental layout (${design.pots.length} pot(s))`);
       addTable(ctx, {
         columns: [
-          { header: "Pot", width: 25 },
-          { header: "Replicate", width: 25 },
-          { header: "Treatment", width: 80 },
-          { header: "Monitoring", width: 50 },
+          { header: "Pot", width: 18 },
+          { header: "Replicate", width: 22 },
+          { header: "Treatment", width: 100 },
+          { header: "Monitoring", width: 38 },
         ],
         rows: design.pots.map((pot) => [
           pot.label,
