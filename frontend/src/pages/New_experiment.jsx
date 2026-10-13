@@ -62,7 +62,7 @@ function New_experiment() {
   const [repetitions, setRepetitions] = useState(1);
   const [excluded, setExcluded] = useState([]);
   const [hardware, setHardware] = useState({});
-  const [cameras, setCameras] = useState([{ camera_id: "", pot_label: "" }, { camera_id: "", pot_label: "" }]);
+  const [cameras, setCameras] = useState([]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -176,6 +176,48 @@ const addCollaborator = async () => {
     [label]: { is_monitored: false, soil_moisture: "", soil_temperature: "", pump: "", ...items[label], ...patch },
   }));
 
+  const addCamera = () => {
+    setCameras((items) => [
+      ...items,
+      { camera_id: "", pot_label: "", verification: "idle", camera_name: "" },
+    ]);
+  };
+
+  const changeCamera = (index, patch) => {
+    setCameras((items) => items.map((item, current) => (
+      current === index ? { ...item, ...patch } : item
+    )));
+    setErrors((current) => ({ ...current, cameras: null }));
+  };
+
+  const removeCamera = (index) => {
+    setCameras((items) => items.filter((_, current) => current !== index));
+    setErrors((current) => ({ ...current, cameras: null }));
+  };
+
+  const verifyCamera = async (index) => {
+    const camera = cameras[index];
+    const cameraId = Number(camera?.camera_id);
+    const hardwareSetId = Number(sensorSetId);
+    if (!Number.isInteger(cameraId) || cameraId < 1 || !Number.isInteger(hardwareSetId) || hardwareSetId < 1) {
+      changeCamera(index, { verification: "invalid", camera_name: "" });
+      return;
+    }
+
+    changeCamera(index, { verification: "checking", camera_name: "" });
+    try {
+      const response = await fetch(
+        `${api}/camera/devices/${cameraId}/validate/?sensor_set_id=${hardwareSetId}`,
+        { headers: getAuthHeaders() },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.code || "camera_unavailable");
+      changeCamera(index, { verification: "valid", camera_name: data.name || "" });
+    } catch {
+      changeCamera(index, { verification: "invalid", camera_name: "" });
+    }
+  };
+
   const validate = () => {
     const next = {};
     if (step === 1) {
@@ -208,6 +250,11 @@ const addCollaborator = async () => {
         return new Set(identifiers).size !== identifiers.length;
       });
       if (duplicatedType) next.hardware = t("newExperiment.validation.duplicateDevice");
+      const incompleteCamera = cameras.some((camera) => !camera.camera_id || !camera.pot_label);
+      const cameraIds = cameras.map((camera) => String(camera.camera_id).trim()).filter(Boolean);
+      if (incompleteCamera) next.cameras = t("newExperiment.validation.cameraIncomplete");
+      else if (new Set(cameraIds).size !== cameraIds.length) next.cameras = t("newExperiment.validation.cameraDuplicate");
+      else if (cameras.some((camera) => camera.verification !== "valid")) next.cameras = t("newExperiment.validation.cameraUnverified");
     }
     setErrors(next);
     return !Object.keys(next).length;
@@ -248,7 +295,10 @@ const addCollaborator = async () => {
           repetitions: Number(repetitions),
           selected_combinations: selected.map((combination) => Object.fromEntries(combination.map((item, index) => [factors[index].name, item.label]))),
           pot_assignments: pots.map(({ label }) => ({ label, ...hardware[label], is_monitored: Boolean(hardware[label]?.is_monitored) })),
-          camera_assignments: cameras.filter((item) => item.camera_id && item.pot_label).map((item) => ({ ...item, camera_id: Number(item.camera_id) })),
+          camera_assignments: cameras.map((item) => ({
+            camera_id: Number(item.camera_id),
+            pot_label: item.pot_label,
+          })),
         }),
       });
       const design = await designResponse.json();
@@ -262,14 +312,17 @@ const addCollaborator = async () => {
           headers: getAuthHeaders(),
         });
       }
-      setErrors({ server: apiErrorMessage(error, t("newExperiment.unexpectedError")) });
+      const serverMessage = error?.camera_assignments
+        ? t("newExperiment.validation.cameraBackend")
+        : apiErrorMessage(error, t("newExperiment.unexpectedError"));
+      setErrors({ server: serverMessage });
       toast.error(t("newExperiment.createFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  const error = Object.values(errors)[0];
+  const error = Object.entries(errors).find(([key, value]) => key !== "cameras" && value)?.[1];
   return (
     <div className="dashboard-page">
       <Sidebar />
@@ -331,14 +384,47 @@ const addCollaborator = async () => {
                 <p>{t("newExperiment.layoutHelp")}</p>
                 <div className="pot-grid pot-grid--reference">{pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}><strong>{pot.label}</strong><small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
               </section>
-              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => setSensorSetId(event.target.value)} /></div>
+              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => { setSensorSetId(event.target.value); setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); }} /></div>
               <h3>{t("experimentForm.frequencyTitle")}</h3><div className="frequency-grid">{SENSORS.map(([id, labelKey, scopeKey]) => <label key={id}><span>{t(`experimentForm.sensors.${labelKey}`)}<small>{t(`experimentForm.sensors.${scopeKey}`)}</small></span><input type="text" inputMode="decimal" placeholder={t("experimentForm.exampleDecimal")} value={frequencies[id]} onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} /></label>)}</div>
               <h3>{t("newExperiment.individualHardware")}</h3>
               <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
               <div className="pot-assignment-list">{pots.map((pot) => { const assignment = hardware[pot.label] || {}; return <div className={`pot-assignment ${assignment.is_monitored ? "monitored" : ""}`} key={pot.label}><label className="monitor-toggle"><input type="checkbox" checked={Boolean(assignment.is_monitored)} onChange={(event) => changeHardware(pot.label, { is_monitored: event.target.checked })} /><strong>{pot.label}</strong><span className="pot-assignment-treatment">{pot.combination.map((item) => item.label).join(" · ")}</span><span>{assignment.is_monitored ? t("newExperiment.monitored") : t("newExperiment.notMonitored")}</span></label>{assignment.is_monitored && <div className="designer-row hardware-fields"><label className="hardware-field"><span>{t("newExperiment.soilMoistureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_moisture || ""} onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.soilTemperatureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_temperature || ""} onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.pumpId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.pump || ""} onChange={(event) => changeHardware(pot.label, { pump: event.target.value })} /></label></div>}</div>; })}</div>
               <h3>{t("newExperiment.cameraAssignment")}</h3>
               <p className="hardware-help">{t("newExperiment.cameraHelp")}</p>
-              {cameras.map((camera, index) => <div className="designer-row camera-row" key={index}><label className="hardware-field"><span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span><input type="number" min="1" placeholder={t("newExperiment.exampleId")} value={camera.camera_id} onChange={(event) => setCameras(cameras.map((item, current) => current === index ? { ...item, camera_id: event.target.value } : item))} /></label><label className="hardware-field"><span>{t("newExperiment.observedPot")}</span><select value={camera.pot_label} onChange={(event) => setCameras(cameras.map((item, current) => current === index ? { ...item, pot_label: event.target.value } : item))}><option value="">{t("newExperiment.selectPot")}</option>{pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}</select></label></div>)}
+              {!cameras.length && <p className="camera-empty-state">{t("newExperiment.noCameras")}</p>}
+              <div className="camera-assignment-list">
+                {cameras.map((camera, index) => (
+                  <div className="designer-row camera-row" key={index}>
+                    <label className="hardware-field">
+                      <span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder={t("newExperiment.exampleId")}
+                        value={camera.camera_id}
+                        onChange={(event) => changeCamera(index, { camera_id: event.target.value, verification: "idle", camera_name: "" })}
+                      />
+                    </label>
+                    <label className="hardware-field">
+                      <span>{t("newExperiment.observedPot")}</span>
+                      <select value={camera.pot_label} onChange={(event) => changeCamera(index, { pot_label: event.target.value })}>
+                        <option value="">{t("newExperiment.selectPot")}</option>
+                        {pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}
+                      </select>
+                    </label>
+                    <div className="camera-row-actions">
+                      <button className="camera-verify-btn" type="button" onClick={() => verifyCamera(index)} disabled={camera.verification === "checking" || !camera.camera_id}>
+                        {camera.verification === "checking" ? t("newExperiment.cameraChecking") : t("newExperiment.cameraVerify")}
+                      </button>
+                      <button className="designer-remove" type="button" onClick={() => removeCamera(index)}>{t("newExperiment.removeCamera")}</button>
+                    </div>
+                    {camera.verification === "valid" && <span className="camera-verification camera-verification--valid">{t("newExperiment.cameraVerified", { name: camera.camera_name })}</span>}
+                    {camera.verification === "invalid" && <span className="camera-verification camera-verification--invalid">{t("newExperiment.cameraNotFound")}</span>}
+                  </div>
+                ))}
+              </div>
+              <button className="btn-back camera-add-btn" type="button" onClick={addCamera}>{t("newExperiment.addCamera")}</button>
+              {errors.cameras && <span className="error-text designer-error">{errors.cameras}</span>}
             </div>}
 
             {step === 5 && <div className="step-content">

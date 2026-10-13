@@ -128,6 +128,37 @@ class CameraFrameUploadView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class CameraDeviceValidationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            sensor_set_id = int(request.query_params.get("sensor_set_id", ""))
+        except (TypeError, ValueError):
+            return Response(
+                {"code": "invalid_sensor_set", "detail": "sensor_set_id must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        camera = CameraDevice.objects.filter(
+            pk=pk,
+            sensor_set_id=sensor_set_id,
+            is_active=True,
+        ).first()
+        if camera is None:
+            return Response(
+                {"code": "camera_unavailable", "detail": "Camera not found for this hardware set."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response({
+            "id": camera.pk,
+            "name": camera.name,
+            "sensor_set_id": camera.sensor_set_id,
+            "is_active": camera.is_active,
+        })
+
+
 class LatestExperimentFrameImageView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []

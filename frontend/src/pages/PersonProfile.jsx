@@ -84,7 +84,13 @@ export default function PersonProfile() {
             <Sidebar />
 
             <div className="dashboard-content">
-                <TopBar />
+                <TopBar
+                    personName={user
+                        ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                          || user.username
+                          || user.email
+                        : ""}
+                />
 
                 <header className="profile-header">
                     <h1>

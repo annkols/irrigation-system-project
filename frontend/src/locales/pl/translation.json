@@ -313,10 +313,17 @@
     "pumpId": "ID pompy",
     "exampleId": "np. 1",
     "cameraAssignment": "Przypisanie kamer (opcjonalnie)",
-    "cameraHelp": "Możesz pozostawić te pola puste, jeśli nie planujesz korzystać z kamer w tym doświadczeniu.",
+    "cameraHelp": "Dodaj dowolną liczbę kamer, podaj ID zdefiniowane na backendzie i przypisz każdą kamerę do obserwowanej doniczki. Kamery są opcjonalne.",
     "cameraDevice": "ID urządzenia kamery {{number}}",
     "observedPot": "Obserwowana doniczka",
     "selectPot": "Wybierz doniczkę",
+    "noCameras": "Nie dodano żadnej kamery.",
+    "addCamera": "+ Dodaj kamerę",
+    "removeCamera": "Usuń kamerę",
+    "cameraVerify": "Sprawdź ID",
+    "cameraChecking": "Sprawdzanie…",
+    "cameraVerified": "Kamera dostępna: {{name}}",
+    "cameraNotFound": "Nie znaleziono aktywnej kamery o tym ID w wybranym zestawie sprzętu.",
     "review": "Sprawdź i utwórz",
     "summaryCounts": "Czynniki: {{factors}}, kombinacje: {{combinations}}, doniczki: {{pots}}",
     "summaryHardware": "Monitorowane doniczki: {{count}}, ID zestawu sprzętu: {{id}}",
@@ -335,7 +342,11 @@
       "repetitions": "Liczba powtórzeń musi wynosić od 1 do 50.",
       "potLimit": "Plan może zawierać maksymalnie 500 doniczek.",
       "hardware": "Wprowadź poprawny identyfikator zestawu sprzętu.",
-      "duplicateDevice": "Ten sam identyfikator urządzenia nie może być przypisany do dwóch doniczek w ramach jednego typu urządzenia."
+      "duplicateDevice": "Ten sam identyfikator urządzenia nie może być przypisany do dwóch doniczek w ramach jednego typu urządzenia.",
+      "cameraIncomplete": "Uzupełnij ID i doniczkę dla każdej dodanej kamery albo usuń niepotrzebny wiersz.",
+      "cameraDuplicate": "Każda kamera może zostać dodana tylko raz.",
+      "cameraUnverified": "Sprawdź ID każdej dodanej kamery przed przejściem dalej.",
+      "cameraBackend": "Nie można zapisać przypisania kamer. Sprawdź, czy wszystkie kamery nadal istnieją, są aktywne i należą do wybranego zestawu sprzętu."
     }
   },
   "experimentDetails": {

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     CameraFrameDeleteView,
+    CameraDeviceValidationView,
     CameraFrameImageView,
     CameraFrameUploadView,
     ExperimentFrameListView,
@@ -11,6 +12,11 @@ from .views import (
 
 
 urlpatterns = [
+    path(
+        "camera/devices/<int:pk>/validate/",
+        CameraDeviceValidationView.as_view(),
+        name="camera-device-validate",
+    ),
     path(
         "camera/frames/upload/",
         CameraFrameUploadView.as_view(),

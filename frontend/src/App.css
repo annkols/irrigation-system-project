@@ -4287,6 +4287,42 @@ body {
 .pot-assignment.monitored { border-color: #56a76b; background: #f3faf5; }
 .monitor-toggle { display: flex; align-items: center; gap: 8px; }
 .camera-row select { min-height: 42px; }
+  .camera-assignment-list { display: grid; gap: 10px; }
+  .camera-row {
+    align-items: flex-end;
+    padding: 14px;
+    border: 1px solid var(--color-border-light);
+    border-radius: 10px;
+    background: var(--color-bg-main);
+  }
+  .camera-row-actions { display: flex; align-items: center; gap: 8px; }
+  .camera-verify-btn {
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 1px solid var(--color-primary);
+    border-radius: 7px;
+    background: var(--color-bg-card);
+    color: var(--color-primary);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .camera-verify-btn:disabled { cursor: wait; opacity: .6; }
+  .camera-add-btn { margin-top: 10px; }
+  .camera-empty-state {
+    margin: 0 0 10px;
+    padding: 14px;
+    border: 1px dashed var(--color-border-light);
+    border-radius: 9px;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+  .camera-verification {
+    flex: 1 0 100%;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .camera-verification--valid { color: var(--color-primary); }
+  .camera-verification--invalid { color: var(--color-error); }
 .design-summary { border: 1px solid #cfe0d4; background: #f5faf6; border-radius: 12px; padding: 18px; }
 .designer-error { display: block; margin: 14px 0; }
 .designer-navigation { margin-top: 24px; }
@@ -4355,8 +4391,10 @@ body {
 }
 
 @media (max-width: 720px) {
-  .designer-row, .level-row { align-items: stretch; flex-direction: column; }
+    .designer-row, .level-row { align-items: stretch; flex-direction: column; }
   .designer-row > input, .designer-row > select, .level-row > input { width: 100%; flex-basis: auto; }
+    .camera-row-actions { width: 100%; }
+    .camera-row-actions button { flex: 1; }
 }
 
 /* ── Reports page ── */

@@ -5,7 +5,7 @@ import "../App.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-export default function TopBar({ experimentName }) {
+export default function TopBar({ experimentName, personName }) {
 
     const { t, i18n } = useTranslation();
 
@@ -94,6 +94,7 @@ export default function TopBar({ experimentName }) {
 
     const generateBreadcrumbs = () => {
         const paths = location.pathname.split("/").filter(Boolean);
+        const isPersonProfile = paths[0] === "person" && paths.length === 2;
         
         let accumulatedPath = "";
         
@@ -108,6 +109,22 @@ export default function TopBar({ experimentName }) {
             }
 
             const isExperimentId = paths[index - 1] === 'experiment';
+
+            if (isPersonProfile && index === 0) {
+                return {
+                    name: t("navigation.searchPeople"),
+                    path: "/search-people",
+                    isLast: false,
+                };
+            }
+
+            if (isPersonProfile && index === 1) {
+                return {
+                    name: personName || t("profile.userProfile"),
+                    path: accumulatedPath,
+                    isLast: true,
+                };
+            }
 
             const translatedSegments = {
                 profile: t("navigation.profile"),

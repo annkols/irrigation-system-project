@@ -307,10 +307,17 @@
     "pumpId": "Pump ID",
     "exampleId": "e.g. 1",
     "cameraAssignment": "Camera assignment (optional)",
-    "cameraHelp": "You can leave these fields empty if you do not plan to use cameras in this experiment.",
+    "cameraHelp": "Add any number of cameras, enter an ID defined in the backend, and assign every camera to the pot it observes. Cameras are optional.",
     "cameraDevice": "Camera {{number}} device ID",
     "observedPot": "Observed pot",
     "selectPot": "Select pot",
+    "noCameras": "No cameras added.",
+    "addCamera": "+ Add camera",
+    "removeCamera": "Remove camera",
+    "cameraVerify": "Verify ID",
+    "cameraChecking": "Checking…",
+    "cameraVerified": "Camera available: {{name}}",
+    "cameraNotFound": "No active camera with this ID was found in the selected hardware set.",
     "review": "Review and create",
     "summaryCounts": "{{factors}} factor(s), {{combinations}} combination(s), {{pots}} pot(s)",
     "summaryHardware": "{{count}} monitored pot(s), Hardware set ID: {{id}}",
@@ -329,7 +336,11 @@
       "repetitions": "Repetitions must be between 1 and 50.",
       "potLimit": "The plan may contain at most 500 pots.",
       "hardware": "Enter a valid Hardware set ID.",
-      "duplicateDevice": "The same device ID cannot be assigned to two pots within one device type."
+      "duplicateDevice": "The same device ID cannot be assigned to two pots within one device type.",
+      "cameraIncomplete": "Enter an ID and a pot for every added camera, or remove the unused row.",
+      "cameraDuplicate": "Each camera can only be added once.",
+      "cameraUnverified": "Verify every added camera ID before continuing.",
+      "cameraBackend": "The camera assignments could not be saved. Check that every camera still exists, is active, and belongs to the selected hardware set."
     }
   },
   "experimentDetails": {

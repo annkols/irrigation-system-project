@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import LocalizedDateInput from "./LocalizedDateInput";
+import TopBar from "./Topbar";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -381,22 +382,7 @@ const handleCollaboratorPermissionChange = (userId, permission, checked) => {
       </aside>
 
       <div className="exp-main">
-        <div className="exp-topbar">
-          <div className="exp-breadcrumb">
-            <span className="exp-breadcrumb-link" onClick={() => navigate('/dashboard')}>{t("navigation.dashboard")}</span>
-            <span className="exp-breadcrumb-sep">›</span>
-            <span className="exp-breadcrumb-link" onClick={() => navigate(`/experiment/${id}`)}>
-              {experimentName || t("experimentForm.experiment")}
-            </span>
-            <span className="exp-breadcrumb-sep">›</span>
-            <span>{t("editExperiment.edit")}</span>
-          </div>
-          <div className="exp-topbar-actions">
-            <span className="material-symbols-outlined exp-topbar-icon">notifications</span>
-            <span className="material-symbols-outlined exp-topbar-icon">settings</span>
-            <span className="material-symbols-outlined exp-topbar-icon">account_circle</span>
-          </div>
-        </div>
+        <TopBar experimentName={experimentName || t("experimentForm.experiment")} />
 
         <div className="exp-content">
           {isLoading ? (

@@ -89,6 +89,36 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(len(list_response.data), 0)
 
+    def test_authenticated_user_can_validate_camera_for_hardware_set(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            reverse("camera-device-validate", args=[self.camera_device.pk]),
+            {"sensor_set_id": 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["id"], self.camera_device.pk)
+        self.assertEqual(response.data["name"], self.camera_device.name)
+
+    def test_camera_validation_rejects_wrong_hardware_set(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            reverse("camera-device-validate", args=[self.camera_device.pk]),
+            {"sensor_set_id": 2},
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_camera_validation_requires_authentication(self):
+        response = self.client.get(
+            reverse("camera-device-validate", args=[self.camera_device.pk]),
+            {"sensor_set_id": 1},
+        )
+
+        self.assertIn(response.status_code, (401, 403))
+
     def test_owner_can_save_latest_frame_for_gallery(self):
         self.upload_frame()
         self.client.force_authenticate(user=self.user)
