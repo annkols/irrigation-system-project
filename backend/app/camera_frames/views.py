@@ -5,11 +5,12 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from experiments.models import Experiment, ExperimentCameraAssignment
+from experiments.permissions import IsExperimentOwnerOrCollaborator
 
 from .models import CameraDevice, CameraFrame
 from .serializers import CameraFrameSerializer
@@ -111,6 +112,18 @@ class CameraFrameUploadView(APIView):
             note="Automatic camera upload",
         )
         frame.image.save(f"{uuid4()}.jpg", ContentFile(image_bytes), save=True)
+
+        # Keep one rolling preview per camera/pot. Manually saved frames are
+        # intentionally excluded and remain available in the gallery.
+        stale_previews = CameraFrame.objects.filter(
+            experiment=experiment,
+            camera=device,
+            pot=assignment.pot,
+            is_saved=False,
+        ).exclude(pk=frame.pk)
+        for stale_frame in stale_previews:
+            stale_frame.delete()
+
         serializer = CameraFrameSerializer(frame, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -166,7 +179,47 @@ class ExperimentFrameListView(generics.ListAPIView):
 
     def get_queryset(self):
         get_object_or_404(Experiment, pk=self.kwargs["experiment_id"])
-        return CameraFrame.objects.filter(experiment_id=self.kwargs["experiment_id"])
+        return CameraFrame.objects.filter(
+            experiment_id=self.kwargs["experiment_id"],
+            is_saved=True,
+        )
+
+
+class SaveLatestExperimentFrameView(APIView):
+    permission_classes = [IsAuthenticated, IsExperimentOwnerOrCollaborator]
+
+    def post(self, request, experiment_id):
+        experiment = get_object_or_404(Experiment, pk=experiment_id)
+        self.check_object_permissions(request, experiment)
+
+        try:
+            pot_number = int(request.data.get("pot_number", ""))
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "pot_number must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        frame = CameraFrame.objects.filter(
+            experiment=experiment,
+            pot__position=pot_number,
+        ).first()
+        if frame is None:
+            return Response(
+                {"detail": "No camera frame has been uploaded for this pot."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not frame.is_saved:
+            frame.is_saved = True
+            frame.saved_at = timezone.now()
+            frame.captured_by = request.user
+            frame.save(update_fields=["is_saved", "saved_at", "captured_by"])
+
+        return Response(
+            CameraFrameSerializer(frame, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class CameraFrameDeleteView(generics.DestroyAPIView):

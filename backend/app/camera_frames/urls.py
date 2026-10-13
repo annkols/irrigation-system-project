@@ -6,6 +6,7 @@ from .views import (
     CameraFrameUploadView,
     ExperimentFrameListView,
     LatestExperimentFrameImageView,
+    SaveLatestExperimentFrameView,
 )
 
 
@@ -19,6 +20,11 @@ urlpatterns = [
         "experiments/<int:experiment_id>/frames/latest/image/",
         LatestExperimentFrameImageView.as_view(),
         name="experiment-latest-frame-image",
+    ),
+    path(
+        "experiments/<int:experiment_id>/frames/latest/save/",
+        SaveLatestExperimentFrameView.as_view(),
+        name="experiment-save-latest-frame",
     ),
     path(
         "experiments/<int:experiment_id>/frames/",

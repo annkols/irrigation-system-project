@@ -356,7 +356,8 @@
     "alerts": "Alerty doświadczenia",
     "oneCritical": "1 krytyczny",
     "viewNotifications": "Zobacz wszystkie powiadomienia",
-    "measurementFailed": "Nie udało się pobrać pomiarów",
+    "measurementFailed": "Brak aktualnych danych z czujników",
+    "measurementsStale": "Sprzęt nie przesyła nowych pomiarów. Ostatni odebrany pomiar: {{time}}.",
     "systemsNormal": "Wszystkie systemy działają prawidłowo",
     "sensorsNormal": "Czujniki przesyłają dane prawidłowo.",
     "liveSensors": "Bieżące odczyty czujników",
@@ -383,6 +384,9 @@
     "noCameraAssigned": "Nie przypisano kamery",
     "latestFrameAlt": "Najnowsza klatka z kamery dla doniczki P{{pot}}",
     "noCameraFeed": "Brak obrazu z kamery",
+    "saveFrame": "Zapisz bieżącą klatkę",
+    "savingFrame": "Zapisywanie…",
+    "frameSaved": "Bieżąca klatka została zapisana.",
     "savedFrames": "Zapisane klatki",
     "export": "Eksportuj",
     "noMeasurements": "Nie zarejestrowano jeszcze pomiarów.",
@@ -420,7 +424,8 @@
       "addImage": "Nie udało się dodać zdjęcia ({{status}}).",
       "deleteImage": "Nie udało się usunąć zdjęcia ({{status}}).",
       "deleteNote": "Nie udało się usunąć notatki ({{status}}).",
-      "saveNote": "Nie udało się zapisać notatki ({{status}})."
+      "saveNote": "Nie udało się zapisać notatki ({{status}}).",
+      "saveFrame": "Nie udało się zapisać bieżącej klatki."
     }
   },
   "charts": {

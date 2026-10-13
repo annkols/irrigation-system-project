@@ -16,6 +16,8 @@ class CameraFrameSerializer(serializers.ModelSerializer):
             "image_url",
             "captured_at",
             "captured_by",
+            "is_saved",
+            "saved_at",
             "note",
         ]
         read_only_fields = fields

@@ -78,6 +78,8 @@ class CameraFrame(models.Model):
         blank=True,
         related_name="captured_camera_frames",
     )
+    is_saved = models.BooleanField(default=False, db_index=True)
+    saved_at = models.DateTimeField(null=True, blank=True)
     note = models.CharField(max_length=255, blank=True)
 
     class Meta:

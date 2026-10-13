@@ -46,6 +46,8 @@ function Experiment_details() {
   const [design, setDesign] = useState(null);
   const [selectedPot, setSelectedPot] = useState(null);
   const [selectedCameraPot, setSelectedCameraPot] = useState(null);
+  const [cameraFrameAvailable, setCameraFrameAvailable] = useState(false);
+  const [isSavingFrame, setIsSavingFrame] = useState(false);
   const [measurements, setMeasurements] = useState([]);
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
   const [pumpCommandStatus, setPumpCommandStatus] = useState("");
@@ -118,6 +120,27 @@ function Experiment_details() {
   const getAuthTokenHeader = () => {
     const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handleSaveCameraFrame = async () => {
+    if (selectedCameraPot == null || !cameraFrameAvailable || isSavingFrame) return;
+
+    setIsSavingFrame(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/${id}/frames/latest/save/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ pot_number: selectedCameraPot }),
+      });
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
+      toast.success(t('experimentDetails.frameSaved'));
+    } catch {
+      toast.error(t('experimentDetails.errors.saveFrame'));
+    } finally {
+      setIsSavingFrame(false);
+    }
   };
 
   const closeNote = () => {
@@ -515,6 +538,32 @@ function Experiment_details() {
 
   const now = new Date();
   const nowDateTime = `${now.toLocaleDateString(i18n.resolvedLanguage)} ${now.toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" })}`;
+  const latestMeasurementTime = stationMeasurements.reduce((latestTime, measurement) => {
+    const measurementTime = new Date(measurement.created_at).getTime();
+    return Number.isFinite(measurementTime) && measurementTime > latestTime
+      ? measurementTime
+      : latestTime;
+  }, 0);
+  const measurementThresholdMs = Math.max(
+    (experiment.measurement_frequency_seconds || 900) * 2 * 1000,
+    30 * 60 * 1000
+  );
+  const experimentStartedAt = experiment.started_at
+    ? new Date(experiment.started_at).getTime()
+    : 0;
+  const isExperimentRunning = experimentStartedAt > 0
+    && experimentStartedAt <= now.getTime()
+    && !experiment.finished_at;
+  const lastHardwareContact = latestMeasurementTime || experimentStartedAt;
+  const hasStaleMeasurements = isExperimentRunning
+    && lastHardwareContact > 0
+    && now.getTime() - lastHardwareContact > measurementThresholdMs;
+  const lastHardwareContactLabel = latestMeasurementTime
+    ? new Date(latestMeasurementTime).toLocaleString(i18n.resolvedLanguage)
+    : t('experimentDetails.never');
+  const measurementAlert = errors.measurements || (hasStaleMeasurements
+    ? t('experimentDetails.measurementsStale', { time: lastHardwareContactLabel })
+    : null);
 
   return (
     <div className="exp-layout">
@@ -700,18 +749,18 @@ function Experiment_details() {
                 <div className="exp-alerts-header">
                   <div className="exp-alerts-title-row">
                     <span className="exp-alerts-title">{t('experimentDetails.alerts')}</span>
-                    {errors.measurements && <span className="exp-alerts-badge">{t('experimentDetails.oneCritical')}</span>}
+                    {measurementAlert && <span className="exp-alerts-badge">{t('experimentDetails.oneCritical')}</span>}
                   </div>
                 </div>
 
-                {errors.measurements ? (
+                {measurementAlert ? (
                   <div className="exp-alert-item">
                     <div className="exp-alert-icon exp-alert-icon--critical">
                       <span className="material-symbols-outlined">error</span>
                     </div>
                     <div className="exp-alert-content">
                       <span className="exp-alert-name">{t('experimentDetails.measurementFailed')}</span>
-                      <span className="exp-alert-desc">{errors.measurements}</span>
+                      <span className="exp-alert-desc">{measurementAlert}</span>
                     </div>
                     {errorTime && <span className="exp-alert-time">{errorTime}</span>}
                   </div>
@@ -854,7 +903,10 @@ function Experiment_details() {
                   id="camera-pot-select"
                   value={selectedCameraPot ?? ""}
                   disabled={!cameraPotNumbers.length}
-                  onChange={(e) => setSelectedCameraPot(Number(e.target.value))}
+                  onChange={(e) => {
+                    setCameraFrameAvailable(false);
+                    setSelectedCameraPot(Number(e.target.value));
+                  }}
                 >
                   {!cameraPotNumbers.length && <option value="">{t('experimentDetails.noCameraAssigned')}</option>}
                   {cameraPotNumbers.map((number) => <option key={number} value={number}>P{number}</option>)}
@@ -869,10 +921,12 @@ function Experiment_details() {
                       alt={t('experimentDetails.latestFrameAlt', { pot: selectedCameraPot })}
                       className="exp-camera-stream"
                       onLoad={e => {
+                        setCameraFrameAvailable(true);
                         e.target.style.display = '';
                         e.target.nextElementSibling?.classList.remove('exp-camera-placeholder-visible');
                       }}
                       onError={e => {
+                        setCameraFrameAvailable(false);
                         e.target.style.display = 'none';
                         e.target.nextElementSibling?.classList.add('exp-camera-placeholder-visible');
                       }}
@@ -884,6 +938,14 @@ function Experiment_details() {
                   </div>
                 </div>
                 <div className="exp-camera-controls">
+                  <button
+                    className="capture-frame-btn"
+                    onClick={handleSaveCameraFrame}
+                    disabled={!cameraFrameAvailable || isSavingFrame}
+                  >
+                    <span className="material-symbols-outlined">add_photo_alternate</span>
+                    {isSavingFrame ? t('experimentDetails.savingFrame') : t('experimentDetails.saveFrame')}
+                  </button>
                   <button className="saved-frames-btn" onClick={() => navigate(`/experiment/${id}/frames`)}>
                     <span className="material-symbols-outlined">photo_library</span>
                     {t('experimentDetails.savedFrames')}

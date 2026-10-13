@@ -350,7 +350,8 @@
     "alerts": "Experiment Alerts",
     "oneCritical": "1 Critical",
     "viewNotifications": "View All Notifications",
-    "measurementFailed": "Measurement Fetch Failed",
+    "measurementFailed": "No current sensor data",
+    "measurementsStale": "The hardware is not sending new measurements. Last measurement received: {{time}}.",
     "systemsNormal": "All systems normal",
     "sensorsNormal": "Sensors reporting as expected.",
     "liveSensors": "Live Sensors",
@@ -377,6 +378,9 @@
     "noCameraAssigned": "No camera assigned",
     "latestFrameAlt": "Latest camera frame for pot P{{pot}}",
     "noCameraFeed": "No camera feed available",
+    "saveFrame": "Save current frame",
+    "savingFrame": "Saving…",
+    "frameSaved": "Current frame saved.",
     "savedFrames": "Saved frames",
     "export": "Export",
     "noMeasurements": "No measurements recorded yet.",
@@ -414,7 +418,8 @@
       "addImage": "Failed to add image ({{status}}).",
       "deleteImage": "Failed to delete image ({{status}}).",
       "deleteNote": "Failed to delete note ({{status}}).",
-      "saveNote": "Failed to save note ({{status}})."
+      "saveNote": "Failed to save note ({{status}}).",
+      "saveFrame": "Failed to save the current frame."
     }
   },
   "charts": {

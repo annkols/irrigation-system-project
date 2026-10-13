@@ -2,6 +2,7 @@ import shutil
 import tempfile
 
 from django.test import override_settings
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -18,9 +19,15 @@ class CameraFrameApiTests(APITestCase):
             MEDIA_ROOT=self.media_root,
         )
         self.settings_override.enable()
+        self.user = get_user_model().objects.create_user(
+            username="camera-owner",
+            email="camera-owner@example.com",
+            password="test-password-123",
+        )
         self.experiment = Experiment.objects.create(
             name="Test experiment",
             plant_name="Tomato",
+            owner=self.user,
             sensor_set_id=1,
             started_at=timezone.now(),
         )
@@ -70,6 +77,7 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(frame.camera, self.camera_device)
         self.assertEqual(frame.pot, self.pot)
         self.assertEqual(frame.note, "Automatic camera upload")
+        self.assertFalse(frame.is_saved)
         self.assertIn(
             f"experiment_{self.experiment.id}/pot_1/camera_{self.camera_device.id}/",
             frame.image.name,
@@ -79,7 +87,65 @@ class CameraFrameApiTests(APITestCase):
             reverse("experiment-frame-list", args=[self.experiment.pk])
         )
         self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(len(list_response.data), 0)
+
+    def test_owner_can_save_latest_frame_for_gallery(self):
+        self.upload_frame()
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("experiment-save-latest-frame", args=[self.experiment.pk]),
+            {"pot_number": 1},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        frame = CameraFrame.objects.get()
+        self.assertTrue(frame.is_saved)
+        self.assertIsNotNone(frame.saved_at)
+        self.assertEqual(frame.captured_by, self.user)
+
+        list_response = self.client.get(
+            reverse("experiment-frame-list", args=[self.experiment.pk])
+        )
         self.assertEqual(len(list_response.data), 1)
+
+    def test_upload_replaces_only_the_previous_unsaved_preview(self):
+        first_response = self.upload_frame()
+        first_id = first_response.data["id"]
+
+        second_response = self.upload_frame()
+
+        self.assertNotEqual(first_id, second_response.data["id"])
+        self.assertEqual(CameraFrame.objects.count(), 1)
+        self.assertFalse(CameraFrame.objects.filter(pk=first_id).exists())
+
+    def test_upload_keeps_a_manually_saved_frame(self):
+        first_response = self.upload_frame()
+        self.client.force_authenticate(user=self.user)
+        self.client.post(
+            reverse("experiment-save-latest-frame", args=[self.experiment.pk]),
+            {"pot_number": 1},
+            format="json",
+        )
+        self.client.force_authenticate(user=None)
+
+        self.upload_frame()
+
+        self.assertEqual(CameraFrame.objects.count(), 2)
+        self.assertTrue(CameraFrame.objects.get(pk=first_response.data["id"]).is_saved)
+
+    def test_anonymous_user_cannot_save_a_frame(self):
+        self.upload_frame()
+
+        response = self.client.post(
+            reverse("experiment-save-latest-frame", args=[self.experiment.pk]),
+            {"pot_number": 1},
+            format="json",
+        )
+
+        self.assertIn(response.status_code, (401, 403))
+        self.assertFalse(CameraFrame.objects.get().is_saved)
 
     def test_upload_rejects_invalid_token(self):
         response = self.upload_frame(token="wrong-token")

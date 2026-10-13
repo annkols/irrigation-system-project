@@ -315,7 +315,6 @@ class UserNotificationsView(APIView):
                     })
 
             # Błąd od czujników
-            sensor_notif_id = f"sensor_error_{exp.id}"
             is_in_progress = exp.started_at and exp.started_at <= now and not exp.finished_at
 
             if is_in_progress:
@@ -323,6 +322,10 @@ class UserNotificationsView(APIView):
 		        # Dopuszczalny bufor: 2x częstotliwość pomiarów, ale nie mniej niż 30 minut
                 threshold_seconds = max(freq_seconds * 2, 1800)
                 latest_measurement = exp.measurements.first()
+                # A dismissal belongs to one concrete outage. After the hardware
+                # sends data again, a later outage receives a new notification id.
+                incident_marker = latest_measurement.pk if latest_measurement else "no_measurements"
+                sensor_notif_id = f"sensor_error_{exp.id}_{incident_marker}"
                 
                 has_sensor_error = False
                 if not latest_measurement:
