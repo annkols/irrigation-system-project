@@ -2708,6 +2708,21 @@ body {
   border-radius: 8px;
 }
 
+.exp-water-all-btn {
+  width: 100%;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.exp-water-all-btn .material-symbols-outlined {
+  font-size: 19px;
+}
+
 @media (max-width: 600px) {
   .exp-pump-timer { grid-template-columns: 1fr; }
 }

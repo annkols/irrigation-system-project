@@ -13,7 +13,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 const MEASUREMENT_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
 
-const pumpCommands = ["ON", "OFF", "AUTO"];
+const irrigationCommands = [
+  { command: "ON", labelKey: "experimentDetails.irrigationOn" },
+  { command: "OFF", labelKey: "experimentDetails.irrigationOff" },
+  { command: "AUTO", labelKey: "experimentDetails.irrigationAuto" },
+];
 const latestNonNull = rows => rows.length ? rows.reduceRight((result, row) => ({ ...result, ...Object.fromEntries(Object.entries(row).filter(([, value]) => value != null)) }), {}) : null;
 const DAYLIGHT_PPFD_FACTOR = 0.0185;
 const RED_LIGHT_SHARE = 700 / (700 + 400);
@@ -501,8 +505,9 @@ function Experiment_details() {
       });
       if (!response.ok) throw new Error();
       setSelectedPumpCommand(command);
+      const commandLabel = irrigationCommands.find(({ command: value }) => value === command)?.labelKey;
       setPumpCommandStatus(durationSeconds == null
-        ? t('experimentDetails.commandSent', { command })
+        ? t('experimentDetails.commandSent', { command: commandLabel ? t(commandLabel) : command })
         : t('experimentDetails.timedCommandSent', { seconds: durationSeconds }));
     } catch {
       setPumpCommandStatus(t('experimentDetails.errors.command'));
@@ -510,6 +515,62 @@ function Experiment_details() {
     } finally {
       setIsSendingPumpCommand(false);
     }
+  };
+
+  const handleWaterAllPots = () => {
+    const duration = Number(pumpDurationSeconds);
+    if (!Number.isInteger(duration) || duration < 1 || duration > 60) {
+      setPumpCommandStatus(t('experimentDetails.errors.duration'));
+      setPumpCommandHasError(true);
+      return;
+    }
+    if (!experiment || potNumbers.length === 0 || isSendingPumpCommand) return;
+
+    toast(
+      ({ closeToast }) => (
+        <div className="confirmation-toast">
+          <p>{t('experimentDetails.confirmWaterAll', { count: potNumbers.length, seconds: duration })}</p>
+          <div className="confirmation-toast-actions">
+            <button
+              className="confirmation-toast-btn confirmation-toast-btn--confirm"
+              onClick={async () => {
+                closeToast();
+                setIsSendingPumpCommand(true);
+                setPumpCommandStatus("");
+                setPumpCommandHasError(false);
+                try {
+                  const responses = await Promise.all(potNumbers.map((potNumber) => fetch(`${API_BASE_URL}/pump-control/`, {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                      command: "ON",
+                      duration_seconds: duration,
+                      station_number: experiment.sensor_set_id,
+                      pot_number: potNumber,
+                    }),
+                  })));
+                  if (responses.some((response) => !response.ok)) throw new Error();
+                  setSelectedPumpCommand(null);
+                  setPumpCommandStatus(t('experimentDetails.waterAllSent', {
+                    count: potNumbers.length,
+                    seconds: duration,
+                  }));
+                } catch {
+                  setPumpCommandStatus(t('experimentDetails.errors.waterAll'));
+                  setPumpCommandHasError(true);
+                } finally {
+                  setIsSendingPumpCommand(false);
+                }
+              }}
+            >{t('profile.yes')}</button>
+            <button className="confirmation-toast-btn confirmation-toast-btn--cancel" onClick={closeToast}>
+              {t('experimentForm.cancel')}
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false, closeOnClick: false }
+    );
   };
 
   const calculateProgress = (exp) => {
@@ -820,13 +881,13 @@ function Experiment_details() {
                   </span>
                 </div>
                 <div className="exp-pump-buttons">
-                  {pumpCommands.map(cmd => (
+                  {irrigationCommands.map(({ command, labelKey }) => (
                     <button
-                      key={cmd}
-                      className={`exp-pump-btn ${selectedPumpCommand === cmd ? 'active' : ''}`}
+                      key={command}
+                      className={`exp-pump-btn ${selectedPumpCommand === command ? 'active' : ''}`}
                       disabled={isSendingPumpCommand || selectedPot == null}
-                      onClick={() => sendPumpCommand(cmd)}
-                    >{cmd}</button>
+                      onClick={() => sendPumpCommand(command)}
+                    >{t(labelKey)}</button>
                   ))}
                 </div>
                 <p className="exp-pump-delay-note">
@@ -837,7 +898,7 @@ function Experiment_details() {
                   onSubmit={(event) => {
                     event.preventDefault();
                     const duration = Number(pumpDurationSeconds);
-                    if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
+                    if (!Number.isInteger(duration) || duration < 1 || duration > 60) {
                       setPumpCommandStatus(t('experimentDetails.errors.duration'));
                       setPumpCommandHasError(true);
                       return;
@@ -850,7 +911,7 @@ function Experiment_details() {
                     id="pump-duration"
                     type="number"
                     min="1"
-                    max="300"
+                    max="60"
                     step="1"
                     value={pumpDurationSeconds}
                     onChange={(event) => setPumpDurationSeconds(event.target.value)}
@@ -861,6 +922,15 @@ function Experiment_details() {
                     disabled={isSendingPumpCommand || selectedPot == null}
                   >{t('experimentDetails.runTimed')}</button>
                 </form>
+                <button
+                  type="button"
+                  className="exp-pump-btn exp-water-all-btn"
+                  disabled={isSendingPumpCommand || potNumbers.length === 0}
+                  onClick={handleWaterAllPots}
+                >
+                  <span className="material-symbols-outlined">format_color_fill</span>
+                  {t('experimentDetails.waterAllActive')}
+                </button>
                 {pumpCommandStatus && (
                   <p className={
                     pumpCommandHasError ? "pump-command-error" : "pump-command-status"

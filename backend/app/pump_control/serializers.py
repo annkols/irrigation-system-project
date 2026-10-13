@@ -32,8 +32,8 @@ class PumpCommandSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'duration_seconds': 'Czas pracy można podać tylko dla komendy ON.'
             })
-        if duration is not None and not 1 <= duration <= 300:
+        if duration is not None and not 1 <= duration <= 60:
             raise serializers.ValidationError({
-                'duration_seconds': 'Czas pracy musi wynosić od 1 do 300 sekund.'
+                'duration_seconds': 'Czas pracy musi wynosić od 1 do 60 sekund.'
             })
         return attrs

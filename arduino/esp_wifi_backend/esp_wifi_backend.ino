@@ -4,314 +4,165 @@
 #include "arduino_secrets.h"
 #include "device_config.h"
 
-// Dla ESP32 zamien powyzsze include na:
-// #include <WiFi.h>
-// #include <HTTPClient.h>
-// #include <WiFiClientSecure.h>
-
-unsigned long lastCommandCheckAt = 0;
-const unsigned long commandCheckIntervalMs = 5000;
-
-unsigned long lastConfigCheckAt = 0;
-const unsigned long configCheckIntervalMs = 30000;
-
-int lastForwardedCommandId = 0;
+unsigned long lastCommandCheckAt = 0, lastConfigCheckAt = 0;
+const unsigned long commandCheckIntervalMs = 5000, configCheckIntervalMs = 30000;
+int assignedExperimentId = 0, assignedStationNumber = 0;
+int assignedPotNumbers[POT_CHANNEL_COUNT] = {0, 0, 0};
+int lastForwardedCommandIds[POT_CHANNEL_COUNT] = {0, 0, 0};
 String lastForwardedConfig = "";
-int assignedExperimentId = 0;
-int assignedStationNumber = 0;
-int assignedPotNumber = 0;
 bool assignmentReady = false;
 
 void setup() {
   Serial.begin(9600);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
   Serial.print("Laczenie z WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.print("Polaczono. IP ESP: ");
-  Serial.println(WiFi.localIP());
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println(); Serial.print("IP ESP: "); Serial.println(WiFi.localIP());
 }
 
 void loop() {
   if (Serial.available()) {
-    String payload = Serial.readStringUntil('\n');
-    payload.trim();
-
-    if (payload.length() > 0) {
-      sendToBackend(payload);
-    }
+    String payload = Serial.readStringUntil('\n'); payload.trim();
+    if (payload.startsWith("{")) sendToBackend(payload);
   }
-
-  if (lastCommandCheckAt == 0 || millis() - lastCommandCheckAt >= commandCheckIntervalMs) {
-    lastCommandCheckAt = millis();
-    fetchPumpCommand();
-  }
-
   if (lastConfigCheckAt == 0 || millis() - lastConfigCheckAt >= configCheckIntervalMs) {
-    lastConfigCheckAt = millis();
-    fetchSensorConfig();
+    lastConfigCheckAt = millis(); fetchSensorConfigs();
   }
+  if (lastCommandCheckAt == 0 || millis() - lastCommandCheckAt >= commandCheckIntervalMs) {
+    lastCommandCheckAt = millis(); fetchPumpCommands();
+  }
+}
+
+bool ensureWifi() {
+  if (WiFi.status() == WL_CONNECTED) return true;
+  WiFi.reconnect();
+  Serial.println("Brak WiFi");
+  return false;
 }
 
 void sendToBackend(String payload) {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Brak WiFi, ponawiam laczenie...");
-    WiFi.reconnect();
-    return;
-  }
-
-  BearSSL::WiFiClientSecure client;
-  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
-  HTTPClient http;
-
-  http.begin(client, MEASUREMENTS_API_URL);
-  http.addHeader("Content-Type", "application/json");
-
-  int statusCode = http.POST(payload);
-
-  Serial.print("POST status: ");
-  Serial.println(statusCode);
-
-  if (statusCode > 0) {
-    Serial.println(http.getString());
-  }
-
+  if (!ensureWifi()) return;
+  BearSSL::WiFiClientSecure client; client.setInsecure();
+  HTTPClient http; http.begin(client, MEASUREMENTS_API_URL); http.addHeader("Content-Type", "application/json");
+  int status = http.POST(payload);
+  Serial.print("POST pomiaru: "); Serial.println(status);
   http.end();
 }
 
-void fetchPumpCommand() {
-  if (!assignmentReady) {
-    return;
-  }
+void fetchSensorConfigs() {
+  if (!ensureWifi()) return;
+  int experiment = 0, station = 0;
+  int pots[POT_CHANNEL_COUNT] = {0, 0, 0};
+  String frequencyResponse = "";
 
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Brak WiFi, ponawiam laczenie...");
-    WiFi.reconnect();
-    return;
-  }
-
-  BearSSL::WiFiClientSecure client;
-  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
-  HTTPClient http;
-
-  String url = String(PUMP_COMMAND_API_URL)
-    + "?station_number=" + String(assignedStationNumber)
-    + "&pot_number=" + String(assignedPotNumber);
-  http.begin(client, url);
-
-  int statusCode = http.GET();
-
-  Serial.print("GET pump command status: ");
-  Serial.println(statusCode);
-
-  if (statusCode == 200) {
-    String response = http.getString();
-    int commandId = extractCommandId(response);
-    String command = extractArduinoCommand(response);
-
-    if (commandId > 0 && command.length() > 0 && commandId != lastForwardedCommandId) {
-      Serial.println(command);
-      lastForwardedCommandId = commandId;
+  for (byte channel = 0; channel < POT_CHANNEL_COUNT; channel++) {
+    BearSSL::WiFiClientSecure client; client.setInsecure();
+    HTTPClient http;
+    String url = String(ACTIVE_SENSOR_CONFIG_API_URL)
+      + "?sensor_set_id=" + String(SENSOR_SET_ID)
+      + "&soil_moisture_id=" + urlEncode(SOIL_MOISTURE_IDS[channel])
+      + "&soil_temperature_id=" + urlEncode(SOIL_TEMPERATURE_IDS[channel]);
+    http.begin(client, url);
+    int status = http.GET();
+    if (status == 200) {
+      String response = http.getString();
+      int currentExperiment = extractInteger(response, "experiment_id");
+      int currentStation = extractInteger(response, "sensor_set_id");
+      int currentPot = extractInteger(response, "pot_number");
+      if (currentExperiment > 0 && currentStation > 0 && currentPot > 0
+          && (experiment == 0 || (experiment == currentExperiment && station == currentStation))) {
+        experiment = currentExperiment; station = currentStation; pots[channel] = currentPot;
+        if (frequencyResponse.length() == 0) frequencyResponse = response;
+      }
     }
+    http.end();
   }
 
-  http.end();
+  if (experiment == 0 || station == 0) { clearAssignment(); return; }
+  assignedExperimentId = experiment; assignedStationNumber = station;
+  assignmentReady = false;
+  for (byte i = 0; i < POT_CHANNEL_COUNT; i++) {
+    if (assignedPotNumbers[i] != pots[i]) lastForwardedCommandIds[i] = 0;
+    assignedPotNumbers[i] = pots[i];
+    assignmentReady = assignmentReady || pots[i] > 0;
+  }
+  String config = buildConfig(frequencyResponse);
+  if (config != lastForwardedConfig) { Serial.println(config); lastForwardedConfig = config; }
 }
 
-void fetchSensorConfig() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Brak WiFi, ponawiam laczenie...");
-    WiFi.reconnect();
-    return;
-  }
-
-  BearSSL::WiFiClientSecure client;
-  client.setInsecure(); // Projekt testowy: pomija reczna konfiguracje certyfikatu HTTPS.
-  HTTPClient http;
-
-  String url = String(ACTIVE_SENSOR_CONFIG_API_URL)
-    + "?sensor_set_id=" + String(SENSOR_SET_ID)
-    + "&soil_moisture_id=" + urlEncode(SOIL_MOISTURE_ID)
-    + "&soil_temperature_id=" + urlEncode(SOIL_TEMPERATURE_ID)
-    + "&pump_id=" + urlEncode(PUMP_ID);
-  http.begin(client, url);
-
-  int statusCode = http.GET();
-
-  Serial.print("GET sensor config status: ");
-  Serial.println(statusCode);
-
-  if (statusCode == 200) {
-    String response = http.getString();
-    int experimentId = extractInteger(response, "experiment_id");
-    int stationNumber = extractInteger(response, "sensor_set_id");
-    int potNumber = extractInteger(response, "pot_number");
-
-    if (experimentId < 1 || stationNumber < 1 || potNumber < 1) {
-      clearAssignment();
-      http.end();
-      return;
-    }
-
-    assignedExperimentId = experimentId;
-    assignedStationNumber = stationNumber;
-    assignedPotNumber = potNumber;
-    assignmentReady = true;
-    String config = buildConfigCommand(response);
-
-    if (config.length() > 0 && config != lastForwardedConfig) {
-      Serial.println(config);
-      lastForwardedConfig = config;
-    }
-  } else {
-    clearAssignment();
-  }
-
-  http.end();
+String buildConfig(String response) {
+  String value = "CONFIG:experiment_id=" + String(assignedExperimentId)
+    + ";station_number=" + String(assignedStationNumber);
+  for (byte i = 0; i < POT_CHANNEL_COUNT; i++)
+    value += ";pot" + String(i + 1) + "=" + String(assignedPotNumbers[i]);
+  value += ";soil_moisture=" + String(extractInteger(response, "soil_moisture"));
+  value += ";light=" + String(extractInteger(response, "light"));
+  value += ";soil_temperature=" + String(extractInteger(response, "soil_temperature"));
+  value += ";air_temperature=" + String(extractInteger(response, "air_temperature"));
+  value += ";air_humidity=" + String(extractInteger(response, "air_humidity"));
+  value += ";pressure=" + String(extractInteger(response, "pressure"));
+  return value;
 }
 
-String buildConfigCommand(String response) {
-  String config = "CONFIG:";
-  config += "experiment_id=" + String(assignedExperimentId);
-  config += ";station_number=" + String(assignedStationNumber);
-  config += ";pot_number=" + String(assignedPotNumber);
-  config += ";soil_moisture=" + String(extractFrequency(response, "soil_moisture"));
-  config += ";light=" + String(extractFrequency(response, "light"));
-  config += ";soil_temperature=" + String(extractFrequency(response, "soil_temperature"));
-  config += ";air_temperature=" + String(extractFrequency(response, "air_temperature"));
-  config += ";air_humidity=" + String(extractFrequency(response, "air_humidity"));
-  config += ";pressure=" + String(extractFrequency(response, "pressure"));
-  return config;
+void fetchPumpCommands() {
+  if (!assignmentReady || !ensureWifi()) return;
+  for (byte channel = 0; channel < POT_CHANNEL_COUNT; channel++) {
+    if (assignedPotNumbers[channel] < 1) continue;
+    BearSSL::WiFiClientSecure client; client.setInsecure();
+    HTTPClient http;
+    String url = String(PUMP_COMMAND_API_URL) + "?station_number=" + String(assignedStationNumber)
+      + "&pot_number=" + String(assignedPotNumbers[channel]);
+    http.begin(client, url);
+    if (http.GET() == 200) {
+      String response = http.getString();
+      int id = extractInteger(response, "id");
+      String command = extractString(response, "arduino_command");
+      if (id > 0 && id != lastForwardedCommandIds[channel] && command.length() > 0) {
+        String forwarded = commandForPot(command, assignedPotNumbers[channel]);
+        if (forwarded.length() > 0) { Serial.println(forwarded); lastForwardedCommandIds[channel] = id; }
+      }
+    }
+    http.end();
+  }
+}
+
+String commandForPot(String command, int pot) {
+  if (command == "PUMP_ON" || command == "PUMP_OFF" || command == "PUMP_AUTO")
+    return command + ":" + String(pot);
+  if (command.startsWith("PUMP_ON:"))
+    return "PUMP_ON:" + String(pot) + ":" + command.substring(8);
+  return "";
 }
 
 void clearAssignment() {
-  if (assignmentReady || lastForwardedConfig.length() > 0) {
-    Serial.println("UNASSIGNED");
-  }
-  assignmentReady = false;
-  assignedExperimentId = 0;
-  assignedStationNumber = 0;
-  assignedPotNumber = 0;
-  lastForwardedConfig = "";
-  lastForwardedCommandId = 0;
+  if (assignmentReady || lastForwardedConfig.length() > 0) Serial.println("UNASSIGNED");
+  assignmentReady = false; assignedExperimentId = 0; assignedStationNumber = 0; lastForwardedConfig = "";
+  for (byte i = 0; i < POT_CHANNEL_COUNT; i++) { assignedPotNumbers[i] = 0; lastForwardedCommandIds[i] = 0; }
 }
 
 String urlEncode(const char* value) {
-  const char* hex = "0123456789ABCDEF";
-  String encoded = "";
-
+  const char* hex = "0123456789ABCDEF"; String encoded = "";
   while (*value) {
-    uint8_t character = static_cast<uint8_t>(*value++);
-    if (
-      (character >= 'a' && character <= 'z') ||
-      (character >= 'A' && character <= 'Z') ||
-      (character >= '0' && character <= '9') ||
-      character == '-' || character == '_' || character == '.' || character == '~'
-    ) {
-      encoded += static_cast<char>(character);
-    } else {
-      encoded += '%';
-      encoded += hex[character >> 4];
-      encoded += hex[character & 0x0F];
-    }
+    uint8_t c = static_cast<uint8_t>(*value++);
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') encoded += static_cast<char>(c);
+    else { encoded += '%'; encoded += hex[c >> 4]; encoded += hex[c & 15]; }
   }
-
   return encoded;
 }
 
 int extractInteger(String response, String key) {
-  int keyIndex = response.indexOf("\"" + key + "\"");
-  if (keyIndex < 0) return 0;
-
-  int colonIndex = response.indexOf(':', keyIndex);
-  if (colonIndex < 0) return 0;
-
-  int commaIndex = response.indexOf(',', colonIndex + 1);
-  int braceIndex = response.indexOf('}', colonIndex + 1);
-  int endIndex = commaIndex;
-  if (endIndex < 0 || (braceIndex >= 0 && braceIndex < endIndex)) {
-    endIndex = braceIndex;
-  }
-  if (endIndex < 0) endIndex = response.length();
-
-  String value = response.substring(colonIndex + 1, endIndex);
-  value.trim();
-  return value.toInt();
+  int keyAt = response.indexOf("\"" + key + "\""); if (keyAt < 0) return 0;
+  int colon = response.indexOf(':', keyAt); if (colon < 0) return 0;
+  int end = response.indexOf(',', colon), brace = response.indexOf('}', colon);
+  if (end < 0 || (brace >= 0 && brace < end)) end = brace;
+  if (end < 0) end = response.length();
+  String value = response.substring(colon + 1, end); value.trim(); return value.toInt();
 }
 
-int extractFrequency(String response, String key) {
-  int keyIndex = response.indexOf("\"" + key + "\"");
-
-  if (keyIndex < 0) {
-    return 0;
-  }
-
-  int colonIndex = response.indexOf(':', keyIndex);
-  int commaIndex = response.indexOf(',', colonIndex + 1);
-  int braceIndex = response.indexOf('}', colonIndex + 1);
-
-  if (colonIndex < 0) {
-    return 0;
-  }
-
-  int endIndex = commaIndex;
-  if (endIndex < 0 || (braceIndex > 0 && braceIndex < endIndex)) {
-    endIndex = braceIndex;
-  }
-
-  if (endIndex < 0) {
-    endIndex = response.length();
-  }
-
-  String value = response.substring(colonIndex + 1, endIndex);
-  value.trim();
-  return value.toInt();
-}
-
-int extractCommandId(String response) {
-  int keyIndex = response.indexOf("\"id\"");
-
-  if (keyIndex < 0) {
-    return 0;
-  }
-
-  int colonIndex = response.indexOf(':', keyIndex);
-  int commaIndex = response.indexOf(',', colonIndex + 1);
-
-  if (colonIndex < 0) {
-    return 0;
-  }
-
-  String idValue;
-  if (commaIndex < 0) {
-    idValue = response.substring(colonIndex + 1);
-  } else {
-    idValue = response.substring(colonIndex + 1, commaIndex);
-  }
-
-  idValue.trim();
-  return idValue.toInt();
-}
-
-String extractArduinoCommand(String response) {
-  int keyIndex = response.indexOf("\"arduino_command\"");
-
-  if (keyIndex < 0) {
-    return "";
-  }
-
-  int colonIndex = response.indexOf(':', keyIndex);
-  int firstQuoteIndex = response.indexOf('"', colonIndex + 1);
-  int secondQuoteIndex = response.indexOf('"', firstQuoteIndex + 1);
-
-  if (colonIndex < 0 || firstQuoteIndex < 0 || secondQuoteIndex < 0) {
-    return "";
-  }
-
-  return response.substring(firstQuoteIndex + 1, secondQuoteIndex);
+String extractString(String response, String key) {
+  int keyAt = response.indexOf("\"" + key + "\""); if (keyAt < 0) return "";
+  int colon = response.indexOf(':', keyAt), firstQuote = response.indexOf('"', colon + 1);
+  int secondQuote = response.indexOf('"', firstQuote + 1);
+  if (colon < 0 || firstQuote < 0 || secondQuote < 0) return "";
+  return response.substring(firstQuote + 1, secondQuote);
 }

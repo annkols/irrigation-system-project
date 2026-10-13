@@ -30,7 +30,7 @@ class PumpCommandApiTests(APITestCase):
         self.assertEqual(response.data['arduino_command'], 'PUMP_ON:15')
 
     def test_rejects_timed_command_outside_allowed_range(self):
-        for duration in (0, 301):
+        for duration in (0, 61):
             response = self.client.post(
                 reverse('pump-command-list-create'),
                 {'command': 'ON', 'duration_seconds': duration},

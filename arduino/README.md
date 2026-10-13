@@ -1,71 +1,64 @@
-# Firmware zestawu nr 1
+# Firmware zestawu na trzy doniczki
 
-Każda płytka Mega+ESP8266 ma dwa procesory, dlatego wymaga wgrania dwóch szkiców.
+Jeden zestaw Arduino Mega + ESP8266 obsługuje trzy doniczki, jedną wspólną pompę
+i trzy elektrozawory. Do procesorów wgrywa się dwa osobne szkice.
 
-## ATmega2560
+## Arduino Mega
 
-Do każdej z trzech części Mega wgrywany jest ten sam szkic:
+Szkic: `all_sensors_without_wifi/all_sensors_final/all_sensors_final.ino`
 
-`all_sensors_without_wifi/all_sensors_final/all_sensors_final.ino`
+| Element | Pin |
+|---|---|
+| SoilWatch kanał 1/2/3 | A0 / A1 / A2 |
+| DS18B20 kanał 1/2/3 | D39 / D40 / D42 |
+| przekaźnik pompy | D22 |
+| zawór kanału 1/2/3 | D23 / D24 / D25 |
+| BH1750 i BME280 SDA | D20 / SDA |
+| BH1750 i BME280 SCL | D21 / SCL |
 
-Szkic używa:
+Podwójne złącza SDA i SCL na Arduino Mega nie są dwiema magistralami. Są połączone
+z tymi samymi liniami D20 i D21, dlatego BME280 może być wpięty w jedno złącze,
+a BH1750 w drugie. Oba moduły mają różne adresy I2C (BME280 `0x76`, BH1750 `0x23`).
 
-- D7 — sterowanie przekaźnikiem,
-- A0 — pojemnościowy czujnik wilgotności gleby,
-- D22 — DS18B20,
-- SDA/D20 i SCL/D21 — magistrala I2C.
+SoilWatch 10: przewód brązowy to zasilanie, zielony to GND, biały to wyjście
+analogowe. Firmware uśrednia 10 próbek i używa wielomianu VWC producenta zamiast
+liniowego `map()`. Automatyczne podlewanie startuje przy wilgotności nie większej
+niż 16% i kończy się po osiągnięciu co najmniej 25%.
 
-BME280 i BH1750 są wykrywane automatycznie. BME280 znajduje się na kontrolerze 1,
-BH1750 na kontrolerze 3, a kontroler 2 nie ma wspólnego czujnika I2C.
+Pompa jest wspólna, więc w danej chwili podlewana jest najwyżej jedna doniczka.
+Sterownik najpierw wyłącza pompę i zamyka zawory, następnie otwiera wybrany zawór,
+czeka 200 ms i dopiero uruchamia pompę. Przy zatrzymaniu najpierw wyłącza pompę.
+Ciągłe podlewanie ma twardy limit 1 minuty. Nieprawidłowy odczyt SoilWatch blokuje
+automatyczne podlewanie danego kanału.
+
+Kod zakłada przekaźniki aktywowane stanem LOW (typowe ustawienie modułu HW-281).
+Przed podłączeniem wody trzeba sprawdzić na sucho, czy po resecie pompa i wszystkie
+zawory pozostają wyłączone. Jeśli moduł działa odwrotnie, należy zamienić wartości
+`RELAY_ON` i `RELAY_OFF`.
 
 ## ESP8266
 
-Szkic `esp_wifi_backend/esp_wifi_backend.ino` pobiera z backendu aktualne przypisanie
-fizycznego sprzętu do doniczki. Numer doniczki nie jest zapisany na stałe w firmware.
+Szkic: `esp_wifi_backend/esp_wifi_backend.ino`
 
-Najpierw należy skopiować `esp_wifi_backend/device_config.example.h` jako
-`esp_wifi_backend/device_config.h`. Plik docelowy jest lokalny i ignorowany przez Git.
-
-Przed każdym wgraniem należy w `device_config.h` ustawić:
+Skopiuj `device_config.example.h` jako `device_config.h` i ustaw identyfikatory
+trzech par czujników. Przykład:
 
 ```cpp
-#define CONTROLLER_NUMBER 1
+const int SENSOR_SET_ID = 1;
+const byte POT_CHANNEL_COUNT = 3;
+const char* SOIL_MOISTURE_IDS[POT_CHANNEL_COUNT] = {"1", "2", "3"};
+const char* SOIL_TEMPERATURE_IDS[POT_CHANNEL_COUNT] = {"1", "2", "3"};
 ```
 
-Następnie wgrać szkic do ESP8266 pierwszej płytki. Dla kolejnych płytek powtórzyć
-operację z wartościami `2` i `3`.
-
-Identyfikatory wpisywane przez użytkownika w formularzu muszą odpowiadać fizycznej
-płytce:
-
-| Kontroler | Wilgotność gleby | Temperatura gleby | Pompa |
-|---|---|---|---|
-| 1 | 1 | 1 | 1 |
-| 2 | 2 | 2 | 2 |
-| 3 | 3 | 3 | 3 |
-
-Numery doniczek mogą być dowolne. Backend odnajduje monitorowaną doniczkę, której
-przypisano komplet identyfikatorów danej płytki, i zwraca jej aktualny numer.
-
-Jeśli nie ma aktywnego doświadczenia albo identyfikatory nie wskazują jednej
-monitorowanej doniczki, ESP8266 wysyła do Mega komunikat `UNASSIGNED`. Mega wyłącza
-pompę i nie wysyła pomiarów do czasu uzyskania prawidłowej konfiguracji.
+ESP pyta backend osobno o przypisanie każdego kanału. Kanał może pozostać
+nieprzypisany; pozostałe nadal działają. Następnie przesyła Mega jedną konfigurację
+z polami `pot1`, `pot2`, `pot3`. Polecenia pompy pobierane są osobno dla każdej
+przypisanej doniczki i przekazywane z numerem doniczki, np. `PUMP_ON:7:30`.
+Kilka poleceń czasowych może oczekiwać jednocześnie. Sterownik uruchamia je kolejno,
+a czas każdej doniczki zaczyna odliczać dopiero po otwarciu jej zaworu.
 
 ## ESP32-CAM
 
-Do obu kamer wgrywany jest szkic `CAMERA/CAMERA.ino`. Przed wgraniem należy
-skopiować `CAMERA/arduino_secrets.example.h` jako `CAMERA/arduino_secrets.h`.
-
-Każda kamera musi mieć osobny rekord `CameraDevice` utworzony w panelu Django
-Admin. Pole `sensor_set_id` powinno mieć wartość `1`. Po utworzeniu rekordu panel
-wyświetla jednorazowy token; należy go wpisać jako `CAMERA_UPLOAD_TOKEN`.
-
-Dla pierwszej i drugiej kamery trzeba użyć różnych tokenów oraz różnych lokalnych
-adresów IP. `CAMERA_SENSOR_SET_ID` pozostaje równy `1` w obu szkicach.
-
-W formularzu doświadczenia pole `Camera device ID` oznacza ID rekordu
-`CameraDevice` widoczne w panelu admina, a nie numer doniczki. Użytkownik może
-przypisać kamerę do dowolnej doniczki wygenerowanej w planie. Kamera wysyła tylko
-swój token i numer zestawu; backend rozpoznaje ją po tokenie i łączy zdjęcie z
-aktywnym doświadczeniem. Przy wyświetlaniu zdjęcia dla doniczki backend korzysta
-z zapisanego przypisania kamera–doniczka.
+Szkic `CAMERA/CAMERA.ino` pozostaje niezależny. Każda kamera musi mieć osobny
+rekord `CameraDevice`, token i adres IP. Wszystkie mogą należeć do tego samego
+`sensor_set_id`; przypisanie kamera–doniczka przechowuje backend.

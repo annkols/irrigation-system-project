@@ -5,12 +5,21 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#define SOIL_MOISTURE_PIN A0
-#define DS18B20_PIN 22
-#define RELAY_PIN 7
+const byte CHANNEL_COUNT = 3;
+const byte SOIL_MOISTURE_PINS[CHANNEL_COUNT] = {A0, A1, A2};
+const byte SOIL_TEMPERATURE_PINS[CHANNEL_COUNT] = {39, 40, 42};
+const byte PUMP_RELAY_PIN = 22;
+const byte VALVE_RELAY_PINS[CHANNEL_COUNT] = {23, 24, 25};
+const byte RELAY_ON = LOW;
+const byte RELAY_OFF = HIGH;
+const byte BH1750_ADDRESS = 0x23;
+const byte BME280_I2C_ADDRESS = 0x76;
 
-#define BH1750_ADDRESS 0x23
-#define BME280_I2C_ADDRESS 0x76
+const float ADC_REFERENCE_VOLTAGE = 5.0F;
+const float MOISTURE_START_PERCENT = 16.0F;
+const float MOISTURE_STOP_PERCENT = 25.0F;
+const unsigned long MAX_WATERING_TIME_MS = 60UL * 1000UL;
+const unsigned long VALVE_SWITCH_DELAY_MS = 200;
 
 #if defined(UBRR3H)
 #define EspSerial Serial3
@@ -20,413 +29,269 @@
 
 BH1750 lightMeter;
 Adafruit_BME280 bme;
+OneWire oneWire0(SOIL_TEMPERATURE_PINS[0]);
+OneWire oneWire1(SOIL_TEMPERATURE_PINS[1]);
+OneWire oneWire2(SOIL_TEMPERATURE_PINS[2]);
+DallasTemperature ds0(&oneWire0), ds1(&oneWire1), ds2(&oneWire2);
+DallasTemperature* soilTemperatureSensors[CHANNEL_COUNT] = {&ds0, &ds1, &ds2};
 
-OneWire oneWire(DS18B20_PIN);
-DallasTemperature soilTempSensor(&oneWire);
+enum ControlMode { MODE_AUTO, MODE_MANUAL_ON, MODE_MANUAL_OFF, MODE_TIMED };
+struct ChannelState {
+  int potNumber;
+  float moisture;
+  float soilTemperature;
+  bool moistureValid;
+  bool temperatureValid;
+  bool autoDemand;
+  bool safetyLockout;
+  ControlMode mode;
+  unsigned long timedUntil;
+  unsigned long timedDurationMs;
+};
+ChannelState channels[CHANNEL_COUNT];
 
-int dryValue = 502;
-int wetValue = 259;
-
-int moistureLimit = 20;
-int experimentId = 0;
-int stationNumber = 0;
-int potNumber = 0;
-
-unsigned long soilMoistureIntervalMs = 10000;
-unsigned long lightIntervalMs = 10000;
-unsigned long soilTemperatureIntervalMs = 10000;
-unsigned long airTemperatureIntervalMs = 10000;
-unsigned long airHumidityIntervalMs = 10000;
-unsigned long pressureIntervalMs = 10000;
-
-unsigned long lastSoilMoistureReadAt = 0;
-unsigned long lastLightReadAt = 0;
-unsigned long lastSoilTemperatureReadAt = 0;
-unsigned long lastAirTemperatureReadAt = 0;
-unsigned long lastAirHumidityReadAt = 0;
-unsigned long lastPressureReadAt = 0;
-
-int cachedSoilMoisture = 0;
-float cachedSoilTemperature = 0;
-float cachedLightLux = 0;
-float cachedAirTemperature = 0;
-float cachedAirHumidity = 0;
-float cachedPressure = 0;
-
-const int RELAY_ON = LOW;
-const int RELAY_OFF = HIGH;
-
-bool pumpState = false;
-bool manualPumpMode = false;
-bool timedPumpActive = false;
-unsigned long timedPumpStartedAt = 0;
-unsigned long timedPumpDurationMs = 0;
-bool assignmentReady = false;
-bool hasSoilMoistureReading = false;
-bool hasLightSensor = false;
-bool hasAirSensor = false;
+int experimentId = 0, stationNumber = 0;
+bool assignmentReady = false, hasLightSensor = false, hasAirSensor = false;
+float lightLux = 0, airTemperature = 0, airHumidity = 0, pressureHpa = 0;
+unsigned long soilMoistureIntervalMs = 10000, soilTemperatureIntervalMs = 10000;
+unsigned long lightIntervalMs = 10000, airTemperatureIntervalMs = 10000;
+unsigned long airHumidityIntervalMs = 10000, pressureIntervalMs = 10000;
+unsigned long lastMoistureAt = 0, lastSoilTemperatureAt = 0, lastLightAt = 0, lastAirAt = 0;
+int activeChannel = -1, nextChannel = 0;
+unsigned long wateringStartedAt = 0;
 
 void setup() {
   Serial.begin(9600);
   EspSerial.begin(9600);
-
-  digitalWrite(RELAY_PIN, RELAY_OFF);
-  pinMode(RELAY_PIN, OUTPUT);
-
-  Wire.begin();
-
-  Serial.println("START SYSTEMU");
-  Serial.println("--------------------------");
-
+  digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    digitalWrite(VALVE_RELAY_PINS[i], RELAY_OFF);
+    pinMode(VALVE_RELAY_PINS[i], OUTPUT);
+    channels[i] = {0, 0, 0, false, false, false, false, MODE_AUTO, 0, 0};
+    soilTemperatureSensors[i]->begin();
+  }
+  Wire.begin(); // Mega: SDA=D20 i SCL=D21; oba komplety gniazd I2C sa wspolne.
   hasLightSensor = lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, BH1750_ADDRESS);
-  if (hasLightSensor) {
-    Serial.println("BH1750 OK");
-  } else {
-    Serial.println("BH1750 ERROR");
-  }
-
   hasAirSensor = bme.begin(BME280_I2C_ADDRESS);
-  if (hasAirSensor) {
-    Serial.println("BME280 OK");
-  } else {
-    Serial.println("BME280 ERROR");
-  }
-
-  soilTempSensor.begin();
-  Serial.println("DS18B20 OK");
-  Serial.println("--------------------------");
+  Serial.println("Sterownik trzech doniczek uruchomiony");
 }
 
 void loop() {
-  handlePumpCommand();
-
+  handleEspCommands();
   unsigned long now = millis();
-  if (timedPumpActive && now - timedPumpStartedAt >= timedPumpDurationMs) {
-    timedPumpActive = false;
-    pumpOff();
-    Serial.println("CZAS PRACY POMPY ZAKOŃCZONY");
-  }
-  bool shouldSend = false;
-  bool soilMoistureUpdated = false;
-  bool soilTemperatureUpdated = false;
-  bool lightUpdated = false;
-  bool airTemperatureUpdated = false;
-  bool airHumidityUpdated = false;
-  bool pressureUpdated = false;
+  bool moistureUpdated = due(lastMoistureAt, soilMoistureIntervalMs, now);
+  bool soilTemperatureUpdated = due(lastSoilTemperatureAt, soilTemperatureIntervalMs, now);
+  bool lightUpdated = hasLightSensor && due(lastLightAt, lightIntervalMs, now);
+  unsigned long airInterval = min(airTemperatureIntervalMs, min(airHumidityIntervalMs, pressureIntervalMs));
+  bool airUpdated = hasAirSensor && due(lastAirAt, airInterval, now);
 
-  if (shouldRead(lastSoilMoistureReadAt, soilMoistureIntervalMs, now)) {
-    readSoilMoisture();
-    lastSoilMoistureReadAt = now;
-    soilMoistureUpdated = true;
-    shouldSend = true;
+  if (moistureUpdated) { readMoisture(); lastMoistureAt = now; }
+  if (soilTemperatureUpdated) { readSoilTemperatures(); lastSoilTemperatureAt = millis(); }
+  if (lightUpdated) { lightLux = lightMeter.readLightLevel(); lastLightAt = now; }
+  if (airUpdated) {
+    airTemperature = bme.readTemperature(); airHumidity = bme.readHumidity();
+    pressureHpa = bme.readPressure() / 100.0F; lastAirAt = now;
   }
 
-  if (shouldRead(lastSoilTemperatureReadAt, soilTemperatureIntervalMs, now)) {
-    readSoilTemperature();
-    lastSoilTemperatureReadAt = now;
-    soilTemperatureUpdated = true;
-    shouldSend = true;
+  updateAutoDemand();
+  updateIrrigation(now);
+  if (assignmentReady && (moistureUpdated || soilTemperatureUpdated || lightUpdated || airUpdated)) {
+    for (byte i = 0; i < CHANNEL_COUNT; i++) if (channels[i].potNumber > 0)
+      sendMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated, airUpdated);
   }
+  delay(25);
+}
 
-  if (hasLightSensor && shouldRead(lastLightReadAt, lightIntervalMs, now)) {
-    readLight();
-    lastLightReadAt = now;
-    lightUpdated = true;
-    shouldSend = true;
-  }
+bool due(unsigned long lastAt, unsigned long interval, unsigned long now) {
+  return interval > 0 && (lastAt == 0 || now - lastAt >= interval);
+}
 
-  if (hasAirSensor && (
-    shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now) ||
-    shouldRead(lastAirHumidityReadAt, airHumidityIntervalMs, now) ||
-    shouldRead(lastPressureReadAt, pressureIntervalMs, now)
-  )) {
-    readAirSensor();
+float soilWatchVwc(float voltage) {
+  float value = 2.8432F * voltage * voltage * voltage - 9.1993F * voltage * voltage
+              + 20.2553F * voltage - 4.1882F;
+  return constrain(value, 0.0F, 100.0F);
+}
 
-    if (shouldRead(lastAirTemperatureReadAt, airTemperatureIntervalMs, now)) {
-      lastAirTemperatureReadAt = now;
-      airTemperatureUpdated = true;
+void readMoisture() {
+  for (byte channel = 0; channel < CHANNEL_COUNT; channel++) {
+    unsigned long sum = 0;
+    for (byte sample = 0; sample < 10; sample++) { sum += analogRead(SOIL_MOISTURE_PINS[channel]); delay(2); }
+    float voltage = (sum / 10.0F) * ADC_REFERENCE_VOLTAGE / 1023.0F;
+    channels[channel].moistureValid = voltage >= 0.05F && voltage <= 3.15F;
+    if (channels[channel].moistureValid) channels[channel].moisture = soilWatchVwc(voltage);
+    else {
+      channels[channel].autoDemand = false;
+      Serial.print("Nieprawidlowy SoilWatch na kanale "); Serial.println(channel + 1);
     }
-
-    if (shouldRead(lastAirHumidityReadAt, airHumidityIntervalMs, now)) {
-      lastAirHumidityReadAt = now;
-      airHumidityUpdated = true;
-    }
-
-    if (shouldRead(lastPressureReadAt, pressureIntervalMs, now)) {
-      lastPressureReadAt = now;
-      pressureUpdated = true;
-    }
-
-    shouldSend = true;
   }
+}
 
-  if (assignmentReady && hasSoilMoistureReading && !manualPumpMode) {
-    if (cachedSoilMoisture > moistureLimit) {
-      if (pumpState) {
-        pumpOff();
-      }
+void readSoilTemperatures() {
+  for (byte i = 0; i < CHANNEL_COUNT; i++) soilTemperatureSensors[i]->requestTemperatures();
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    float value = soilTemperatureSensors[i]->getTempCByIndex(0);
+    channels[i].temperatureValid = value != DEVICE_DISCONNECTED_C && value > -55 && value < 125;
+    if (channels[i].temperatureValid) channels[i].soilTemperature = value;
+  }
+}
+
+void updateAutoDemand() {
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    if (channels[i].mode != MODE_AUTO || !channels[i].moistureValid || channels[i].potNumber < 1) {
+      if (channels[i].mode == MODE_AUTO) channels[i].autoDemand = false;
+      continue;
+    }
+    if (channels[i].moisture >= MOISTURE_STOP_PERCENT) {
+      channels[i].autoDemand = false;
+      channels[i].safetyLockout = false;
+    } else if (channels[i].moisture <= MOISTURE_START_PERCENT && !channels[i].safetyLockout) {
+      channels[i].autoDemand = true;
+    }
+  }
+}
+
+bool demandsWater(byte channel, unsigned long now) {
+  ChannelState &state = channels[channel];
+  if (state.potNumber < 1) return false;
+  if (state.mode == MODE_TIMED && state.timedUntil != 0 && (long)(now - state.timedUntil) >= 0)
+    state.mode = MODE_MANUAL_OFF;
+  if (state.mode == MODE_MANUAL_ON || state.mode == MODE_TIMED) return true;
+  return state.mode == MODE_AUTO && state.autoDemand && !state.safetyLockout;
+}
+
+void updateIrrigation(unsigned long now) {
+  if (!assignmentReady) { stopIrrigation(); return; }
+  if (activeChannel >= 0) {
+    if (now - wateringStartedAt >= MAX_WATERING_TIME_MS) {
+      channels[activeChannel].safetyLockout = true;
+      channels[activeChannel].autoDemand = false;
+      if (channels[activeChannel].mode != MODE_AUTO) channels[activeChannel].mode = MODE_MANUAL_OFF;
+      Serial.println("STOP: przekroczono 1 minute podlewania");
+      stopIrrigation();
+    } else if (!demandsWater(activeChannel, now)) {
+      int finished = activeChannel; stopIrrigation(); nextChannel = (finished + 1) % CHANNEL_COUNT;
+    }
+  }
+  if (activeChannel < 0) {
+    for (byte offset = 0; offset < CHANNEL_COUNT; offset++) {
+      byte candidate = (nextChannel + offset) % CHANNEL_COUNT;
+      if (demandsWater(candidate, now)) { startIrrigation(candidate); nextChannel = (candidate + 1) % CHANNEL_COUNT; break; }
+    }
+  }
+}
+
+void startIrrigation(byte channel) {
+  stopIrrigation();
+  digitalWrite(VALVE_RELAY_PINS[channel], RELAY_ON);
+  delay(VALVE_SWITCH_DELAY_MS);
+  digitalWrite(PUMP_RELAY_PIN, RELAY_ON);
+  activeChannel = channel; wateringStartedAt = millis();
+  if (channels[channel].mode == MODE_TIMED && channels[channel].timedUntil == 0)
+    channels[channel].timedUntil = wateringStartedAt + channels[channel].timedDurationMs;
+  Serial.print("Podlewanie P"); Serial.println(channels[channel].potNumber);
+}
+
+void stopIrrigation() {
+  digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+  if (activeChannel >= 0) delay(VALVE_SWITCH_DELAY_MS);
+  for (byte i = 0; i < CHANNEL_COUNT; i++) digitalWrite(VALVE_RELAY_PINS[i], RELAY_OFF);
+  activeChannel = -1;
+}
+
+int channelForPot(int pot) {
+  for (byte i = 0; i < CHANNEL_COUNT; i++) if (channels[i].potNumber == pot) return i;
+  return -1;
+}
+
+void handleEspCommands() {
+  while (EspSerial.available()) {
+    String command = EspSerial.readStringUntil('\n'); command.trim();
+    if (command.startsWith("CONFIG:")) applyConfig(command);
+    else if (command == "UNASSIGNED") clearAssignments();
+    else applyPumpCommand(command);
+  }
+}
+
+void applyPumpCommand(String command) {
+  int firstColon = command.indexOf(':');
+  if (firstColon < 0 || !assignmentReady) return;
+  String action = command.substring(0, firstColon);
+  int secondColon = command.indexOf(':', firstColon + 1);
+  int pot = command.substring(firstColon + 1, secondColon < 0 ? command.length() : secondColon).toInt();
+  int channel = channelForPot(pot);
+  if (channel < 0) return;
+  if (action == "PUMP_ON") {
+    channels[channel].safetyLockout = false;
+    if (secondColon > 0) {
+      unsigned long seconds = command.substring(secondColon + 1).toInt();
+      if (seconds < 1 || seconds > 60) return;
+      channels[channel].mode = MODE_TIMED;
+      channels[channel].timedDurationMs = seconds * 1000UL;
+      channels[channel].timedUntil = 0; // Odliczanie zacznie sie dopiero po otwarciu tego zaworu.
     } else {
-      if (!pumpState) {
-        pumpOn();
-      }
+      channels[channel].mode = MODE_MANUAL_ON; channels[channel].timedUntil = 0;
     }
-  }
-
-  if (!assignmentReady || !shouldSend) {
-    delay(50);
-    return;
-  }
-
-  Serial.println("===== ODCZYTY =====");
-
-  Serial.print("Swiatlo: ");
-  Serial.print(cachedLightLux);
-  Serial.println(" lx");
-
-  Serial.print("Temperatura powietrza: ");
-  Serial.print(cachedAirTemperature);
-  Serial.println(" C");
-
-  Serial.print("Wilgotnosc powietrza: ");
-  Serial.print(cachedAirHumidity);
-  Serial.println(" %");
-
-  Serial.print("Cisnienie: ");
-  Serial.print(cachedPressure);
-  Serial.println(" hPa");
-
-  Serial.print("Temperatura gleby: ");
-  Serial.print(cachedSoilTemperature);
-  Serial.println(" C");
-
-  Serial.print("Wilgotnosc gleby: ");
-  Serial.print(cachedSoilMoisture);
-  Serial.println(" %");
-
-  Serial.print("Pompa: ");
-  Serial.println(pumpState ? "WLACZONA" : "WYLACZONA");
-  Serial.print("Tryb pompy: ");
-  Serial.println(manualPumpMode ? "MANUAL" : "AUTO");
-
-  Serial.println("--------------------------");
-
-  sendJsonToEsp(
-    cachedSoilMoisture,
-    cachedSoilTemperature,
-    cachedLightLux,
-    cachedAirTemperature,
-    cachedAirHumidity,
-    cachedPressure,
-    pumpState,
-    soilMoistureUpdated,
-    soilTemperatureUpdated,
-    lightUpdated,
-    airTemperatureUpdated,
-    airHumidityUpdated,
-    pressureUpdated
-  );
-
-  delay(50);
-}
-
-bool shouldRead(unsigned long lastReadAt, unsigned long intervalMs, unsigned long now) {
-  return intervalMs > 0 && (lastReadAt == 0 || now - lastReadAt >= intervalMs);
-}
-
-void readSoilMoisture() {
-  int rawSoil = analogRead(SOIL_MOISTURE_PIN);
-  cachedSoilMoisture = map(rawSoil, dryValue, wetValue, 0, 100);
-  cachedSoilMoisture = constrain(cachedSoilMoisture, 0, 100);
-  hasSoilMoistureReading = true;
-}
-
-void readSoilTemperature() {
-  soilTempSensor.requestTemperatures();
-  cachedSoilTemperature = soilTempSensor.getTempCByIndex(0);
-}
-
-void readLight() {
-  cachedLightLux = lightMeter.readLightLevel();
-}
-
-void readAirSensor() {
-  cachedAirTemperature = bme.readTemperature();
-  cachedAirHumidity = bme.readHumidity();
-  cachedPressure = bme.readPressure() / 100.0F;
-}
-
-void pumpOn() {
-  digitalWrite(RELAY_PIN, RELAY_ON);
-  pumpState = true;
-  Serial.println("POMPA WLACZONA");
-}
-
-void pumpOff() {
-  digitalWrite(RELAY_PIN, RELAY_OFF);
-  pumpState = false;
-  Serial.println("POMPA WYLACZONA");
-}
-
-void handlePumpCommand() {
-  if (!EspSerial.available()) {
-    return;
-  }
-
-  String command = EspSerial.readStringUntil('\n');
-  command.trim();
-
-  if (command.startsWith("CONFIG:")) {
-    applySensorConfig(command);
-  } else if (command == "UNASSIGNED") {
-    assignmentReady = false;
-    experimentId = 0;
-    stationNumber = 0;
-    potNumber = 0;
-    manualPumpMode = false;
-    timedPumpActive = false;
-    pumpOff();
-    Serial.println("BRAK PRZYPISANIA SPRZETU DO DONICZKI");
-  } else if (command == "PUMP_ON") {
-    if (!assignmentReady) return;
-    manualPumpMode = true;
-    timedPumpActive = false;
-    pumpOn();
-  } else if (command.startsWith("PUMP_ON:")) {
-    if (!assignmentReady) return;
-    unsigned long durationSeconds = command.substring(8).toInt();
-    if (durationSeconds < 1 || durationSeconds > 300) return;
-    manualPumpMode = true;
-    timedPumpActive = true;
-    timedPumpStartedAt = millis();
-    timedPumpDurationMs = durationSeconds * 1000UL;
-    pumpOn();
-  } else if (command == "PUMP_OFF") {
-    manualPumpMode = true;
-    timedPumpActive = false;
-    pumpOff();
-  } else if (command == "PUMP_AUTO") {
-    manualPumpMode = false;
-    timedPumpActive = false;
-    Serial.println("TRYB POMPY AUTO");
+  } else if (action == "PUMP_OFF") {
+    channels[channel].mode = MODE_MANUAL_OFF; channels[channel].timedUntil = 0;
+  } else if (action == "PUMP_AUTO") {
+    channels[channel].mode = MODE_AUTO; channels[channel].safetyLockout = false; channels[channel].timedUntil = 0;
   }
 }
 
-void applySensorConfig(String command) {
-  experimentId = readConfigInt(command, "experiment_id");
-  stationNumber = readConfigInt(command, "station_number");
-  potNumber = readConfigInt(command, "pot_number");
-  updateInterval(command, "soil_moisture", soilMoistureIntervalMs);
-  updateInterval(command, "light", lightIntervalMs);
-  updateInterval(command, "soil_temperature", soilTemperatureIntervalMs);
-  updateInterval(command, "air_temperature", airTemperatureIntervalMs);
-  updateInterval(command, "air_humidity", airHumidityIntervalMs);
-  updateInterval(command, "pressure", pressureIntervalMs);
-
-  assignmentReady = experimentId > 0 && stationNumber > 0 && potNumber > 0;
-  if (!assignmentReady) {
-    pumpOff();
-    Serial.println("NIEPRAWIDLOWE PRZYPISANIE SPRZETU");
-    return;
+void applyConfig(String command) {
+  stopIrrigation();
+  experimentId = configInt(command, "experiment_id"); stationNumber = configInt(command, "station_number");
+  bool anyPot = false;
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    channels[i].potNumber = configInt(command, "pot" + String(i + 1));
+    channels[i].mode = MODE_AUTO; channels[i].autoDemand = false; channels[i].safetyLockout = false;
+    channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
+    anyPot = anyPot || channels[i].potNumber > 0;
   }
-
-  Serial.print("Przypisano do stacji ");
-  Serial.print(stationNumber);
-  Serial.print(", doniczki P");
-  Serial.println(potNumber);
+  setInterval(command, "soil_moisture", soilMoistureIntervalMs);
+  setInterval(command, "soil_temperature", soilTemperatureIntervalMs);
+  setInterval(command, "light", lightIntervalMs); setInterval(command, "air_temperature", airTemperatureIntervalMs);
+  setInterval(command, "air_humidity", airHumidityIntervalMs); setInterval(command, "pressure", pressureIntervalMs);
+  assignmentReady = experimentId > 0 && stationNumber > 0 && anyPot;
+  if (!assignmentReady) clearAssignments();
 }
 
-int readConfigInt(String command, String key) {
-  int keyIndex = command.indexOf(key + "=");
-  if (keyIndex < 0) return 0;
-
-  int valueStart = keyIndex + key.length() + 1;
-  int valueEnd = command.indexOf(';', valueStart);
-  if (valueEnd < 0) valueEnd = command.length();
-
-  String value = command.substring(valueStart, valueEnd);
-  value.trim();
-  return value.toInt();
+void clearAssignments() {
+  stopIrrigation(); experimentId = 0; stationNumber = 0; assignmentReady = false;
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    channels[i].potNumber = 0; channels[i].mode = MODE_AUTO; channels[i].autoDemand = false;
+    channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
+  }
+  Serial.println("Brak przypisania sprzetu");
 }
 
-void updateInterval(String command, String key, unsigned long &intervalMs) {
-  int keyIndex = command.indexOf(key + "=");
-
-  if (keyIndex < 0) {
-    return;
-  }
-
-  int valueStart = keyIndex + key.length() + 1;
-  int valueEnd = command.indexOf(';', valueStart);
-
-  if (valueEnd < 0) {
-    valueEnd = command.length();
-  }
-
-  String value = command.substring(valueStart, valueEnd);
-  value.trim();
-
-  unsigned long seconds = value.toInt();
-  intervalMs = seconds * 1000UL;
+int configInt(String command, String key) {
+  int keyAt = command.indexOf(key + "="); if (keyAt < 0) return 0;
+  int start = keyAt + key.length() + 1, end = command.indexOf(';', start);
+  if (end < 0) end = command.length();
+  return command.substring(start, end).toInt();
 }
 
-void sendJsonToEsp(
-  int soilMoisture,
-  float soilTemperature,
-  float lightLux,
-  float airTemperature,
-  float airHumidity,
-  float pressure,
-  bool pumpState,
-  bool soilMoistureUpdated,
-  bool soilTemperatureUpdated,
-  bool lightUpdated,
-  bool airTemperatureUpdated,
-  bool airHumidityUpdated,
-  bool pressureUpdated
-) {
-  EspSerial.print("{\"experiment_id\":");
-  EspSerial.print(experimentId);
-  EspSerial.print(",\"station_number\":");
-  EspSerial.print(stationNumber);
-  EspSerial.print(",\"pot_number\":");
-  EspSerial.print(potNumber);
-  EspSerial.print(",\"moisture_percent\":");
-  if (soilMoistureUpdated) {
-    EspSerial.print(soilMoisture);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"air_temperature\":");
-  if (airTemperatureUpdated) {
-    EspSerial.print(airTemperature, 2);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"air_humidity\":");
-  if (airHumidityUpdated) {
-    EspSerial.print(airHumidity, 2);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"pressure_hpa\":");
-  if (pressureUpdated) {
-    EspSerial.print(pressure, 2);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"soil_temperature\":");
-  if (soilTemperatureUpdated) {
-    EspSerial.print(soilTemperature, 2);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"light_lux\":");
-  if (lightUpdated) {
-    EspSerial.print(lightLux, 2);
-  } else {
-    EspSerial.print("null");
-  }
-  EspSerial.print(",\"pump_on\":");
-  EspSerial.print(pumpState ? "true" : "false");
+void setInterval(String command, String key, unsigned long &interval) {
+  int seconds = configInt(command, key); if (seconds > 0) interval = (unsigned long)seconds * 1000UL;
+}
+
+void nullable(float value, bool valid) {
+  if (valid && !isnan(value)) EspSerial.print(value, 2); else EspSerial.print("null");
+}
+
+void sendMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated, bool airUpdated) {
+  ChannelState &state = channels[channel];
+  EspSerial.print("{\"experiment_id\":"); EspSerial.print(experimentId);
+  EspSerial.print(",\"station_number\":"); EspSerial.print(stationNumber);
+  EspSerial.print(",\"pot_number\":"); EspSerial.print(state.potNumber);
+  EspSerial.print(",\"moisture_percent\":"); nullable(state.moisture, moistureUpdated && state.moistureValid);
+  EspSerial.print(",\"air_temperature\":"); nullable(airTemperature, airUpdated && hasAirSensor);
+  EspSerial.print(",\"air_humidity\":"); nullable(airHumidity, airUpdated && hasAirSensor);
+  EspSerial.print(",\"pressure_hpa\":"); nullable(pressureHpa, airUpdated && hasAirSensor);
+  EspSerial.print(",\"soil_temperature\":"); nullable(state.soilTemperature, temperatureUpdated && state.temperatureValid);
+  EspSerial.print(",\"light_lux\":"); nullable(lightLux, lightUpdated && hasLightSensor);
+  EspSerial.print(",\"pump_on\":"); EspSerial.print(activeChannel == channel ? "true" : "false");
   EspSerial.println("}");
 }
