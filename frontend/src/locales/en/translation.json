@@ -477,6 +477,23 @@
     "generatePdf": "Generate PDF",
     "selectSection": "Select at least one section.",
     "generated": "Report generated.",
+    "range": {
+      "label": "Data range",
+      "all": "All data",
+      "allDescription": "Measurements and notes from the whole experiment.",
+      "range": "Custom range",
+      "rangeDescription": "Only measurements and notes from the selected dates and times.",
+      "from": "From",
+      "to": "To",
+      "invalid": "Range start cannot be later than range end.",
+      "pdfLabel": "Data range: {{from}} – {{to}}",
+      "time": "Time",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "increase": "Increase {{unit}}",
+      "decrease": "Decrease {{unit}}",
+      "pdfAll": "Data range: all data"
+    },
     "sections": {
       "details": "Experiment details",
       "detailsDescription": "Plant type, description, keywords, dates, collaborators.",

@@ -89,7 +89,7 @@ function writeWrapped(ctx, text, width = CONTENT_WIDTH, x = MARGIN) {
   writeLines(ctx, ctx.doc.splitTextToSize(String(text ?? ""), width), x);
 }
 
-export function addCoverTitle(ctx, { title, experimentName, generatedAt, generatedBy }) {
+export function addCoverTitle(ctx, { title, experimentName, generatedAt, generatedBy, period }) {
   const { doc } = ctx;
   setStyle(doc, { style: "bold", size: 22 });
   writeWrapped(ctx, title);
@@ -101,6 +101,7 @@ export function addCoverTitle(ctx, { title, experimentName, generatedAt, generat
 
   setStyle(doc, { size: 9.5, color: COLOR_MUTED });
   writeWrapped(ctx, `Generated: ${generatedAt}${generatedBy ? `  ·  by ${generatedBy}` : ""}`);
+  if (period) writeWrapped(ctx, period);
   ctx.y += 3;
 
   doc.setDrawColor(...COLOR_PRIMARY);

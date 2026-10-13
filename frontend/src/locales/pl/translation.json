@@ -483,6 +483,23 @@
     "generatePdf": "Wygeneruj PDF",
     "selectSection": "Wybierz co najmniej jedną sekcję.",
     "generated": "Raport został wygenerowany.",
+    "range": {
+      "label": "Zakres danych",
+      "all": "Wszystkie dane",
+      "allDescription": "Pomiary i notatki z całego okresu trwania doświadczenia.",
+      "range": "Wybrany przedział",
+      "rangeDescription": "Tylko pomiary i notatki z podanego zakresu dat i godzin.",
+      "from": "Od",
+      "to": "Do",
+      "invalid": "Początek zakresu nie może być późniejszy niż koniec.",
+      "pdfLabel": "Zakres danych: {{from}} – {{to}}",
+      "time": "Godzina",
+      "hours": "Godziny",
+      "minutes": "Minuty",
+      "increase": "Zwiększ: {{unit}}",
+      "decrease": "Zmniejsz: {{unit}}",
+      "pdfAll": "Zakres danych: wszystkie dane"
+    },
     "sections": {
       "details": "Szczegóły doświadczenia",
       "detailsDescription": "Rodzaj rośliny, opis, słowa kluczowe, daty i współpracownicy.",
