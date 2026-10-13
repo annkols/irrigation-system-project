@@ -134,9 +134,10 @@ export default function Reports() {
           .then((data) => (Array.isArray(data) ? data : []))
         : [];
 
-      const potNumbers = [...new Set(
-        experiment.pot_numbers?.length ? experiment.pot_numbers : measurements.map((m) => m.pot_number)
-      )].filter((n) => n != null).sort((a, b) => a - b);
+      const potNumbers = [...new Set([
+        ...(experiment.pot_numbers || []),
+        ...measurements.map((m) => m.pot_number),
+      ])].filter((n) => n != null).sort((a, b) => a - b);
 
       const cameraPotNumbers = (() => {
         if (!design?.camera_assignments?.length) return [];
@@ -180,7 +181,7 @@ export default function Reports() {
         noteThumbnails = new Map(entries);
       }
 
-      buildPdf({
+      await buildPdf({
         experiment,
         design,
         collaborators,
@@ -284,11 +285,11 @@ export default function Reports() {
   );
 }
 
-function buildPdf({
+async function buildPdf({
   experiment, design, collaborators, measurements, notes, noteThumbnails,
   potNumbers, cameraPotNumbers, cameraImages, sections, generatedBy, t, locale,
 }) {
-  const ctx = createReport();
+  const ctx = await createReport();
   const generatedAt = new Date().toLocaleString(locale, {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
   });
@@ -323,10 +324,10 @@ function buildPdf({
       addSubheading(ctx, t('reports.pdf.layout', { count: design.pots.length }));
       addTable(ctx, {
         columns: [
-          { header: t('experimentDetails.pot'), width: 25 },
-          { header: t('reports.pdf.replicate'), width: 25 },
-          { header: t('newExperiment.treatment'), width: 80 },
-          { header: t('reports.pdf.monitoring'), width: 50 },
+          { header: t('experimentDetails.pot'), width: 18 },
+          { header: t('reports.pdf.replicate'), width: 22 },
+          { header: t('newExperiment.treatment'), width: 100 },
+          { header: t('reports.pdf.monitoring'), width: 38 },
         ],
         rows: design.pots.map((pot) => [
           pot.label,
