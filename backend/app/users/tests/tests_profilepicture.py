@@ -103,6 +103,27 @@ class UserProfilePictureTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_authenticated_user_can_download_another_users_avatar(self):
+        viewer = User.objects.create_user(
+            username="viewer",
+            email="viewer@example.com",
+            password="TestPass123",
+        )
+        profile, created = UserProfile.objects.get_or_create(user=self.user)
+        profile.profile_picture = create_test_avatar_file()
+        profile.save()
+        self.client.force_authenticate(user=viewer)
+
+        response = self.client.get(reverse("user-avatar", kwargs={"pk": self.user.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "image/jpeg")
+
+    def test_unauthenticated_user_cannot_download_another_users_avatar(self):
+        response = self.client.get(reverse("user-avatar", kwargs={"pk": self.user.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
     # ANONYMOUS TRIES TO DELETE AN AVATAR -> 401
     def test_unauthenticated_user_cannot_delete_avatar(self):

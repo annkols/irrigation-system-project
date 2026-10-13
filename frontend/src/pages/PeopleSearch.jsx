@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
+import AuthenticatedUserAvatar from "../components/AuthenticatedUserAvatar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -162,19 +163,11 @@ export default function PeopleSearch() {
 
                                         <div className="person-avatar">
 
-                                            {user.profile?.profile_picture ? (
-                                                <img
-                                                    src={
-                                                        user.profile
-                                                            .profile_picture
-                                                    }
-                                                    alt={t("profile.imageAlt")}
-                                                />
-                                            ) : (
-                                                <span className="material-symbols-outlined">
-                                                    person
-                                                </span>
-                                            )}
+                                            <AuthenticatedUserAvatar
+                                                userId={user.id}
+                                                hasPicture={Boolean(user.profile?.profile_picture)}
+                                                alt={t("profile.imageAlt")}
+                                            />
 
                                         </div>
 

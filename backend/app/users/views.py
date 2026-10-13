@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from django.db.models import Q
 from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import mimetypes
 
@@ -282,6 +283,32 @@ class CurrentUserProfilePictureView(APIView):
                 context={"request": request}
             ).data
         }, status=status.HTTP_200_OK)
+
+
+class UserProfilePictureView(APIView):
+    permission_classes = [CanViewUsers]
+
+    def get(self, request, pk):
+        user = get_object_or_404(User.objects.select_related("profile"), pk=pk)
+        try:
+            profile = user.profile
+        except UserProfile.DoesNotExist as exc:
+            raise Http404("Profile picture not found") from exc
+
+        if not profile.profile_picture:
+            raise Http404("Profile picture not found")
+
+        content_type, _ = mimetypes.guess_type(profile.profile_picture.name)
+        try:
+            image = profile.profile_picture.open("rb")
+        except FileNotFoundError as exc:
+            raise Http404("Profile picture not found") from exc
+
+        return FileResponse(
+            image,
+            content_type=content_type or "application/octet-stream",
+            as_attachment=False,
+        )
 
 class UserNotificationsView(APIView):
     permission_classes = [IsAuthenticated]

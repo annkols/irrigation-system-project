@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
+import AuthenticatedUserAvatar from "../components/AuthenticatedUserAvatar";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const ROLE_TRANSLATION_KEYS = {
@@ -172,19 +173,13 @@ export default function PersonProfile() {
                                 </div>
 
                                 <div className="my-profile-picture-wrapper">
-                                    {user?.profile?.profile_picture ? (
-                                        <img
-                                            src={user.profile.profile_picture}
-                                            alt={t("profile.imageAlt")}
-                                            className="my-profile-avatar-img"
-                                        />
-                                    ) : (
-                                        <div className="my-profile-avatar-placeholder">
-                                            <span className="material-symbols-outlined">
-                                                person
-                                            </span>
-                                        </div>
-                                    )}
+                                    <AuthenticatedUserAvatar
+                                        userId={user?.id}
+                                        hasPicture={Boolean(user?.profile?.profile_picture)}
+                                        alt={t("profile.imageAlt")}
+                                        imageClassName="my-profile-avatar-img"
+                                        placeholderClassName="my-profile-avatar-placeholder"
+                                    />
                                 </div>
 
                             </div>
