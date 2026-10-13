@@ -5,6 +5,7 @@ export const formatChartTime = (value, locale) => new Date(value).toLocaleString
   month: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
 });
 
 const median = (values) => {

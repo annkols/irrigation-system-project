@@ -122,7 +122,7 @@ export default function SavedFrames() {
                 <div className="frame-card-footer">
                   <div>
                     <time dateTime={frame.captured_at}>
-                      {new Date(frame.captured_at).toLocaleString(i18n.resolvedLanguage)}
+                      {new Date(frame.captured_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })}
                     </time>
                     {frame.note && <p>{frame.note}</p>}
                   </div>

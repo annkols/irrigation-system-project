@@ -63,7 +63,7 @@ export function renderLineChartImage({ points, title, color = "#006D3D", width =
     const t = xMin + (xMax - xMin) * fraction;
     const x = xScale(t);
     const date = new Date(t);
-    const text = `${date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`;
+    const text = `${date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
     ctx.textAlign = fraction === 0 ? "left" : fraction === 1 ? "right" : "center";
     ctx.fillText(text, x, height - 16);
   });

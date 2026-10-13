@@ -7,6 +7,8 @@ import TopBar from "./Topbar";
 import { buildChartSeries, findSharedSensorSource } from "./chartDataUtils";
 import { renderLineChartImage } from "./reportChart";
 import { useTranslation } from "react-i18next";
+import TimeStepper from "./TimeStepper";
+import LocalizedDateInput from "./LocalizedDateInput";
 import {
   addCoverTitle,
   addEmptyNote,
@@ -37,6 +39,14 @@ const latestNonNull = (rows) => (rows.length
   }), {})
   : null);
 
+const toIsoBoundary = (dateTime, endOfMinute) => (dateTime
+  ? new Date(new Date(dateTime).getTime() + (endOfMinute ? 59999 : 0)).toISOString()
+  : null);
+
+const formatDateTime = (value, locale) => new Date(value).toLocaleString(locale, {
+  day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
 const authHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -61,6 +71,11 @@ export default function Reports() {
   const [sections, setSections] = useState(
     Object.fromEntries(SECTION_DEFS.map((section) => [section.key, true]))
   );
+  const [rangeMode, setRangeMode] = useState("all");
+  const [fromDay, setFromDay] = useState("");
+  const [fromTime, setFromTime] = useState("00:00");
+  const [toDay, setToDay] = useState("");
+  const [toTime, setToTime] = useState("23:59");
   const [generating, setGenerating] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -100,6 +115,10 @@ export default function Reports() {
 
   const toggleSection = (key) => setSections((prev) => ({ ...prev, [key]: !prev[key] }));
   const allSectionsOff = SECTION_DEFS.every((section) => !sections[section.key]);
+  const useRange = rangeMode === "range";
+  const dateFrom = fromDay ? `${fromDay}T${fromTime}` : "";
+  const dateTo = toDay ? `${toDay}T${toTime}` : "";
+  const invalidRange = useRange && dateFrom && dateTo && dateFrom > dateTo;
 
   const generateReport = async () => {
     if (!selectedExperiment) return;
@@ -115,9 +134,15 @@ export default function Reports() {
       const experiment = await expRes.json();
       const design = designRes.ok ? await designRes.json() : null;
 
+      const rangeStart = useRange ? toIsoBoundary(dateFrom, false) : null;
+      const rangeEnd = useRange ? toIsoBoundary(dateTo, true) : null;
+      const measurementParams = new URLSearchParams({ experiment_id: experiment.id });
+      if (rangeStart) measurementParams.set("date_from", rangeStart);
+      if (rangeEnd) measurementParams.set("date_to", rangeEnd);
+
       const needsMeasurements = sections.sensors || sections.charts;
       const measurements = needsMeasurements
-        ? await fetch(`${API_BASE_URL}/measurements/?experiment_id=${experiment.id}`, { headers })
+        ? await fetch(`${API_BASE_URL}/measurements/?${measurementParams}`, { headers })
           .then((res) => (res.ok ? res.json() : []))
           .then((data) => (Array.isArray(data) ? data : []))
         : [];
@@ -132,6 +157,10 @@ export default function Reports() {
         ? await fetch(`${API_BASE_URL}/experiments/${experiment.id}/notes/`, { headers })
           .then((res) => (res.ok ? res.json() : []))
           .then((data) => (Array.isArray(data) ? data : []))
+          .then((data) => data.filter((note) => {
+            const created = new Date(note.created_at);
+            return (!rangeStart || created >= new Date(rangeStart)) && (!rangeEnd || created <= new Date(rangeEnd));
+          }))
         : [];
 
       const potNumbers = [...new Set([
@@ -192,6 +221,7 @@ export default function Reports() {
         cameraPotNumbers,
         cameraImages,
         sections,
+        dateRange: useRange && (dateFrom || dateTo) ? { from: dateFrom, to: dateTo } : null,
         generatedBy: currentUser
           ? (currentUser.first_name && currentUser.last_name
             ? `${currentUser.first_name} ${currentUser.last_name}`
@@ -246,6 +276,44 @@ export default function Reports() {
                 </select>
               </div>
 
+              <div className="exp-overview-field">
+                <span className="exp-info-label">{t('reports.range.label')}</span>
+                <div className="reports-section-list">
+                  {["all", "range"].map((mode) => (
+                    <label key={mode} className="reports-section-item">
+                      <input
+                        type="radio"
+                        name="report-range"
+                        checked={rangeMode === mode}
+                        onChange={() => setRangeMode(mode)}
+                      />
+                      <span className="material-symbols-outlined">{mode === "all" ? "all_inclusive" : "date_range"}</span>
+                      <span className="reports-section-text">
+                        <strong>{t(`reports.range.${mode}`)}</strong>
+                        <small>{t(`reports.range.${mode}Description`)}</small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {useRange && (
+                  <div className="reports-range-dates">
+                    <div className="reports-range-field">
+                      <span className="exp-info-label">{t('reports.range.from')}</span>
+                      <LocalizedDateInput value={fromDay} onChange={setFromDay} ariaLabel={t('reports.range.from')} />
+                      <span className="reports-range-time-label">{t('reports.range.time')}</span>
+                      <TimeStepper value={fromTime} onChange={setFromTime} />
+                    </div>
+                    <div className="reports-range-field">
+                      <span className="exp-info-label">{t('reports.range.to')}</span>
+                      <LocalizedDateInput value={toDay} onChange={setToDay} ariaLabel={t('reports.range.to')} />
+                      <span className="reports-range-time-label">{t('reports.range.time')}</span>
+                      <TimeStepper value={toTime} onChange={setToTime} />
+                    </div>
+                  </div>
+                )}
+                {invalidRange && <span className="error-text">{t('reports.range.invalid')}</span>}
+              </div>
+
               <div className="exp-overview-field exp-overview-field--last">
                 <span className="exp-info-label">{t('reports.sectionsToInclude')}</span>
                 <div className="reports-section-list">
@@ -270,7 +338,7 @@ export default function Reports() {
             <div className="reports-generate-row">
               <button
                 className="exp-btn exp-btn--primary"
-                disabled={generating || allSectionsOff || !selectedExperiment}
+                disabled={generating || allSectionsOff || invalidRange || !selectedExperiment}
                 onClick={generateReport}
               >
                 <span className="material-symbols-outlined">picture_as_pdf</span>
@@ -287,11 +355,11 @@ export default function Reports() {
 
 async function buildPdf({
   experiment, design, collaborators, measurements, notes, noteThumbnails,
-  potNumbers, cameraPotNumbers, cameraImages, sections, generatedBy, t, locale,
+  potNumbers, cameraPotNumbers, cameraImages, sections, dateRange, generatedBy, t, locale,
 }) {
   const ctx = await createReport();
   const generatedAt = new Date().toLocaleString(locale, {
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
   });
 
   addCoverTitle(ctx, {
@@ -299,6 +367,12 @@ async function buildPdf({
     experimentName: experiment.name,
     generatedAt,
     generatedBy,
+    period: dateRange
+      ? t('reports.range.pdfLabel', {
+        from: dateRange.from ? formatDateTime(dateRange.from, locale) : "…",
+        to: dateRange.to ? formatDateTime(dateRange.to, locale) : "…",
+      })
+      : t('reports.range.pdfAll'),
   });
 
   if (sections.details) {
@@ -374,7 +448,7 @@ async function buildPdf({
           ],
           rows: potMeasurements.map((m) => [
             m.created_at ? new Date(m.created_at).toLocaleString(locale, {
-              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
             }) : "-",
             m.air_temperature ?? "-",
             m.moisture_percent ?? "-",
@@ -443,7 +517,7 @@ async function buildPdf({
       addEmptyNote(ctx, t('reports.pdf.noNotes'));
     } else {
       notes.forEach((note) => {
-        addSubheading(ctx, `${note.title} — ${new Date(note.created_at).toLocaleString(locale)}`);
+        addSubheading(ctx, `${note.title} — ${new Date(note.created_at).toLocaleString(locale, { hourCycle: "h23" })}`);
         if (note.content) addParagraph(ctx, note.content);
         const thumbnail = noteThumbnails.get(note.id);
         if (thumbnail) {

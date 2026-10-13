@@ -4445,7 +4445,8 @@ body {
   background: var(--color-bg-hover);
 }
 
-.reports-section-item input[type="checkbox"] {
+.reports-section-item input[type="checkbox"],
+.reports-section-item input[type="radio"] {
   margin-top: 3px;
   width: 16px;
   height: 16px;
@@ -4471,6 +4472,80 @@ body {
 
 .reports-section-text small {
   font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.reports-range-dates {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.reports-range-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reports-range-time-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.time-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-stepper-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-stepper-segment button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.time-stepper-segment button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-primary);
+}
+
+.time-stepper-segment input {
+  width: 44px;
+  box-sizing: border-box;
+  padding: 6px 0;
+  border: 1.5px solid var(--color-border-input);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 16px;
+  font-family: var(--font-main);
+  color: var(--color-text-main);
+  background: var(--color-bg-main);
+}
+
+.time-stepper-segment input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.time-stepper-colon {
+  font-size: 18px;
+  font-weight: 600;
   color: var(--color-text-muted);
 }
 
@@ -5167,6 +5242,7 @@ body {
   .dates-choices,
   .keyword-input-wrapper,
   .hardware-layout-preview-header,
+  .reports-range-dates,
   .reports-generate-row {
     align-items: stretch;
     flex-direction: column;

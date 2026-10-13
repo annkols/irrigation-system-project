@@ -271,7 +271,7 @@ function Experiment_details() {
     let refreshTimer;
 
     const fetchMeasurements = async (initial = false) => {
-      const currentTime = new Date().toLocaleString();
+      const currentTime = new Date().toLocaleString(undefined, { hourCycle: "h23" });
       const query = new URLSearchParams({
         experiment_id: id,
         limit: String(INITIAL_MEASUREMENT_LIMIT),
@@ -310,7 +310,7 @@ function Experiment_details() {
       } catch {
         if (cancelled) return;
         const successString = lastSuccessTime.current ?? t('experimentDetails.never');
-        setErrorTime(new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" }));
+        setErrorTime(new Date().toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }));
         setErrors(prev => ({
           ...prev,
           measurements: t('experimentDetails.errors.measurements', { time: successString })
@@ -598,7 +598,7 @@ function Experiment_details() {
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
-  const nowDateTime = `${now.toLocaleDateString(i18n.resolvedLanguage)} ${now.toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit" })}`;
+  const nowDateTime = `${now.toLocaleDateString(i18n.resolvedLanguage)} ${now.toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
   const latestMeasurementTime = stationMeasurements.reduce((latestTime, measurement) => {
     const measurementTime = new Date(measurement.created_at).getTime();
     return Number.isFinite(measurementTime) && measurementTime > latestTime
@@ -620,7 +620,7 @@ function Experiment_details() {
     && lastHardwareContact > 0
     && now.getTime() - lastHardwareContact > measurementThresholdMs;
   const lastHardwareContactLabel = latestMeasurementTime
-    ? new Date(latestMeasurementTime).toLocaleString(i18n.resolvedLanguage)
+    ? new Date(latestMeasurementTime).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })
     : t('experimentDetails.never');
   const measurementAlert = errors.measurements || (hasStaleMeasurements
     ? t('experimentDetails.measurementsStale', { time: lastHardwareContactLabel })
@@ -1091,7 +1091,7 @@ function Experiment_details() {
                     <tbody>
                       {selectedMeasurements.map((m, i) => (
                         <tr key={i}>
-                          <td>{m.created_at ? new Date(m.created_at).toLocaleString(i18n.resolvedLanguage) : '-'}</td>
+                          <td>{m.created_at ? new Date(m.created_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" }) : '-'}</td>
                           <td>{m.air_temperature ?? '-'}</td>
                           <td>{m.moisture_percent ?? '-'}</td>
                           <td>{m.air_humidity ?? '-'}</td>
@@ -1122,7 +1122,7 @@ function Experiment_details() {
                     <span className="note-date">
                       {new Date(openNote.created_at || openNote.createdAt).toLocaleString(i18n.resolvedLanguage, {
                         year: 'numeric', month: 'short', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
+                        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
                       })}
                       {openNote.updated_at && openNote.updated_at !== openNote.created_at && (
                         <span className="note-edited-tag"> · {t('experimentDetails.edited')}</span>
@@ -1256,7 +1256,7 @@ function Experiment_details() {
                             <span className="note-date">
                               {new Date(note.created_at || note.createdAt).toLocaleString(i18n.resolvedLanguage, {
                                 year: 'numeric', month: 'short', day: 'numeric',
-                                hour: '2-digit', minute: '2-digit'
+                                hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
                               })}
                             </span>
                             <h3 className="note-title">{note.title}</h3>

@@ -135,7 +135,7 @@ export default function PotComparisonChart({ measurements = [], potNumbers = [] 
               domain={["auto", "auto"]}
             />
             <Tooltip
-              labelFormatter={(value) => new Date(value).toLocaleString(i18n.resolvedLanguage)}
+              labelFormatter={(value) => new Date(value).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })}
               formatter={(value, name) => [`${value} ${selectedFeature.unit}`, name]}
             />
             <Legend />
