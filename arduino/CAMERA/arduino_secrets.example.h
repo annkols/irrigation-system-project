@@ -11,8 +11,8 @@ const char* CAMERA_UPLOAD_TOKEN = "token-skopiowany-z-panelu-admin";
 const int CAMERA_SENSOR_SET_ID = 1;
 const unsigned long CAMERA_UPLOAD_INTERVAL_MS = 60UL * 60UL * 1000UL;
 
-// Każda z dwóch kamer musi mieć inny adres IP w tej samej sieci.
-// Dostosuj wartości do swojej sieci; dla drugiej kamery zmień ostatnią liczbę.
+// Każda kamera musi mieć inny adres IP w tej samej sieci.
+// Dostosuj wartości do swojej sieci i przed wgraniem ustaw osobny adres każdej kamery.
 IPAddress CAMERA_LOCAL_IP(192, 168, 43, 47);
 IPAddress CAMERA_GATEWAY(192, 168, 43, 1);
 IPAddress CAMERA_SUBNET(255, 255, 255, 0);

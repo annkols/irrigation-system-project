@@ -13,6 +13,10 @@ String lastForwardedConfig = "";
 bool assignmentReady = false;
 
 void setup() {
+  // Mega wysyla trzy rekordy jeden po drugim. W czasie wykonywania HTTPS POST
+  // ESP nie czyta UART, dlatego domyslny bufor moze zgubic drugi lub trzeci
+  // rekord. 1024 bajty mieszcza caly pakiet dla trzech doniczek.
+  Serial.setRxBufferSize(1024);
   Serial.begin(9600);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Laczenie z WiFi");
@@ -46,6 +50,9 @@ void sendToBackend(String payload) {
   HTTPClient http; http.begin(client, MEASUREMENTS_API_URL); http.addHeader("Content-Type", "application/json");
   int status = http.POST(payload);
   Serial.print("POST pomiaru: "); Serial.println(status);
+  if (status < 200 || status >= 300) {
+    Serial.print("Odpowiedz backendu: "); Serial.println(http.getString());
+  }
   http.end();
 }
 
@@ -87,7 +94,10 @@ void fetchSensorConfigs() {
     assignmentReady = assignmentReady || pots[i] > 0;
   }
   String config = buildConfig(frequencyResponse);
-  if (config != lastForwardedConfig) { Serial.println(config); lastForwardedConfig = config; }
+  // Wysylaj konfiguracje przy kazdym odswiezeniu. Mega moze zostac zresetowana
+  // lub przeprogramowana niezaleznie od ESP i wtedy musi odzyskac przypisania.
+  Serial.println(config);
+  lastForwardedConfig = config;
 }
 
 String buildConfig(String response) {

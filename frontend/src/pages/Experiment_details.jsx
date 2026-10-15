@@ -19,6 +19,22 @@ const irrigationCommands = [
   { command: "AUTO", labelKey: "experimentDetails.irrigationAuto" },
 ];
 const latestNonNull = rows => rows.length ? rows.reduceRight((result, row) => ({ ...result, ...Object.fromEntries(Object.entries(row).filter(([, value]) => value != null)) }), {}) : null;
+const SENSOR_VALUE_KEYS = [
+  'moisture_percent',
+  'air_temperature',
+  'air_humidity',
+  'pressure_hpa',
+  'soil_temperature',
+  'light_lux',
+];
+const hasSensorReading = measurement => SENSOR_VALUE_KEYS.some(key => measurement[key] != null);
+const latestReadingTime = rows => rows.reduce((latestTime, measurement) => {
+  if (!hasSensorReading(measurement)) return latestTime;
+  const measurementTime = new Date(measurement.created_at).getTime();
+  return Number.isFinite(measurementTime) && measurementTime > latestTime
+    ? measurementTime
+    : latestTime;
+}, 0);
 const DAYLIGHT_PPFD_FACTOR = 0.0185;
 const RED_LIGHT_SHARE = 700 / (700 + 400);
 const BLUE_LIGHT_SHARE = 400 / (700 + 400);
@@ -598,13 +614,14 @@ function Experiment_details() {
   const progressPercent = calculateProgress(experiment);
 
   const now = new Date();
-  const nowDateTime = `${now.toLocaleDateString(i18n.resolvedLanguage)} ${now.toLocaleTimeString(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
-  const latestMeasurementTime = stationMeasurements.reduce((latestTime, measurement) => {
-    const measurementTime = new Date(measurement.created_at).getTime();
-    return Number.isFinite(measurementTime) && measurementTime > latestTime
-      ? measurementTime
-      : latestTime;
-  }, 0);
+  // Rekord zmiany stanu pompy może nie zawierać żadnej wartości czujnika.
+  // Nie wolno traktować go jako świeżego pomiaru ani oznaczać starych wartości
+  // aktualnym czasem przeglądarki.
+  const latestMeasurementTime = latestReadingTime(stationMeasurements);
+  const selectedPotMeasurementTime = latestReadingTime(selectedMeasurements);
+  const selectedPotMeasurementDateTime = selectedPotMeasurementTime
+    ? new Date(selectedPotMeasurementTime).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })
+    : t('experimentDetails.never');
   const measurementThresholdMs = Math.max(
     (experiment.measurement_frequency_seconds || 900) * 2 * 1000,
     30 * 60 * 1000
@@ -850,7 +867,7 @@ function Experiment_details() {
                       </select>
                     </div>
                   </div>
-                  <span className="exp-sensors-time">{t('experimentDetails.updated', { date: nowDateTime })}</span>
+                  <span className="exp-sensors-time">{t('experimentDetails.updated', { date: selectedPotMeasurementDateTime })}</span>
                 </div>
                 <div className="exp-sensors-grid">
                   {[

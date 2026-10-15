@@ -7,7 +7,7 @@
 
 const byte CHANNEL_COUNT = 3;
 const byte SOIL_MOISTURE_PINS[CHANNEL_COUNT] = {A0, A1, A2};
-const byte SOIL_TEMPERATURE_PINS[CHANNEL_COUNT] = {39, 40, 42};
+const byte SOIL_TEMPERATURE_PINS[CHANNEL_COUNT] = {35, 36, 38};
 const byte PUMP_RELAY_PIN = 22;
 const byte VALVE_RELAY_PINS[CHANNEL_COUNT] = {23, 24, 25};
 const byte RELAY_ON = LOW;
@@ -16,6 +16,8 @@ const byte BH1750_ADDRESS = 0x23;
 const byte BME280_I2C_ADDRESS = 0x76;
 
 const float ADC_REFERENCE_VOLTAGE = 5.0F;
+const float MIN_VALID_SOIL_VOLTAGE = 0.15F;
+const float MAX_VALID_SOIL_VOLTAGE = 3.15F;
 const float MOISTURE_START_PERCENT = 16.0F;
 const float MOISTURE_STOP_PERCENT = 25.0F;
 const unsigned long MAX_WATERING_TIME_MS = 60UL * 1000UL;
@@ -59,6 +61,7 @@ unsigned long airHumidityIntervalMs = 10000, pressureIntervalMs = 10000;
 unsigned long lastMoistureAt = 0, lastSoilTemperatureAt = 0, lastLightAt = 0, lastAirAt = 0;
 int activeChannel = -1, nextChannel = 0;
 unsigned long wateringStartedAt = 0;
+bool irrigationStateChanged = false;
 
 void setup() {
   Serial.begin(9600);
@@ -70,11 +73,16 @@ void setup() {
     pinMode(VALVE_RELAY_PINS[i], OUTPUT);
     channels[i] = {0, 0, 0, false, false, false, false, MODE_AUTO, 0, 0};
     soilTemperatureSensors[i]->begin();
+    Serial.print("DS18B20 na D"); Serial.print(SOIL_TEMPERATURE_PINS[i]);
+    Serial.print(": wykryto "); Serial.print(soilTemperatureSensors[i]->getDeviceCount());
+    Serial.println(" czujnik(ow)");
   }
   Wire.begin(); // Mega: SDA=D20 i SCL=D21; oba komplety gniazd I2C sa wspolne.
   hasLightSensor = lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, BH1750_ADDRESS);
   hasAirSensor = bme.begin(BME280_I2C_ADDRESS);
   Serial.println("Sterownik trzech doniczek uruchomiony");
+  Serial.println(hasLightSensor ? "BH1750: OK" : "BH1750: BRAK ODPOWIEDZI");
+  Serial.println(hasAirSensor ? "BME280: OK" : "BME280: BRAK ODPOWIEDZI");
 }
 
 void loop() {
@@ -96,9 +104,10 @@ void loop() {
 
   updateAutoDemand();
   updateIrrigation(now);
-  if (assignmentReady && (moistureUpdated || soilTemperatureUpdated || lightUpdated || airUpdated)) {
+  if (assignmentReady && (moistureUpdated || soilTemperatureUpdated || lightUpdated || airUpdated || irrigationStateChanged)) {
     for (byte i = 0; i < CHANNEL_COUNT; i++) if (channels[i].potNumber > 0)
       sendMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated, airUpdated);
+    irrigationStateChanged = false;
   }
   delay(25);
 }
@@ -118,11 +127,18 @@ void readMoisture() {
     unsigned long sum = 0;
     for (byte sample = 0; sample < 10; sample++) { sum += analogRead(SOIL_MOISTURE_PINS[channel]); delay(2); }
     float voltage = (sum / 10.0F) * ADC_REFERENCE_VOLTAGE / 1023.0F;
-    channels[channel].moistureValid = voltage >= 0.05F && voltage <= 3.15F;
-    if (channels[channel].moistureValid) channels[channel].moisture = soilWatchVwc(voltage);
-    else {
+    channels[channel].moistureValid = voltage >= MIN_VALID_SOIL_VOLTAGE
+      && voltage <= MAX_VALID_SOIL_VOLTAGE;
+    Serial.print("SoilWatch "); Serial.print(channel + 1);
+    Serial.print(" (A"); Serial.print(channel); Serial.print("): raw=");
+    Serial.print(sum / 10.0F, 1); Serial.print(", napiecie=");
+    Serial.print(voltage, 3); Serial.print(" V");
+    if (channels[channel].moistureValid) {
+      channels[channel].moisture = soilWatchVwc(voltage);
+      Serial.print(", VWC="); Serial.print(channels[channel].moisture, 1); Serial.println(" %");
+    } else {
       channels[channel].autoDemand = false;
-      Serial.print("Nieprawidlowy SoilWatch na kanale "); Serial.println(channel + 1);
+      Serial.println(" -> NIEPRAWIDLOWY ODCZYT");
     }
   }
 }
@@ -133,6 +149,13 @@ void readSoilTemperatures() {
     float value = soilTemperatureSensors[i]->getTempCByIndex(0);
     channels[i].temperatureValid = value != DEVICE_DISCONNECTED_C && value > -55 && value < 125;
     if (channels[i].temperatureValid) channels[i].soilTemperature = value;
+    Serial.print("DS18B20 "); Serial.print(i + 1);
+    Serial.print(" (D"); Serial.print(SOIL_TEMPERATURE_PINS[i]); Serial.print("): ");
+    if (channels[i].temperatureValid) {
+      Serial.print(value, 2); Serial.println(" C");
+    } else {
+      Serial.print(value, 2); Serial.println(" C -> NIEPRAWIDLOWY ODCZYT");
+    }
   }
 }
 
@@ -187,16 +210,19 @@ void startIrrigation(byte channel) {
   delay(VALVE_SWITCH_DELAY_MS);
   digitalWrite(PUMP_RELAY_PIN, RELAY_ON);
   activeChannel = channel; wateringStartedAt = millis();
+  irrigationStateChanged = true;
   if (channels[channel].mode == MODE_TIMED && channels[channel].timedUntil == 0)
     channels[channel].timedUntil = wateringStartedAt + channels[channel].timedDurationMs;
   Serial.print("Podlewanie P"); Serial.println(channels[channel].potNumber);
 }
 
 void stopIrrigation() {
+  bool wasRunning = activeChannel >= 0;
   digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
   if (activeChannel >= 0) delay(VALVE_SWITCH_DELAY_MS);
   for (byte i = 0; i < CHANNEL_COUNT; i++) digitalWrite(VALVE_RELAY_PINS[i], RELAY_OFF);
   activeChannel = -1;
+  if (wasRunning) irrigationStateChanged = true;
 }
 
 int channelForPot(int pot) {
@@ -207,6 +233,8 @@ int channelForPot(int pot) {
 void handleEspCommands() {
   while (EspSerial.available()) {
     String command = EspSerial.readStringUntil('\n'); command.trim();
+    if (command.length() == 0) continue;
+    Serial.print("ESP -> Mega: "); Serial.println(command);
     if (command.startsWith("CONFIG:")) applyConfig(command);
     else if (command == "UNASSIGNED") clearAssignments();
     else applyPumpCommand(command);
@@ -215,12 +243,20 @@ void handleEspCommands() {
 
 void applyPumpCommand(String command) {
   int firstColon = command.indexOf(':');
-  if (firstColon < 0 || !assignmentReady) return;
+  if (firstColon < 0) return;
+  if (!assignmentReady) {
+    Serial.println("Pominieto polecenie: Mega nie ma jeszcze konfiguracji doniczek");
+    return;
+  }
   String action = command.substring(0, firstColon);
   int secondColon = command.indexOf(':', firstColon + 1);
   int pot = command.substring(firstColon + 1, secondColon < 0 ? command.length() : secondColon).toInt();
   int channel = channelForPot(pot);
-  if (channel < 0) return;
+  if (channel < 0) {
+    Serial.print("Pominieto polecenie: doniczka P"); Serial.print(pot);
+    Serial.println(" nie jest przypisana do tego sterownika");
+    return;
+  }
   if (action == "PUMP_ON") {
     channels[channel].safetyLockout = false;
     if (secondColon > 0) {
@@ -237,24 +273,59 @@ void applyPumpCommand(String command) {
   } else if (action == "PUMP_AUTO") {
     channels[channel].mode = MODE_AUTO; channels[channel].safetyLockout = false; channels[channel].timedUntil = 0;
   }
+  Serial.print("Przyjeto polecenie "); Serial.print(action);
+  Serial.print(" dla P"); Serial.print(pot);
+  Serial.print(" (kanal "); Serial.print(channel + 1); Serial.println(")");
 }
 
 void applyConfig(String command) {
-  stopIrrigation();
-  experimentId = configInt(command, "experiment_id"); stationNumber = configInt(command, "station_number");
+  int newExperimentId = configInt(command, "experiment_id");
+  int newStationNumber = configInt(command, "station_number");
+  int newPotNumbers[CHANNEL_COUNT];
   bool anyPot = false;
   for (byte i = 0; i < CHANNEL_COUNT; i++) {
-    channels[i].potNumber = configInt(command, "pot" + String(i + 1));
-    channels[i].mode = MODE_AUTO; channels[i].autoDemand = false; channels[i].safetyLockout = false;
-    channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
-    anyPot = anyPot || channels[i].potNumber > 0;
+    newPotNumbers[i] = configInt(command, "pot" + String(i + 1));
+    anyPot = anyPot || newPotNumbers[i] > 0;
   }
   setInterval(command, "soil_moisture", soilMoistureIntervalMs);
   setInterval(command, "soil_temperature", soilTemperatureIntervalMs);
   setInterval(command, "light", lightIntervalMs); setInterval(command, "air_temperature", airTemperatureIntervalMs);
   setInterval(command, "air_humidity", airHumidityIntervalMs); setInterval(command, "pressure", pressureIntervalMs);
-  assignmentReady = experimentId > 0 && stationNumber > 0 && anyPot;
-  if (!assignmentReady) clearAssignments();
+  bool configValid = newExperimentId > 0 && newStationNumber > 0 && anyPot;
+  if (!configValid) {
+    clearAssignments();
+    return;
+  }
+
+  bool sameConfig = assignmentReady
+    && experimentId == newExperimentId
+    && stationNumber == newStationNumber;
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    sameConfig = sameConfig && channels[i].potNumber == newPotNumbers[i];
+  }
+  if (sameConfig) {
+    Serial.println("Konfiguracja doniczek potwierdzona");
+    return;
+  }
+
+  stopIrrigation();
+  experimentId = newExperimentId;
+  stationNumber = newStationNumber;
+  assignmentReady = true;
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    channels[i].potNumber = newPotNumbers[i];
+    channels[i].mode = MODE_AUTO; channels[i].autoDemand = false; channels[i].safetyLockout = false;
+    channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
+  }
+  // Po restarcie lub zmianie doświadczenia wykonaj pełny odczyt od razu,
+  // zamiast czekać do końca interwału skonfigurowanego w backendzie.
+  lastMoistureAt = 0;
+  lastSoilTemperatureAt = 0;
+  lastLightAt = 0;
+  lastAirAt = 0;
+  Serial.print("Konfiguracja: P"); Serial.print(channels[0].potNumber);
+  Serial.print(", P"); Serial.print(channels[1].potNumber);
+  Serial.print(", P"); Serial.println(channels[2].potNumber);
 }
 
 void clearAssignments() {
