@@ -75,6 +75,7 @@ body {
 }
 
 :root[data-theme="dark"] .sidebar-name,
+:root[data-theme="dark"] .sidebar-logo-mark,
 :root[data-theme="dark"] .exp-sidebar-logo-text {
   filter: brightness(0) invert(1);
   opacity: 0.95;
@@ -1772,6 +1773,24 @@ body {
   align-items: center;
   gap: 14px;
   margin-bottom: 28px;
+}
+
+.exp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-normal, 6px);
+  border: 0px solid var(--color-border-input);
+  background-color: transparent;
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.exp-back-btn:hover {
+  color: var(--color-primary);
 }
 
 .saved-frames-heading .exp-back-btn {
@@ -3912,8 +3931,12 @@ body {
 
 /* x do zamykania */
 .Toastify__close-button {
-  color: var(--color-text-muted);
+  color: var(--color-text-main);
   opacity: 0.8;
+}
+
+.Toastify__close-button > svg {
+  fill: var(--color-text-main) !important;
 }
 
 .Toastify__close-button:hover {
@@ -3936,6 +3959,26 @@ body {
 .person-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.person-avatar {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  min-height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-main);
+  border: 1px solid var(--color-border-input);
+}
+
+.person-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .view-profile-btn {
@@ -5965,6 +6008,7 @@ body {
 .confirmation-toast p {
   margin: 0;
   line-height: 1.4;
+  color: var(--color-text-main);
 }
 
 .confirmation-toast-actions {
@@ -6193,7 +6237,6 @@ body {
   }
 
   .profile-dropdown,
-  .settings-dropdown,
   .notifications-dropdown {
     position: fixed;
     top: 58px;
@@ -6203,6 +6246,12 @@ body {
     min-width: 0;
     max-width: calc(100vw - 20px);
     max-height: min(360px, calc(100dvh - 76px));
+  }
+
+  .setings-dropdown {
+    right: 0;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
   }
 
   .notification-item {
