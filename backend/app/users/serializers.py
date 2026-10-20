@@ -13,8 +13,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ["university", "department", "role", "profile_picture"]
 
-class ProfilePictureUploadSerializer(serializers.ModelSerializer):
+class UserProfileEditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ["university", "department", "role"]
 
+class ProfilePictureUploadSerializer(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(required=True, allow_empty_file=False)
 
     class Meta:
@@ -40,6 +44,42 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "profile", "is_active", "is_staff"]
         read_only_fields = fields
+
+class UserEditSerializer(serializers.ModelSerializer):
+    profile = UserProfileEditSerializer(required=False)
+
+    first_name = serializers.CharField(required=False, allow_blank=False, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=False, max_length=150)
+
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "profile"]
+
+    def validate_username(self, value):
+        username = value.strip()
+
+        if User.objects.filter(username__iexact=username).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError(
+                "Username is already taken."
+            )
+        return username
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+
+        instance = super().update(instance, validated_data)
+
+        if profile_data:
+            profile, _ = UserProfile.objects.get_or_create(user=instance)
+
+            for field, value in profile_data.items():
+                setattr(profile, field, value)
+
+            profile.save(update_fields=list(profile_data.keys()))
+
+        return instance
+
 
 
 class UserSearchSerializer(serializers.ModelSerializer):

@@ -29,7 +29,8 @@ from .serializers import (
     UserSearchSerializer,
     UserSerializer,
     ProfilePictureUploadSerializer,
-    UserDeleteConfirmSerializer
+    UserDeleteConfirmSerializer,
+    UserEditSerializer
 )
 
 from .models import UserProfile
@@ -110,9 +111,28 @@ class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
+    http_method_names = ["get", "patch", "head", "options"]
+
     def get_object(self):
         return self.request.user
 
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        serializer = UserEditSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={"request": request}
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            UserSerializer(user, context={"request": request}).data, 
+            status=status.HTTP_200_OK
+        )
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -171,11 +191,7 @@ class UserDeactivateView(generics.UpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [CanChangeUsers]
 
-    http_method_names = [
-        "patch",
-        "head",
-        "options",
-    ]
+    http_method_names = ["patch", "head", "options"]
     
     def patch(self, request, *args, **kwargs):
         user = self.get_object()
