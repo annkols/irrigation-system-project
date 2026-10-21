@@ -42,8 +42,34 @@
   "notifications": {
     "experiment_ended_title": "Experiment Ended",
     "experiment_ended_message": "The experiment \"{{name}}\" has reached its planned end time.",
+
     "sensor_error_title": "Sensor Error",
-    "sensor_error_message": "Sensor data stream has stopped in experiment \"{{name}}\"."
+    "sensor_error_message": "Sensor data stream has stopped in experiment \"{{name}}\".",
+
+    "experiment_ending_soon_title": "Experiment ending soon",
+    "experiment_ending_soon_message": "Experiment \"{{name}}\" ends in 24 hours.",
+
+    "experiment_starting_soon_title": "Scheduled start",
+    "experiment_starting_soon_message": "Experiment \"{{name}}\" will start in 24 hours.",
+
+    "experiment_started_title": "Experiment started",
+    "experiment_started_message": "Experiment \"{{name}}\" has just started.",
+
+    "measurement_anomaly_title": "Measurement anomaly",
+    "measurement_anomaly_message": "An issue was detected in experiment \"{{name}}\": {{metric_key}} is {{value}} (threshold: {{limit}}).",
+
+    "collaborator_added_title": "Added as collaborator",
+    "collaborator_added_message": "You can now collaborate on experiment \"{{name}}\".",
+
+    "collaborator_removed_title": "Removed from collaboration",
+    "collaborator_removed_message": "You can no longer collaborate on experiment \"{{name}}\"."
+  },
+  "metrics": {
+    "air_temperature": "Air temperature",
+    "soil_temperature": "Soil temperature",
+    "air_humidity": "Air humidity",
+    "soil_moisture": "Soil moisture",
+    "pressure": "Atmospheric pressure"
   },
   "start": {
     "sessionExpired": "Your session has expired. Please sign in again.",
