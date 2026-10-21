@@ -429,10 +429,65 @@ class UserNotificationsView(APIView):
                         "created_at": exp.started_at
                     })
 
+            # enomalie w pomianrach
+            if is_in_progress:
+                latest_meas = exp.measurements.first()
+                if latest_meas:
+                    # trzeba zdefiniować jakiepomiary są normalne
+                    thresholds = {
+                        "air_temperature": {"max": 45.0, "min": 5.0, "key": "air_temperature"},
+                        "soil_temperature": {"max": 45.0, "min": 5.0, "key": "soil_temperature"},
+                        "air_humidity": {"max": 80.0, "min": 5.0, "key": "air_humidity"},
+                        "moisture_percent": {"max": 90.0, "min": 2.0, "key": "soil_moisture"},
+                        "pressure_hpa": {"max": 1050.0, "min": 1000.0, "key": "pressure"}
+                    }
+
+                    checks = [
+                        ("air_temperature", latest_meas.air_temperature),
+                        ("soil_temperature", latest_meas.soil_temperature),
+                        ("air_humidity", latest_meas.air_humidity),
+                        ("moisture_percent", latest_meas.moisture_percent),
+                        ("pressure_hpa", latest_meas.pressure_hpa),
+                    ]
+
+                    for field_key, value in checks:
+                        if value is None:
+                            continue
+                    
+                        cfg = thresholds.get(field_key)
+                        if not cfg:
+                            continue
+
+                        is_anomaly = False
+                        condition_type = ""
+
+                        if "max" in cfg and value > cfg["max"]:
+                            is_anomaly = True
+                            condition_type = "max"
+                        elif "min" in cfg and value < cfg["min"]:
+                            is_anomaly = True
+                            condition_type = "min"
+
+                        if is_anomaly:
+                            anomaly_notif_id = f"anomaly_{exp.id}_{field_key}_{latest_meas.pk}"
+                            if anomaly_notif_id not in dismissed_ids:
+                                notifications.append({
+                                    "id": anomaly_notif_id,
+                                    "type": "measurement_anomaly",
+                                    "experiment_id": exp.id,
+                                    "params": {
+                                        "name": exp.name,
+                                        "metric_key": cfg["key"],
+                                        "value": value,
+                                        "limit": cfg[condition_type],
+                                        "condition": condition_type
+                                    },
+                                    "created_at": latest_meas.created_at
+                                })
+
 
             # POTENCJALNEI DODATKOWE POWIADOMIENIA (TODO):
             # Dodano użytkownika jako collabolator
-            # Anomalie w wynikach (np. mega wysoka tempertura)
             # Błąd od kamery
 
 
