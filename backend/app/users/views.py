@@ -9,6 +9,8 @@ import mimetypes
 from experiments.models import Experiment
 from .models import DismissedNotification
 
+from datetime import timedelta
+
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import generics, status
@@ -365,8 +367,6 @@ class UserNotificationsView(APIView):
 		        # Dopuszczalny bufor: 2x częstotliwość pomiarów, ale nie mniej niż 30 minut
                 threshold_seconds = max(freq_seconds * 2, 1800)
                 latest_measurement = exp.measurements.first()
-                # A dismissal belongs to one concrete outage. After the hardware
-                # sends data again, a later outage receives a new notification id.
                 incident_marker = latest_measurement.pk if latest_measurement else "no_measurements"
                 sensor_notif_id = f"sensor_error_{exp.id}_{incident_marker}"
                 
@@ -387,14 +387,54 @@ class UserNotificationsView(APIView):
                         "created_at": latest_measurement.created_at if latest_measurement else exp.started_at
                     })
 
-            # Błąd od kamery
+            # 24h przed planowanym rozpoczęciem
+            if exp.planned_start_at:
+                start_warning_time = exp.planned_start_at - timedelta(hours=24)
+                start_notif_id = f"exp_starting_soon_{exp.id}"
+            
+                if start_warning_time <= now and (not exp.started_at or exp.started_at > now):
+                    if start_notif_id not in dismissed_ids:
+                        notifications.append({
+                            "id": start_notif_id,
+                            "type": "experiment_starting_soon",
+                            "experiment_id": exp.id,
+                            "params": {"name": exp.name},
+                            "created_at": start_warning_time
+                        })
+
+            # 24h przed planowanym końcem
+            if exp.planned_end_at:
+                end_warning_time = exp.planned_end_at - timedelta(hours=24)
+                end_notif_id = f"exp_ending_soon_{exp.id}"
+            
+                if end_warning_time <= now and not exp.finished_at:
+                    if end_notif_id not in dismissed_ids:
+                        notifications.append({
+                            "id": end_notif_id,
+                            "type": "experiment_ending_soon",
+                            "experiment_id": exp.id,
+                            "params": {"name": exp.name},
+                            "created_at": end_warning_time
+                        })
+
+            # Moment rozpoczęcia eksperymentu
+            if exp.started_at and exp.started_at <= now:
+                start_notif_id = f"exp_started_{exp.id}"
+                if start_notif_id not in dismissed_ids:
+                    notifications.append({
+                        "id": start_notif_id,
+                        "type": "experiment_started",
+                        "experiment_id": exp.id,
+                        "params": {"name": exp.name},
+                        "created_at": exp.started_at
+                    })
+
 
             # POTENCJALNEI DODATKOWE POWIADOMIENIA (TODO):
-            # 24h przed planowanym końcem
-            # 24h przed planowanym rozpoczęciem
-            # w momencie rozpoczęcia eksperymentu (?)
             # Dodano użytkownika jako collabolator
             # Anomalie w wynikach (np. mega wysoka tempertura)
+            # Błąd od kamery
+
 
         return Response(notifications)
 
