@@ -1434,6 +1434,11 @@ body {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
+.theme-toggle-btn.active {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
 .profile-dropdown .logout-btn {
   width: 100%;
   padding: 8px 12px;
