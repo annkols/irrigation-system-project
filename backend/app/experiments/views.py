@@ -622,3 +622,20 @@ class CollaboratedExperimentsListView(generics.ListAPIView):
             .distinct()
             .order_by("-created_at")
         )
+
+# Powiadomienia o collabolarors
+        collab_events = CollaboratorEventNotification.objects.filter(user=user)
+        for event in collab_events:
+            event_notif_id = f"collab_event_{event.id}"
+            
+            if event_notif_id not in dismissed_ids:
+                type_name = "collaborator_added" if event.event_type == "added" else "collaborator_removed"
+                notifications.append({
+                    "id": event_notif_id,
+                    "type": type_name,
+                    "experiment_id": event.experiment.id,
+                    "params": {
+                        "name": event.experiment.name,
+                    },
+                    "created_at": event.created_at
+                })

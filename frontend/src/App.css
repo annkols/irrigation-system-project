@@ -745,6 +745,13 @@ body {
   word-break: break-word;
 }
 
+.notification-date {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+    margin-top: 4px;
+}
+
 .settings-dropdown {
   display: flex;
   flex-direction: column;
@@ -1432,6 +1439,11 @@ body {
 .theme-toggle-btn:hover {
   border-color: var(--color-primary, #6366f1);
   background-color: rgba(0, 0, 0, 0.04);
+}
+
+.theme-toggle-btn.active {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .profile-dropdown .logout-btn {

@@ -42,8 +42,34 @@
   "notifications": {
     "experiment_ended_title": "Koniec eksperymentu",
     "experiment_ended_message": "Doświadczenie \"{{name}}\" osiągnęło planowany czas zakończenia.",
+
     "sensor_error_title": "Błąd odczytów",
-    "sensor_error_message": "Wstrzymano przesył danych z czujników w doświadczeniu \"{{name}}\"."
+    "sensor_error_message": "Wstrzymano przesył danych z czujników w doświadczeniu \"{{name}}\".",
+
+    "experiment_ending_soon_title": "Zbliża się koniec eksperymentu",
+    "experiment_ending_soon_message": "Eksperyment \"{{name}}\" kończy się za 24 godziny.",
+  
+    "experiment_starting_soon_title": "Planowany start",
+    "experiment_starting_soon_message": "Eksperyment \"{{name}}\" rozpocznie się za 24 godziny.",
+  
+    "experiment_started_title": "Eksperyment rozpoczęty",
+    "experiment_started_message": "Eksperyment \"{{name}}\" właśnie się rozpoczął.",
+  
+    "measurement_anomaly_title": "Anomalia w pomiarach",
+    "measurement_anomaly_message": "W eksperymencie \"{{name}}\" wykryto problem: {{metric_key}} wynosi {{value}} (próg: {{limit}}).",
+  
+    "collaborator_added_title": "Dodano do współtworzenia",
+    "collaborator_added_message": "Możesz współtworzyć eksperyment \"{{name}}\".",
+  
+    "collaborator_removed_title": "Usunięto ze współtworzenia",
+    "collaborator_removed_message": "Nie możesz już współtworzyć doświadczenia \"{{name}}\"."
+  },
+  "metrics": {
+    "air_temperature": "Temperatura powietrza",
+    "soil_temperature": "Temperatura gleby",
+    "air_humidity": "Wilgotność powietrza",
+    "soil_moisture": "Wilgotność gleby",
+    "pressure": "Ciśnienie atmosferyczne"
   },
   "start": {
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",

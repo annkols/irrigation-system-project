@@ -324,23 +324,35 @@ export default function TopBar({ experimentName, personName }) {
                             {notifications.length === 0 ? (
                                 <span className="notifications-empty">{t("topbar.noNotifications")}</span>
                             ) : (
-                                notifications.map((notif) => (
-                                    <div 
-                                        key={notif.id} 
-                                        className="notification-item"
-                                        onClick={() => handleNotificationClick(notif)}
-                                    >
-                                        <p className="notification-title">
-                                            <strong>{t(`notifications.${notif.type}_title`)}</strong>
-                                        </p>
-                                        <p className="notification-message">
-                                            {t(`notifications.${notif.type}_message`, {
-                                                ...notif.params,
-                                                name: notif.params?.name ? notif.params.name.replace(/-/g, " ") : ""
-                                            })}
-                                        </p>
-                                    </div>
-                                ))
+                                notifications.map((notif) => {
+                                    const translatedMetric = notif.params?.metric_key 
+                                        ? t(`metrics.${notif.params.metric_key}`) 
+                                        : "";
+
+                                    return (
+                                        <div 
+                                            key={notif.id} 
+                                            className="notification-item"
+                                            onClick={() => handleNotificationClick(notif)}
+                                        >
+                                            <p className="notification-title">
+                                                <strong>{t(`notifications.${notif.type}_title`)}</strong>
+                                            </p>
+                                            <p className="notification-message">
+                                                {t(`notifications.${notif.type}_message`, {
+                                                    ...notif.params,
+                                                    metric_key: translatedMetric,
+                                                    name: notif.params?.name ? notif.params.name.replace(/-/g, " ") : ""
+                                                })}
+                                            </p>
+                                            {notif.created_at && (
+                                                <span className="notification-date">
+                                                    {new Date(notif.created_at).toLocaleString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     )}
