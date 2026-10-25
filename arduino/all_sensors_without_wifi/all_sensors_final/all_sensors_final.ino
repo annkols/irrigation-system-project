@@ -22,6 +22,7 @@ const float MOISTURE_START_PERCENT = 16.0F;
 const float MOISTURE_STOP_PERCENT = 25.0F;
 const unsigned long MAX_WATERING_TIME_MS = 60UL * 1000UL;
 const unsigned long VALVE_SWITCH_DELAY_MS = 200;
+const unsigned long MEASUREMENT_SEND_GAP_MS = 7000;
 
 #if defined(UBRR3H)
 #define EspSerial Serial3
@@ -62,6 +63,13 @@ unsigned long lastMoistureAt = 0, lastSoilTemperatureAt = 0, lastLightAt = 0, la
 int activeChannel = -1, nextChannel = 0;
 unsigned long wateringStartedAt = 0;
 bool irrigationStateChanged = false;
+bool measurementPending[CHANNEL_COUNT] = {false, false, false};
+bool pendingMoisture[CHANNEL_COUNT] = {false, false, false};
+bool pendingSoilTemperature[CHANNEL_COUNT] = {false, false, false};
+bool pendingLight[CHANNEL_COUNT] = {false, false, false};
+bool pendingAir[CHANNEL_COUNT] = {false, false, false};
+byte nextMeasurementChannel = 0;
+unsigned long lastMeasurementSentAt = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -106,9 +114,10 @@ void loop() {
   updateIrrigation(now);
   if (assignmentReady && (moistureUpdated || soilTemperatureUpdated || lightUpdated || airUpdated || irrigationStateChanged)) {
     for (byte i = 0; i < CHANNEL_COUNT; i++) if (channels[i].potNumber > 0)
-      sendMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated, airUpdated);
+      queueMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated, airUpdated);
     irrigationStateChanged = false;
   }
+  flushMeasurementQueue(now);
   delay(25);
 }
 
@@ -316,7 +325,12 @@ void applyConfig(String command) {
     channels[i].potNumber = newPotNumbers[i];
     channels[i].mode = MODE_AUTO; channels[i].autoDemand = false; channels[i].safetyLockout = false;
     channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
+    measurementPending[i] = false;
+    pendingMoisture[i] = false; pendingSoilTemperature[i] = false;
+    pendingLight[i] = false; pendingAir[i] = false;
   }
+  nextMeasurementChannel = 0;
+  lastMeasurementSentAt = 0;
   // Po restarcie lub zmianie doświadczenia wykonaj pełny odczyt od razu,
   // zamiast czekać do końca interwału skonfigurowanego w backendzie.
   lastMoistureAt = 0;
@@ -333,6 +347,9 @@ void clearAssignments() {
   for (byte i = 0; i < CHANNEL_COUNT; i++) {
     channels[i].potNumber = 0; channels[i].mode = MODE_AUTO; channels[i].autoDemand = false;
     channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
+    measurementPending[i] = false;
+    pendingMoisture[i] = false; pendingSoilTemperature[i] = false;
+    pendingLight[i] = false; pendingAir[i] = false;
   }
   Serial.println("Brak przypisania sprzetu");
 }
@@ -350,6 +367,32 @@ void setInterval(String command, String key, unsigned long &interval) {
 
 void nullable(float value, bool valid) {
   if (valid && !isnan(value)) EspSerial.print(value, 2); else EspSerial.print("null");
+}
+
+void queueMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated, bool airUpdated) {
+  measurementPending[channel] = true;
+  pendingMoisture[channel] = pendingMoisture[channel] || moistureUpdated;
+  pendingSoilTemperature[channel] = pendingSoilTemperature[channel] || temperatureUpdated;
+  pendingLight[channel] = pendingLight[channel] || lightUpdated;
+  pendingAir[channel] = pendingAir[channel] || airUpdated;
+}
+
+void flushMeasurementQueue(unsigned long now) {
+  if (!assignmentReady) return;
+  if (lastMeasurementSentAt != 0 && now - lastMeasurementSentAt < MEASUREMENT_SEND_GAP_MS) return;
+
+  for (byte offset = 0; offset < CHANNEL_COUNT; offset++) {
+    byte channel = (nextMeasurementChannel + offset) % CHANNEL_COUNT;
+    if (!measurementPending[channel]) continue;
+
+    sendMeasurement(channel, pendingMoisture[channel], pendingSoilTemperature[channel], pendingLight[channel], pendingAir[channel]);
+    measurementPending[channel] = false;
+    pendingMoisture[channel] = false; pendingSoilTemperature[channel] = false;
+    pendingLight[channel] = false; pendingAir[channel] = false;
+    nextMeasurementChannel = (channel + 1) % CHANNEL_COUNT;
+    lastMeasurementSentAt = millis();
+    return;
+  }
 }
 
 void sendMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated, bool airUpdated) {

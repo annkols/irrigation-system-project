@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const MEASUREMENT_REFRESH_MS = 10000;
+const CAMERA_FRAME_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
 
 const irrigationCommands = [
@@ -67,6 +68,7 @@ function Experiment_details() {
   const [selectedPot, setSelectedPot] = useState(null);
   const [selectedCameraPot, setSelectedCameraPot] = useState(null);
   const [cameraFrameAvailable, setCameraFrameAvailable] = useState(false);
+  const [cameraFrameRefreshKey, setCameraFrameRefreshKey] = useState(() => Date.now());
   const [isSavingFrame, setIsSavingFrame] = useState(false);
   const [measurements, setMeasurements] = useState([]);
   const [selectedPumpCommand, setSelectedPumpCommand] = useState(null);
@@ -383,6 +385,17 @@ function Experiment_details() {
     }
     if (!cameraPotNumbers.length && selectedCameraPot !== null) setSelectedCameraPot(null);
   }, [cameraPotNumbers, selectedCameraPot]);
+
+  useEffect(() => {
+    if (activeTab !== 'camera' || selectedCameraPot == null) return undefined;
+
+    setCameraFrameRefreshKey(Date.now());
+    const refreshTimer = window.setInterval(() => {
+      setCameraFrameRefreshKey(Date.now());
+    }, CAMERA_FRAME_REFRESH_MS);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [activeTab, selectedCameraPot]);
 
   const stationMeasurements = useMemo(() => {
     if (!experiment) return [];
@@ -993,6 +1006,7 @@ function Experiment_details() {
                   onChange={(e) => {
                     setCameraFrameAvailable(false);
                     setSelectedCameraPot(Number(e.target.value));
+                    setCameraFrameRefreshKey(Date.now());
                   }}
                 >
                   {!cameraPotNumbers.length && <option value="">{t('experimentDetails.noCameraAssigned')}</option>}
@@ -1003,8 +1017,8 @@ function Experiment_details() {
                 <div className="exp-camera-frame-wrap">
                   {selectedCameraPot != null && (
                     <img
-                      key={selectedCameraPot}
-                      src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/?pot_number=${selectedCameraPot}`}
+                      key={`${selectedCameraPot}-${cameraFrameRefreshKey}`}
+                      src={`${API_BASE_URL}/experiments/${id}/frames/latest/image/?pot_number=${selectedCameraPot}&refresh=${cameraFrameRefreshKey}`}
                       alt={t('experimentDetails.latestFrameAlt', { pot: selectedCameraPot })}
                       className="exp-camera-stream"
                       onLoad={e => {

@@ -9,7 +9,9 @@ const char* CAMERA_UPLOAD_URL = "https://<BACKEND_HOST>/api/camera/frames/upload
 const char* CAMERA_UPLOAD_TOKEN = "token-skopiowany-z-panelu-admin";
 // Musi być taki sam jak Hardware set ID doświadczenia.
 const int CAMERA_SENSOR_SET_ID = 1;
-const unsigned long CAMERA_UPLOAD_INTERVAL_MS = 60UL * 60UL * 1000UL;
+// Podgląd w aplikacji odświeża się co 10 sekund, więc kamera powinna wysyłać
+// klatki z taką samą częstotliwością.
+const unsigned long CAMERA_UPLOAD_INTERVAL_MS = 10UL * 1000UL;
 
 // Każda kamera musi mieć inny adres IP w tej samej sieci.
 // Dostosuj wartości do swojej sieci i przed wgraniem ustaw osobny adres każdej kamery.
