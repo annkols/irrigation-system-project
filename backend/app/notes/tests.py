@@ -27,7 +27,7 @@ class NoteEditImageTests(APITestCase):
             username='stranger', email='stranger@example.com', password='Pass123!', is_active=True,
         )
         self.experiment = Experiment.objects.create(name='Exp', owner=self.owner, sensor_set_id=1)
-        self.note = Note.objects.create(experiment=self.experiment, title='Old', content='old body')
+        self.note = Note.objects.create(experiment=self.experiment, title='Old', content='old body', author=self.owner,)
 
     def test_owner_can_edit_note(self):
         self.client.force_authenticate(self.owner)
@@ -80,10 +80,36 @@ class NoteEditImageTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(NoteImage.objects.filter(id=image.id).exists())
 
-    def test_collaborator_with_edit_permission_can_edit(self):
+    def test_collaborator_with_edit_permission_can_edit_own_note(self):
         ExperimentCollaborator.objects.create(
-            experiment=self.experiment, user=self.stranger, can_edit_experiment=True,
+            experiment=self.experiment, user=self.stranger, can_edit_notes=True,
+        )
+
+        note = Note.objects.create(
+            experiment=self.experiment,
+            author=self.stranger,
+            title="Own note",
+            content="Original",
         )
         self.client.force_authenticate(self.stranger)
-        res = self.client.patch(f'/api/notes/{self.note.id}/', {'title': 'By collaborator'})
+        res = self.client.patch(f'/api/notes/{note.id}/', {'title': 'By collaborator'})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+        note.refresh_from_db()
+        self.assertEqual(note.title, "By collaborator")
+
+    def test_collaborator_with_edit_permission_cannot_edit_others_note(self):
+        ExperimentCollaborator.objects.create(
+            experiment=self.experiment, user=self.stranger, can_edit_notes=True,
+        )
+        self.client.force_authenticate(user=self.stranger)
+
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"title": "Not having permissions"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.title, "Old")

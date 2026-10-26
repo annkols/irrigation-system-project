@@ -5,7 +5,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
 from experiments.models import Experiment
-from experiments.permissions import CanEditExperiment, CanViewExperiment
+from experiments.permissions import CanEditExperiment, CanViewExperiment, CanAddNotes, CanEditNotes, CanDeleteNotes
 from .models import Note, NoteImage
 from .serializers import NoteImageSerializer, NoteSerializer
 
@@ -17,7 +17,7 @@ class ExperimentNoteListCreateView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
-        permission = CanViewExperiment if self.request.method == 'GET' else CanEditExperiment
+        permission = CanViewExperiment if self.request.method == 'GET' else CanAddNotes
         return [IsAuthenticated(), permission()]
 
     def get_experiment(self):
@@ -39,7 +39,7 @@ class ExperimentNoteListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         experiment = self.get_experiment()
-        note = serializer.save(experiment=experiment)
+        note = serializer.save(experiment=experiment, author=self.request.user)
         _attach_images(note, self.request.FILES.getlist('images'))
 
 
@@ -50,7 +50,15 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
-        permission = CanViewExperiment if self.request.method == 'GET' else CanEditExperiment
+        if self.request.method in ["GET", "HEAD"]:
+            permission = CanViewExperiment
+
+        elif self.request.method == "DELETE":
+            permission = CanDeleteNotes
+
+        else:
+            permission = CanEditNotes
+        
         return [IsAuthenticated(), permission()]
 
     def perform_update(self, serializer):
@@ -61,7 +69,7 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
 class NoteImageDestroyView(generics.DestroyAPIView):
     queryset = NoteImage.objects.select_related('note__experiment')
     serializer_class = NoteImageSerializer
-    permission_classes = [IsAuthenticated, CanEditExperiment]
+    permission_classes = [IsAuthenticated, CanDeleteNotes]
 
 
 def _attach_images(note, files):

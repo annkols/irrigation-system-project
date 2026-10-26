@@ -1,6 +1,6 @@
 from django.db import models
 from experiments.models import Experiment
-
+from django.conf import settings
 
 class Note(models.Model):
     experiment = models.ForeignKey(
@@ -8,6 +8,14 @@ class Note(models.Model):
         on_delete=models.CASCADE,
         related_name='notes',
     )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notes_author"
+    )
+
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
