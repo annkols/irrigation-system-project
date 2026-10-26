@@ -32,6 +32,7 @@ class ExperimentCollaborator(models.Model):
     can_edit_notes = models.BooleanField(default=False)
     can_delete_notes = models.BooleanField(default=False)
     can_manage_frames = models.BooleanField(default=False)
+    can_control_pump = models.BooleanField(defauld=False)
     
     added_at = models.DateTimeField(auto_now_add=True)
 

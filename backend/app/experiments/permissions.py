@@ -84,3 +84,84 @@ class CanEndExperiment(BasePermission):
             user=request.user,
             can_end_experiment=True,
         ).exists()
+
+class CanAddNotes(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        experiment = get_experiment(obj)
+
+        if experiment.owner_id == request.user.id:
+            return True
+
+        return ExperimentCollaborator.objects.filter(
+            experiment=experiment,
+            user=request.user,
+            can_add_notes=True,
+        ).exists()
+
+class CanEditNotes(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        experiment = get_experiment(obj)
+
+        if experiment.owner_id == request.user.id:
+            return True
+
+        return ExperimentCollaborator.objects.filter(
+            experiment=experiment,
+            user=request.user,
+            can_edit_notes=True
+        ).exists()
+
+class CanDeleteNotes(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        experiment = get_experiment(obj)
+
+        if experiment.owner_id == request.user.id:
+            return True
+
+        return ExperimentCollaborator.objects.filter(
+            experiment=experiment,
+            user=request.user,
+            can_delete_notes=True
+        ).exists()
+
+class CanManageFrames(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        experiment = get_experiment(obj)
+
+        if experiment.owner_id == request.user.id:
+            return True
+
+        return ExperimentCollaborator.objects.filter(
+            experiment=experiment,
+            user=request.user,
+            can_manage_frames=True
+        ).exists()
+
+class CanControlPump(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        experiment = get_experiment(obj)
+
+        if experiment.owner_id == request.user.id:
+            return True
+
+        return ExperimentCollaborator.objects.filter(
+            experiment=experiment,
+            user=request.user,
+            can_control_pump=True
+        ).exists()
+
