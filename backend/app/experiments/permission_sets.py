@@ -10,10 +10,13 @@ PERMISSION_FIELDS = [
 ]
 
 PERMISSION_PRESETS = {
-    "viewer": [],
+    "viewer": [
+        
+    ],
     "note_editor": [
         "can_add_notes",
         "can_edit_notes",
+        "can_delete_notes",
     ],
     "experiment_editor": [
         "can_edit_experiment",
@@ -22,6 +25,10 @@ PERMISSION_PRESETS = {
         "can_delete_notes",
     ],
     "experiment_coowner": [
+        "can_edit_experiment",
+        "can_add_notes",
+        "can_edit_notes",
+        "can_delete_notes",
         "can_manage_frames",
         "can_control_pump",
     ]

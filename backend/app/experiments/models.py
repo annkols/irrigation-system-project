@@ -28,7 +28,11 @@ class ExperimentCollaborator(models.Model):
 
     can_edit_experiment = models.BooleanField(default=False)
     can_end_experiment = models.BooleanField(default=False)
-
+    can_add_notes = models.BooleanField(defauld=False)
+    can_edit_notes = models.BooleanField(default=False)
+    can_delete_notes = models.BooleanField(default=False)
+    can_manage_frames = models.BooleanField(default=False)
+    
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
