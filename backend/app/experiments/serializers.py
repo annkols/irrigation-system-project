@@ -113,7 +113,19 @@ class ExperimentCollaboratorPermissionSerializer(serializers.ModelSerializer):
 class ExperimentSerializer(serializers.ModelSerializer):
     keywords = KeywordListField(required=True)
     pot_numbers = serializers.SerializerMethodField()
+    collaborators = serializers.SerializerMethodField()
+    def get_collaborators(self, obj):
+        memberships = obj.collaborator_memberships.select_related(
+            "user",
+            "user__profile",
+        ).all()
 
+        return ExperimentCollaboratorSerializer(
+            memberships,
+            many=True,
+            context=self.context,
+        ).data
+    
     initial_collaborators = CollaboratorAssignmentSerializer(
         many=True,
         write_only=True,
@@ -129,6 +141,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             'description',
             'plant_name',
             'keywords',
+            'collaborators',
             'owner',
             "initial_collaborators",
             'sensor_set_id',
@@ -185,11 +198,78 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
         return experiment
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         keyword_names = validated_data.pop("keywords", None)
+
+        collaborators_data = self.initial_data.get("collaborators")
+
         experiment = super().update(instance, validated_data)
+
         if keyword_names is not None:
             self._set_keywords(experiment, keyword_names)
+
+        if collaborators_data is not None:
+            if not isinstance(collaborators_data, list):
+                raise serializers.ValidationError({
+                    "collaborators": "Lista współpracowników jest nieprawidłowa."
+                })
+
+            user_ids = [
+                item.get("user_id")
+                for item in collaborators_data
+                if isinstance(item, dict)
+            ]
+
+            if (
+                len(user_ids) != len(collaborators_data)
+                or len(user_ids) != len(set(user_ids))
+            ):
+                raise serializers.ValidationError({
+                    "collaborators": "Nieprawidłowa lub zduplikowana lista użytkowników."
+                })
+
+            ExperimentCollaborator.objects.filter(
+                experiment=experiment
+            ).exclude(user_id__in=user_ids).delete()
+
+            for item in collaborators_data:
+                if not isinstance(item, dict):
+                    raise serializers.ValidationError({
+                        "collaborators": "Nieprawidłowe dane współpracownika."
+                    })
+
+                user_id = item.get("user_id")
+                if user_id is None:
+                    raise serializers.ValidationError({
+                        "collaborators": "Brak user_id."
+                    })
+
+                can_edit = item.get("can_edit_experiment", False)
+                can_end = item.get("can_end_experiment", False)
+
+                if not isinstance(can_edit, bool) or not isinstance(can_end, bool):
+                    raise serializers.ValidationError({
+                        "collaborators": "Uprawnienia muszą mieć wartości true lub false."
+                    })
+
+                membership, created = ExperimentCollaborator.objects.get_or_create(
+                    experiment=experiment,
+                    user_id=user_id,
+                    defaults={
+                        "can_edit_experiment": can_edit,
+                        "can_end_experiment": can_end,
+                    },
+                )
+
+                if not created:
+                    membership.can_edit_experiment = can_edit
+                    membership.can_end_experiment = can_end
+                    membership.save(update_fields=[
+                        "can_edit_experiment",
+                        "can_end_experiment",
+                    ])
+
         return experiment
 
     def _time_ranges_overlap(self, first_start, first_end, second_start, second_end):
