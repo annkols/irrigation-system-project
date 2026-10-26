@@ -10,8 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from experiments.models import Experiment, ExperimentCameraAssignment
-from experiments.permissions import IsExperimentOwnerOrCollaborator
-
+from experiments.permissions import CanManageFrames, CanViewExperiment
 from .models import CameraDevice, CameraFrame
 from .serializers import CameraFrameSerializer
 
@@ -160,11 +159,11 @@ class CameraDeviceValidationView(APIView):
 
 
 class LatestExperimentFrameImageView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated, CanViewExperiment]
 
     def get(self, request, experiment_id):
-        get_object_or_404(Experiment, pk=experiment_id)
+        experiment = get_object_or_404(Experiment, pk=experiment_id)
+        self.check_object_permissions(request, experiment)
         frames = CameraFrame.objects.filter(experiment_id=experiment_id)
         pot_number = request.query_params.get("pot_number")
         if pot_number:
@@ -193,11 +192,11 @@ class LatestExperimentFrameImageView(APIView):
 
 
 class CameraFrameImageView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated, CanViewExperiment]
 
     def get(self, request, pk):
         frame = get_object_or_404(CameraFrame, pk=pk)
+        self.check_object_permissions(request, frame.experiment)
         response = FileResponse(frame.image.open("rb"), content_type="image/jpeg")
         response["Cache-Control"] = "private, max-age=300"
         return response
@@ -205,11 +204,11 @@ class CameraFrameImageView(APIView):
 
 class ExperimentFrameListView(generics.ListAPIView):
     serializer_class = CameraFrameSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated, CanViewExperiment]
 
     def get_queryset(self):
-        get_object_or_404(Experiment, pk=self.kwargs["experiment_id"])
+        experiment = get_object_or_404(Experiment, pk=self.kwargs["experiment_id"])
+        self.check_object_permissions(self.request, experiment)
         return CameraFrame.objects.filter(
             experiment_id=self.kwargs["experiment_id"],
             is_saved=True,
@@ -217,7 +216,7 @@ class ExperimentFrameListView(generics.ListAPIView):
 
 
 class SaveLatestExperimentFrameView(APIView):
-    permission_classes = [IsAuthenticated, IsExperimentOwnerOrCollaborator]
+    permission_classes = [IsAuthenticated, CanManageFrames]
 
     def post(self, request, experiment_id):
         experiment = get_object_or_404(Experiment, pk=experiment_id)
@@ -255,5 +254,4 @@ class SaveLatestExperimentFrameView(APIView):
 
 class CameraFrameDeleteView(generics.DestroyAPIView):
     queryset = CameraFrame.objects.all()
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated, CanManageFrames]

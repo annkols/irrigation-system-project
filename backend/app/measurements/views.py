@@ -10,11 +10,11 @@ from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.permissions import IsAuthenticated
 import openpyxl
 
 from experiments.models import Experiment
-from experiments.permissions import CanViewExperiment
+from experiments.permissions import CanViewExperiment, IsExperimentOwner
 from .models import Measurement
 from .serializers import MeasurementSerializer
 
@@ -87,11 +87,17 @@ class MeasurementListCreateView(generics.ListCreateAPIView):
 
 
 class MeasurementDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Measurement.objects.all()
+    queryset = (Measurement.objects
+        .select_related("experiment")
+        .filter(experiment__isnull=False)
+    )
     serializer_class = MeasurementSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
 
+    def get_permissions(self):
+        if self.request.method in ["GET", "HEAD"]:
+            return [CanViewExperiment()]
+
+        return [IsAuthenticated(), IsExperimentOwner()]
 
 class MeasurementLatestView(APIView):
     permission_classes = [AllowAny]

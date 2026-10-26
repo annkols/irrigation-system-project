@@ -263,30 +263,28 @@ class ExperimentSerializer(serializers.ModelSerializer):
                         "collaborators": "Brak user_id."
                     })
 
-                can_edit = item.get("can_edit_experiment", False)
-                can_end = item.get("can_end_experiment", False)
-
-                if not isinstance(can_edit, bool) or not isinstance(can_end, bool):
-                    raise serializers.ValidationError({
-                        "collaborators": "Uprawnienia muszą mieć wartości true lub false."
-                    })
-
                 membership, created = ExperimentCollaborator.objects.get_or_create(
                     experiment=experiment,
                     user_id=user_id,
-                    defaults={
-                        "can_edit_experiment": can_edit,
-                        "can_end_experiment": can_end,
-                    },
                 )
 
                 if not created:
-                    membership.can_edit_experiment = can_edit
-                    membership.can_end_experiment = can_end
-                    membership.save(update_fields=[
-                        "can_edit_experiment",
-                        "can_end_experiment",
-                    ])
+                    changed_fields = []
+
+                    for field in PERMISSION_FIELDS:
+                        if field in item:
+                            value = item[field]
+
+                            if not isinstance(value, bool):
+                                raise serializers.ValidationError({
+                                    field: "Permission must be true or false."
+                                })
+
+                            setattr(membership, field, value)
+                            changed_fields.append(field)
+
+                    if changed_fields:
+                        membership.save(update_fields=changed_fields)
 
         return experiment
 
