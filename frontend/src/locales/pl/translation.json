@@ -234,10 +234,10 @@
     "deleteFailed": "Nie udało się usunąć konta. Spróbuj ponownie."
   },
   "experimentForm": {
-    "can_end":"Can end the experiment.",
-    "can_edit": "Can edit the experiment.",
-    "collaborator": "collaborator",
-    "find_mail":"Search for a user by email",
+    "can_end":"Może usunąć eksperyment",
+    "can_edit": "Może edytować eksperyment",
+    "collaborator": "współpracownik",
+    "find_mail":"Wyszukaj użytkownika po e-mailu",
     "experiment": "Doświadczenie",
     "public": "Publiczne",
     "private": "Prywatne",
@@ -294,6 +294,9 @@
     }
   },
   "newExperiment": {
+    "UsersNotFound":"Brak pasujących użytkowników.",
+    "peopleSearching":"Wyszukiwanie użytkowników...",
+    "enter_email":"Wpisz adres e-mail",
     "control": "Kontrola",
     "unexpectedError": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie.",
     "created": "Doświadczenie i układ doniczek zostały utworzone!",

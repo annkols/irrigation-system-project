@@ -6911,182 +6911,324 @@ body {
   }
 }
 
+/* ================================
+WSPÓŁPRACOWNICY — SEKCJA
+================================ */
+
 .collaborators-section,
 .exp-collaborator-edit-list {
-  margin-top: 20px;
+margin-top: 20px;
 }
 
 .collaborators-section > p {
-  margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-main);
+margin-bottom: 12px;
+color: var(--color-text-main);
+font-size: 14px;
+font-weight: 600;
 }
 
 .collaborators-section .keyword-input-wrapper,
 .exp-edit-keyword-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+display: flex;
+align-items: center;
+gap: 10px;
+width: 100%;
 }
 
 .collaborators-section .keyword-input-wrapper input,
 .exp-edit-keyword-row .exp-edit-input {
-  flex: 1;
-  min-width: 0;
+flex: 1;
+min-width: 0;
 }
 
+/* ================================
+WYSZUKIWANIE WSPÓŁPRACOWNIKÓW
+================================ */
+
+.collaborator-search,
+.exp-collaborator-search {
+position: relative;
+width: 100%;
+}
+
+.collaborator-suggestions,
 .exp-collaborator-search-results {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 12px;
-  background: var(--action-bg);
-  border: 1px solid var(--color-bg-main);
-  border-radius: 10px;
+position: absolute;
+top: calc(100% + 6px);
+left: 0;
+right: 0;
+z-index: 100;
+display: flex;
+flex-direction: column;
+max-height: 260px;
+overflow-y: auto;
+padding: 4px;
+background: var(--color-bg-card);
+border: 1px solid var(--color-border-light);
+border-radius: var(--radius-card);
+box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
 }
 
-.exp-collaborator-edit-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--action-bg);
-  border: 1px solid var(--color-bg-main);
-  border-radius: 8px;
+.collaborator-suggestion,
+.exp-collaborator-suggestion {
+display: flex;
+align-items: center;
+gap: 12px;
+width: 100%;
+padding: 12px;
+border: 0;
+border-radius: 6px;
+background: transparent;
+color: var(--color-text-main);
+text-align: left;
+cursor: pointer;
+transition: background 0.2s ease;
 }
 
-.exp-collaborator-edit-row > span {
-  min-width: 0;
-  color: var(--color-text-main);
-  font-size: 13px;
+.exp-collaborator-suggestion {
+justify-content: space-between;
 }
+
+.collaborator-suggestion,
+.exp-collaborator-suggestion {
+background: var(--color-primary-light);
+}
+
+.collaborator-suggestion,
+.exp-collaborator-suggestion {
+opacity: 0.6;
+cursor: wait;
+}
+
+.collaborator-suggestion-avatar {
+display: flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+width: 36px;
+height: 36px;
+border-radius: 50%;
+background: var(--color-primary-light);
+color: var(--color-primary);
+font-weight: 600;
+}
+
+.collaborator-suggestion-info {
+display: flex;
+flex: 1;
+flex-direction: column;
+gap: 3px;
+min-width: 0;
+}
+
+.collaborator-suggestion-info strong,
+.collaborator-suggestion-info small,
+.exp-collaborator-suggestion span {
+overflow-wrap: anywhere;
+}
+
+.collaborator-suggestion-info small {
+color: var(--color-text-muted);
+font-size: 12px;
+}
+
+.collaborator-suggestion-add,
+.exp-collaborator-add-icon {
+flex-shrink: 0;
+color: var(--color-primary);
+font-size: 22px;
+font-weight: 600;
+}
+
+.collaborator-search-status {
+margin: 8px 0;
+color: var(--color-text-muted);
+font-size: 13px;
+}
+
+/* ================================
+LISTA WSPÓŁPRACOWNIKÓW
+================================ */
 
 .collaborators-list,
 .exp-collaborator-edit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+margin-top: 14px;
 }
 
 .collaborator-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--action-bg);
-  border: 1px solid var(--color-bg-main);
-  border-radius: 10px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 16px;
+padding: 14px;
+background: var(--color-bg-card);
+border: 1px solid var(--color-border-light);
+border-radius: var(--radius-card);
+transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.collaborator-item {
+border-color: var(--color-primary-border-hover);
+box-shadow: var(--shadow-card);
 }
 
 .collaborator-item > span {
-  min-width: 0;
-  color: var(--color-text-main);
-  font-size: 13px;
+min-width: 0;
+color: var(--color-text-main);
+font-size: 13px;
+overflow-wrap: anywhere;
+}
+
+.collaborator-details {
+display: flex;
+flex: 1;
+flex-direction: column;
+gap: 10px;
+min-width: 0;
+}
+
+.collaborator-details > strong {
+overflow-wrap: anywhere;
+color: var(--color-text-main);
+}
+
+/* ================================
+EDYCJA WSPÓŁPRACOWNIKÓW
+================================ */
+
+.exp-collaborator-edit-item {
+padding: 16px;
+background: var(--color-bg-card);
+border: 1px solid var(--color-border-light);
+border-radius: var(--radius-card);
+transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .exp-collaborator-edit-item {
-  padding: 16px;
-  background: var(--action-bg);
-  border: 1px solid var(--color-bg-main);
-  border-radius: 12px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.exp-collaborator-edit-item:hover {
-  border-color: var(--color-bg-main);
-  box-shadow: 0 3px 12px var(--shadow-card);
+border-color: var(--color-primary-border-hover);
+box-shadow: var(--shadow-card);
 }
 
 .exp-collaborator-edit-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+margin-bottom: 14px;
 }
 
 .exp-collaborator-edit-header strong {
-  min-width: 0;
-  color: var(--color-text-main);
-  font-size: 14px;
-  font-weight: 600;
+min-width: 0;
+color: var(--color-text-main);
+font-size: 14px;
+font-weight: 600;
+overflow-wrap: anywhere;
+}
+
+/* ================================
+UPRAWNIENIA I CHECKBOXY
+================================ */
+
+.exp-edit-checkbox,
+.collaborator-permissions label {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+color: var(--color-text-main);
+font-size: 13px;
+cursor: pointer;
 }
 
 .exp-edit-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  color: var(--color-text-main);
-  font-size: 13px;
-  cursor: pointer;
+margin-top: 10px;
 }
 
-.exp-edit-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-  flex-shrink: 0;
+.collaborator-permissions {
+display: flex;
+flex-wrap: wrap;
+gap: 12px 20px;
+}
+
+.collaborator-permissions label {
+font-size: 14px;
+}
+
+.exp-edit-checkbox input[type="checkbox"],
+.collaborator-permissions input[type="checkbox"] {
+width: 16px;
+height: 16px;
+margin: 0;
+accent-color: var(--color-primary);
+cursor: pointer;
+flex-shrink: 0;
+}
+
+/* ================================
+USUWANIE WSPÓŁPRACOWNIKÓW
+================================ */
+
+.collaborator-item .btn-remove-tag,
+.exp-collaborator-edit-header .btn-remove-tag {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+width: 32px;
+height: 32px;
+padding: 0;
+border: 1px solid transparent;
+border-radius: 8px;
+background: transparent;
+color: var(--color-text-muted);
+font-size: 20px;
+line-height: 1;
+cursor: pointer;
+transition: background 0.2s ease, color 0.2s ease;
 }
 
 .collaborator-item .btn-remove-tag,
 .exp-collaborator-edit-header .btn-remove-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: var(--action-bg);
-  color: var(--color-text-main);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+background: #FEECEC;
+color: var(--color-error);
 }
 
-.collaborator-item .btn-remove-tag:hover,
-.exp-collaborator-edit-header .btn-remove-tag:hover {
-  background: var(--action-bg);
-  color: var(--color-text-main);
-}
+/* ================================
+ETYKIETY WSPÓŁPRACOWNIKÓW
+================================ */
 
 .exp-collaborators {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-top: 8px;
 }
 
 .collab-chip {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 7px 12px;
-  border: 1px solid var(--color-secondary);
-  border-radius: 999px;
-  background: var(--color-bg-card);
-  color: var(--color-text-main);
-  font-size: 12px;
-  font-weight: 500;
+display: inline-flex;
+align-items: center;
+max-width: 100%;
+padding: 7px 12px;
+border: 1px solid var(--color-primary-border-hover);
+border-radius: 999px;
+background: var(--color-primary-light);
+color: var(--color-primary);
+font-size: 12px;
+font-weight: 500;
+overflow-wrap: anywhere;
 }
+
+/* ================================
+BŁĘDY
+================================ */
 
 .collaborators-section .error-text,
 .exp-overview-field .error-text {
-  display: block;
-  margin-top: 8px;
-  color: var(--color-error);
-  font-size: 12px;
-  line-height: 1.5;
+display: block;
+margin-top: 8px;
+color: var(--color-error);
+font-size: 12px;
+line-height: 1.5;
 }

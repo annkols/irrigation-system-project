@@ -17,6 +17,7 @@ const getAuthHeaders = () => {
 
 
 export default function SavedFrames() {
+  const [canEdit, setCanEdit] = useState(false);
   const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,18 +46,45 @@ export default function SavedFrames() {
   }, [id, t]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
-      .then((response) => {
-        if (!response.ok) throw new Error(t('savedFrames.errors.experiment'));
-        return response.json();
-      })
-      .then(setExperiment)
-      .catch((error) => toast.error(error.message));
+    let cancelled = false;
 
+    const fetchExperiment = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/experiments/${id}/`, {
+          headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+          throw new Error(t("savedFrames.errors.experiment"));
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setExperiment(data);
+          setCanEdit(data.can_edit_experiment === true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(error.message);
+        }
+      }
+    };
+
+    fetchExperiment();
     fetchFrames();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, fetchFrames, t]);
 
   const deleteFrame = async (frame) => {
+    if (!canEdit) {
+      toast.error(t("savedFrames.errors.delete"));
+      return;
+    }
+    
     if (!window.confirm(t('savedFrames.confirmDelete'))) return;
 
     try {
@@ -84,78 +112,80 @@ export default function SavedFrames() {
       <Sidebar />
       <div className="dashboard-content">
         <TopBar experimentName={experiment?.name} />
-      <main className="saved-frames-page">
-        <div className="saved-frames-heading">
-          <button
-            type="button"
-            className="exp-back-btn"
-            onClick={() => navigate(`/experiment/${id}`, { state: { defaultTab: 'camera' } })}
-            aria-label={t('savedFrames.back')}
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div>
-            <h2>{t('savedFrames.title')}</h2>
-            <p>{experiment?.name || t('experimentForm.experiment')}</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <p className="frames-message">{t('common.loading')}</p>
-        ) : frames.length === 0 ? (
-          <div className="frames-empty">
-            <span className="material-symbols-outlined">photo_library</span>
-            <h3>{t('savedFrames.empty')}</h3>
-            <p>{t('savedFrames.emptyHelp')}</p>
-          </div>
-        ) : (
-          <div className="frames-grid">
-            {frames.map((frame) => (
-              <article className="frame-card" key={frame.id}>
-                <button
-                  type="button"
-                  className="frame-preview-btn"
-                  onClick={() => setSelectedFrame(frame)}
-                >
-                  <img src={frame.image_url} alt={t('savedFrames.frameAlt', { id: frame.id })} />
-                </button>
-                <div className="frame-card-footer">
-                  <div>
-                    <time dateTime={frame.captured_at}>
-                      {new Date(frame.captured_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })}
-                    </time>
-                    {frame.note && <p>{frame.note}</p>}
-                  </div>
-                  <button
-                    type="button"
-                    className="frame-delete-btn"
-                    onClick={() => deleteFrame(frame)}
-                    aria-label={t('savedFrames.delete')}
-                  >
-                    <span className="material-symbols-outlined">delete</span>
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {selectedFrame && (
-        <div className="frame-modal" onClick={() => setSelectedFrame(null)}>
-          <div className="frame-modal-content" onClick={(event) => event.stopPropagation()}>
+        <main className="saved-frames-page">
+          <div className="saved-frames-heading">
             <button
               type="button"
-              className="frame-modal-close"
-              onClick={() => setSelectedFrame(null)}
-              aria-label={t('savedFrames.close')}
+              className="exp-back-btn"
+              onClick={() => navigate(`/experiment/${id}`, { state: { defaultTab: 'camera' } })}
+              aria-label={t('savedFrames.back')}
             >
-              <span className="material-symbols-outlined">close</span>
+              <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <img src={selectedFrame.image_url} alt={t('savedFrames.frameAlt', { id: selectedFrame.id })} />
+            <div>
+              <h2>{t('savedFrames.title')}</h2>
+              <p>{experiment?.name || t('experimentForm.experiment')}</p>
+            </div>
           </div>
-        </div>
-      )}
+
+          {loading ? (
+            <p className="frames-message">{t('common.loading')}</p>
+          ) : frames.length === 0 ? (
+            <div className="frames-empty">
+              <span className="material-symbols-outlined">photo_library</span>
+              <h3>{t('savedFrames.empty')}</h3>
+              <p>{t('savedFrames.emptyHelp')}</p>
+            </div>
+          ) : (
+            <div className="frames-grid">
+              {frames.map((frame) => (
+                <article className="frame-card" key={frame.id}>
+                  <button
+                    type="button"
+                    className="frame-preview-btn"
+                    onClick={() => setSelectedFrame(frame)}
+                  >
+                    <img src={frame.image_url} alt={t('savedFrames.frameAlt', { id: frame.id })} />
+                  </button>
+                  <div className="frame-card-footer">
+                    <div>
+                      <time dateTime={frame.captured_at}>
+                        {new Date(frame.captured_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" })}
+                      </time>
+                      {frame.note && <p>{frame.note}</p>}
+                    </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="frame-delete-btn"
+                        onClick={() => deleteFrame(frame)}
+                        aria-label={t("savedFrames.delete")}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </main>
+
+        {selectedFrame && (
+          <div className="frame-modal" onClick={() => setSelectedFrame(null)}>
+            <div className="frame-modal-content" onClick={(event) => event.stopPropagation()}>
+              <button
+                type="button"
+                className="frame-modal-close"
+                onClick={() => setSelectedFrame(null)}
+                aria-label={t('savedFrames.close')}
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+              <img src={selectedFrame.image_url} alt={t('savedFrames.frameAlt', { id: selectedFrame.id })} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
