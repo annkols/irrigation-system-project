@@ -14,7 +14,8 @@ from .views import (
     ExperimentCollaboratorsListView,
     ExperimentCollaboratorDetailView,
     OwnedExperimentsListView,
-    CollaboratedExperimentsListView
+    CollaboratedExperimentsListView,
+    PotCustomLabelUpdateView
     )
 
 urlpatterns = [
@@ -33,5 +34,5 @@ urlpatterns = [
     path("experiments/<int:pk>/collaborators/<int:membership_pk>/", ExperimentCollaboratorDetailView.as_view(), name="experiment-collaborator-detail"),
     path("experiments/owned/", OwnedExperimentsListView.as_view(), name="experiment-owned-list"),
     path("experiments/collaborated/", CollaboratedExperimentsListView.as_view(), name='experiment-collaborated-list'),
-
+    path("experiments/<int:pk>/pots/<int:pot_id>", PotCustomLabelUpdateView.as_view(), name='experiment-po-label-update')
 ]

@@ -574,6 +574,7 @@ class PotSerializer(serializers.ModelSerializer):
             "treatment_name",
             "treatment_levels",
             "hardware_assignments",
+            "user_defined_label"
         ]
 
     def get_treatment_levels(self, obj):
@@ -669,3 +670,15 @@ class ExperimentDesignReadSerializer(serializers.ModelSerializer):
             }
             for assignment in obj.camera_assignments.select_related("camera", "pot")
         ]
+
+class PotCustomLabelSerializer(serializers.ModelSerializer):
+    user_defined_label = serializers.CharField(
+        max_length=50,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+    )
+
+    class Meta:
+        model = Pot
+        fields = ["user_defined_label"]

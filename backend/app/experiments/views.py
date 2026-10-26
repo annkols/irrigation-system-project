@@ -33,6 +33,7 @@ from .serializers import (
     ExperimentUpdateSerializer,
     ExperimentCollaboratorSerializer,
     ExperimentCollaboratorPermissionSerializer,
+    PotCustomLabelSerializer
 )
 from .permission_sets import PERMISSION_FIELDS
 from .permissions import (
@@ -359,7 +360,19 @@ class ExperimentEndView(APIView):
 
         serializer = ExperimentSerializer(experiment, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+class PotCustomLabelUpdateView(generics.UpdateAPIView):
+    serializer_class = PotCustomLabelSerializer
+    permission_classes = [IsAuthenticated, CanEditExperiment]
+    http_method_names = ["patch", "options"]
+
+    lookup_url_kwarg = "pot_id"
+
+    def get_queryset(self):
+        return Pot.objects.filter(
+            experiment_id=self.kwargs["pk"]
+        )
+
 class ActiveExperimentSensorConfigView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -641,3 +654,4 @@ class CollaboratedExperimentsListView(generics.ListAPIView):
                     },
                     "created_at": event.created_at
                 })
+
