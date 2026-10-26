@@ -63,8 +63,11 @@ class UserSearchTests(APITestCase):
 
         self.assertNotIn("is_active", response.data[0])
         self.assertNotIn("is_staff", response.data[0])
-        self.assertNotIn("email", response.data[0])
-
+        self.assertIn("email", response.data[0])
+        self.assertEqual(
+            response.data[0]["email"],
+            "anna.private@example.com",
+        )
 
     # SEARCH BY PROFILE FIELDS -> 200, 200
     def test_search_uses_profile_fields_and_hides_inactive_users(self):
