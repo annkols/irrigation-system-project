@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
@@ -55,6 +55,8 @@ function New_experiment() {
   const [collaborators, setCollaborators] = useState([]);
   const [addingCollaborator, setAddingCollaborator] = useState(false);
   const [collaboratorError, setCollaboratorError] = useState("");
+  const [collaboratorSuggestions, setCollaboratorSuggestions] = useState([]);
+  const [searchingCollaborators, setSearchingCollaborators] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [sensorSetId, setSensorSetId] = useState(1);
   const [frequencies, setFrequencies] = useState(Object.fromEntries(SENSORS.map(([id]) => [id, "1"])));
@@ -66,85 +68,161 @@ function New_experiment() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-const addCollaborator = async () => {
-  const query = collaboratorEmail.trim();
+  useEffect(() => {
+    const query = collaboratorEmail.trim();
 
-  if (!query) return;
+    if (query.length < 2) {
+      setCollaboratorSuggestions([]);
+      setSearchingCollaborators(false);
+      return;
+    }
 
-  setAddingCollaborator(true);
-  setCollaboratorError("");
+    let cancelled = false;
 
-  try {
-    const response = await fetch(
-      `${api}/users/search/?q=${encodeURIComponent(query)}`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
+    const timeoutId = setTimeout(async () => {
+      setSearchingCollaborators(true);
+
+      try {
+        const response = await fetch(
+          `${api}/users/search/?q=${encodeURIComponent(query)}`,
+          { headers: getAuthHeaders() }
+        );
+
+        if (!response.ok) {
+          throw new Error("User search failed");
+        }
+
+        const data = await response.json();
+        const users = Array.isArray(data) ? data : data.results ?? [];
+        const normalizedQuery = query.toLowerCase();
+
+        const filteredUsers = users.filter((user) => {
+          const email = (user.email ?? "").trim().toLowerCase();
+          const username = (user.username ?? "").trim().toLowerCase();
+          const userId = user.id ?? user.user_id;
+
+          const matches =
+            email.includes(normalizedQuery) ||
+            username.includes(normalizedQuery);
+
+          const alreadyAdded = collaborators.some(
+            (item) => String(item.user_id) === String(userId)
+          );
+
+          return matches && userId != null && !alreadyAdded;
+        });
+
+        if (!cancelled) {
+          setCollaboratorSuggestions(filteredUsers);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCollaboratorSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchingCollaborators(false);
+        }
       }
-    );
+    }, 300);
 
-    const data = await response.json();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [collaboratorEmail, collaborators, api]);
 
-    if (!response.ok) {
-      throw new Error(t("experimentDetails.lost_user"));
+  const addCollaborator = async (selectedUser = null) => {
+    const query = collaboratorEmail.trim();
+
+    if (!selectedUser && !query) return;
+
+    setAddingCollaborator(true);
+    setCollaboratorError("");
+
+    try {
+      let user = selectedUser;
+
+      if (!user) {
+        const response = await fetch(
+          `${api}/users/search/?q=${encodeURIComponent(query)}`,
+          { headers: getAuthHeaders() }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(t("experimentDetails.lost_user"));
+        }
+
+        const users = Array.isArray(data) ? data : data.results ?? [];
+        const normalizedQuery = query.toLowerCase();
+
+        user = users.find((item) =>
+          (item.email ?? "").trim().toLowerCase() === normalizedQuery ||
+          (item.username ?? "").trim().toLowerCase() === normalizedQuery
+        );
+      }
+
+      if (!user) {
+        setCollaboratorError(t("experimentDetails.lost_user"));
+        return;
+      }
+
+      const userId = user.id ?? user.user_id;
+
+      if (userId == null) {
+        setCollaboratorError(t("experimentDetails.lost_user"));
+        return;
+      }
+
+      if (
+        collaborators.some(
+          (item) => String(item.user_id) === String(userId)
+        )
+      ) {
+        setCollaboratorError(t("experimentDetails.already_user"));
+        return;
+      }
+
+      setCollaborators((current) => [
+        ...current,
+        {
+          user_id: userId,
+          email: user.email ?? user.username ?? query,
+          can_edit_experiment: true,
+          can_end_experiment: false,
+        },
+      ]);
+
+      setCollaboratorEmail("");
+      setCollaboratorSuggestions([]);
+    } catch (err) {
+      console.error("Error adding collaborator:", err);
+      setCollaboratorError(
+        err.message || t("experimentDetails.lost_user")
+      );
+    } finally {
+      setAddingCollaborator(false);
     }
+  };
 
-    const users = Array.isArray(data)
-      ? data
-      : data.results ?? [];
-
-    const normalizedQuery = query.toLowerCase();
-
-    const user = users.find((item) => {
-      const email = (item.email ?? "").trim().toLowerCase();
-      const username = (item.username ?? "").trim().toLowerCase();
-
-      return email === normalizedQuery || username === normalizedQuery;
-    });
-
-    if (!user) {
-      setCollaboratorError(t("experimentDetails.lost_user"));
-      return;
-    }
-
-    const userId = user.id ?? user.user_id;
-
-    if (
-      collaborators.some(
-        (item) => String(item.user_id) === String(userId)
+  const updateCollaboratorPermission = (userId, permission, checked) => {
+    setCollaborators((current) =>
+      current.map((item) =>
+        String(item.user_id) === String(userId)
+          ? { ...item, [permission]: checked }
+          : item
       )
-    ) {
-      setCollaboratorError(t("experimentDetails.already_user"));
-      return;
-    }
-
-    setCollaborators((current) => [
-      ...current,
-      {
-        user_id: userId,
-        email: user.email ?? user.username ?? query,
-        can_edit_experiment: true,
-        can_end_experiment: true,
-      },
-    ]);
-
-    setCollaboratorEmail("");
-  } catch (err) {
-    console.error("Error adding collaborator:", err);
-    setCollaboratorError(
-      err.message || t("experimentDetails.lost_user")
     );
-  } finally {
-    setAddingCollaborator(false);
-  }
-};
+  };
 
   const removeCollaborator = (userId) => {
     setCollaborators((current) =>
       current.filter((item) => item.user_id !== userId)
     );
   };
-  
+
   const combinations = useMemo(() => {
     if (factors.some((factor) => !factor.name.trim() || factor.levels.some((item) => !item.label.trim()))) return [];
     return cartesian(factors.map((factor) => factor.levels));
@@ -280,7 +358,7 @@ const addCollaborator = async () => {
             user_id: collaborator.user_id,
             can_edit_experiment: collaborator.can_edit_experiment,
             can_end_experiment: collaborator.can_end_experiment,
-          })),is_public: isPublic,
+          })), is_public: isPublic,
         }),
       });
       const experiment = await experimentResponse.json();
@@ -306,7 +384,7 @@ const addCollaborator = async () => {
       toast.success(t("newExperiment.created"));
       navigate("/dashboard");
     } catch (error) {
-      if (experimentId){
+      if (experimentId) {
         await fetch(`${api}/experiments/${experimentId}/delete/`, {
           method: "DELETE",
           headers: getAuthHeaders(),
@@ -339,22 +417,146 @@ const addCollaborator = async () => {
               <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
               <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
               <div className="form-section collaborators-section">
-              <p>{t("experimentDetails.collaborators")}</p>
-              <div className="keyword-input-wrapper">
-                <input type="email" placeholder="Enter collaborator's email" value={collaboratorEmail}
-                  onChange={(event) => { setCollaboratorEmail(event.target.value); setCollaboratorError("");}}
-                  onKeyDown={(event) => { if (event.key === "Enter") {
-                  event.preventDefault(); 
-                  addCollaborator();}}}/>
-              <button className="btn-create" type="button" onClick={addCollaborator} disabled={addingCollaborator || !collaboratorEmail.trim()}> {addingCollaborator ? t("experimentForm.Adding") : t("experimentForm.add")}</button>
+                <p>{t("experimentDetails.collaborators")}</p>
+                <div className="collaborator-search">
+                  <div className="keyword-input-wrapper">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      placeholder={t("newExperiment.enter_email")}
+                      value={collaboratorEmail}
+                      onChange={(event) => {
+                        setCollaboratorEmail(event.target.value);
+                        setCollaboratorError("");
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+
+                          if (collaboratorSuggestions.length > 0) {
+                            addCollaborator(collaboratorSuggestions[0]);
+                          } else {
+                            addCollaborator();
+                          }
+                        }
+
+                        if (event.key === "Escape") {
+                          setCollaboratorSuggestions([]);
+                        }
+                      }}
+                    />
+
+                    <button
+                      className="btn-create"
+                      type="button"
+                      onClick={() => addCollaborator()}
+                      disabled={addingCollaborator || !collaboratorEmail.trim()}
+                    >
+                      {addingCollaborator
+                        ? t("experimentForm.Adding")
+                        : t("experimentForm.add")}
+                    </button>
+                  </div>
+
+                  {collaboratorEmail.trim().length >= 2 &&
+                    collaboratorSuggestions.length > 0 && (
+                      <div className="collaborator-suggestions" role="listbox">
+                        {collaboratorSuggestions.map((user) => (
+                          <button
+                            key={user.id ?? user.user_id}
+                            type="button"
+                            className="collaborator-suggestion"
+                            role="option"
+                            aria-selected="false"
+                            onClick={() => addCollaborator(user)}
+                            disabled={addingCollaborator}
+                          >
+                            <span className="collaborator-suggestion-avatar">
+                              {(user.email ?? user.username ?? "?")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </span>
+
+                            <span className="collaborator-suggestion-info">
+                              <strong>{user.email ?? user.username}</strong>
+
+                              {user.email && user.username &&
+                                user.email !== user.username && (
+                                  <small>{user.username}</small>
+                                )}
+                            </span>
+
+                            <span className="collaborator-suggestion-add">+</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                  {searchingCollaborators && (
+                    <p className="collaborator-search-status">
+                      {t("newExperiment.peopleSearching")}
+                    </p>
+                  )}
+
+                  {!searchingCollaborators &&
+                    collaboratorEmail.trim().length >= 2 &&
+                    collaboratorSuggestions.length === 0 &&
+                    !collaboratorError && (
+                      <p className="collaborator-search-status">
+                        {t("newExperiment.UsersNotFound")}
+                      </p>
+                    )}
+                </div>
+
+                {collaboratorError && (
+                  <p className="error-text">{collaboratorError}</p>
+                )}
+
+                <div className="collaborators-list">
+                  {collaborators.map((collaborator) => (
+                    <div
+                      className="collaborator-item"
+                      key={collaborator.user_id}
+                    >
+                      <div className="collaborator-details">
+                        <strong>{collaborator.email}</strong>
+
+                        <div className="collaborator-permissions">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(
+                                collaborator.can_edit_experiment
+                              )}
+                              onChange={(event) =>
+                                updateCollaboratorPermission(
+                                  collaborator.user_id,
+                                  "can_edit_experiment",
+                                  event.target.checked
+                                )
+                              }
+                            />
+                            {t("experimentForm.can_edit")}
+                          </label>
+                            {/*tu był przyciks który dawał permisje współpracownikom na usuwanie eksperymentu*/}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-remove-tag"
+                        onClick={() =>
+                          removeCollaborator(collaborator.user_id)
+                        }
+                        aria-label={`${t("experimentDetails.delete")} ${collaborator.email}`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              {collaboratorError && (<p className="error-text">{collaboratorError}</p>)}
-              <div className="collaborators-list"> 
-                {collaborators.map((collaborator) => (
-              <div className="collaborator-item" key={collaborator.user_id}>
-              <span>{collaborator.email}</span>
-              <button type="button" className="btn-remove-tag" onClick={() => removeCollaborator(collaborator.user_id)} aria-label={`Remove ${collaborator.email}`}> &times;
-              </button></div>))}</div></div>
+
             </div>}
 
             {step === 2 && <div className="step-content">

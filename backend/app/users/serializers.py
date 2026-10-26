@@ -87,7 +87,7 @@ class UserSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "profile"]
+        fields = ["id", "username", "email","first_name", "last_name", "profile"]
         read_only_fields = fields
 
 
