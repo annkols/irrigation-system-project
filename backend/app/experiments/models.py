@@ -209,6 +209,7 @@ class Pot(models.Model):
     replicate_number = models.PositiveSmallIntegerField()
     position = models.PositiveIntegerField()
     is_monitored = models.BooleanField(default=False)
+    user_defined_label = models.CharField(max_length=50, blank=True, default="")
 
     class Meta:
         ordering = ["position", "id"]
