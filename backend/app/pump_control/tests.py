@@ -1,11 +1,50 @@
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+from datetime import timedelta
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import PumpCommand
 
+from experiments.models import Experiment, Pot, Treatment
+
+User = get_user_model()
 
 class PumpCommandApiTests(APITestCase):
+        
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="Owner",
+            password="TestPass123!",
+        )
+
+        self.experiment = Experiment.objects.create(
+            name="Pump test",
+            plant_name="Soy",
+            owner=self.user,
+            sensor_set_id=1,
+            started_at=timezone.now(),
+        )
+
+        treatment = Treatment.objects.create(
+            experiment=self.experiment,
+            name="Control",
+        )
+
+        Pot.objects.create(
+            experiment=self.experiment,
+            treatment=treatment,
+            label="P1",
+            replicate_number=1,
+            position=1,
+        )
+
+        self.client.force_authenticate(user=self.user)
+
+
     def test_create_pump_command(self):
         response = self.client.post(
             reverse('pump-command-list-create'),

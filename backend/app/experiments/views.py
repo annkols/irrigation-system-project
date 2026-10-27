@@ -34,7 +34,7 @@ from .serializers import (
     ExperimentCollaboratorSerializer,
     ExperimentCollaboratorPermissionSerializer,
 )
-
+from .permission_sets import PERMISSION_FIELDS
 from .permissions import (
     CanEditExperiment,
     CanEndExperiment,
@@ -42,6 +42,7 @@ from .permissions import (
     IsExperimentOwner,
     IsExperimentOwnerOrCollaborator,
 )
+
 
 def visible_experiments_for(user):
     return (
@@ -559,6 +560,7 @@ class ExperimentCollaboratorsListView(generics.ListCreateAPIView):
 
             serializer.save(
                 experiment=experiment,
+                **{field: False for field in PERMISSION_FIELDS} # domyślnie dodany collaborator nie ma uprawnień poza wglądem
             )
 
 class ExperimentCollaboratorDetailView(generics.RetrieveUpdateDestroyAPIView):

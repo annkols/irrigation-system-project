@@ -69,6 +69,8 @@ class CameraFrameApiTests(APITestCase):
         )
 
     def test_upload_assigns_frame_to_active_experiment(self):
+        self.client.force_authenticate(user=self.user)
+
         response = self.upload_frame()
 
         self.assertEqual(response.status_code, 201)
@@ -240,6 +242,7 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(CameraFrame.objects.count(), 0)
 
     def test_latest_frame_image_returns_uploaded_jpeg(self):
+        self.client.force_authenticate(user=self.user)
         self.upload_frame()
 
         response = self.client.get(
@@ -251,6 +254,7 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(response["Cache-Control"], "no-store")
 
     def test_latest_frame_image_can_be_selected_by_pot(self):
+        self.client.force_authenticate(user=self.user)
         self.upload_frame()
 
         response = self.client.get(
@@ -262,6 +266,7 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(b"".join(response.streaming_content), b"jpeg-data")
 
     def test_frame_image_endpoint_returns_uploaded_jpeg(self):
+        self.client.force_authenticate(user=self.user)
         upload_response = self.upload_frame()
 
         response = self.client.get(
@@ -272,6 +277,8 @@ class CameraFrameApiTests(APITestCase):
         self.assertEqual(b"".join(response.streaming_content), b"jpeg-data")
 
     def test_delete_removes_database_record(self):
+        self.client.force_authenticate(user=self.user)
+        
         upload_response = self.upload_frame()
 
         response = self.client.delete(

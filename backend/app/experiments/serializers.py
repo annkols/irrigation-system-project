@@ -16,6 +16,7 @@ from .models import (
     PotHardwareAssignment,
     Treatment,
 )
+from .permission_sets import PERMISSION_FIELDS, PERMISSION_PRESETS
 
 User = get_user_model()
 
@@ -88,9 +89,8 @@ class ExperimentCollaboratorSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "user_id",
-            "can_edit_experiment",
-            "can_end_experiment",
-            "added_at",
+            *PERMISSION_FIELDS,
+            "added_at"
         ]
 
         read_only_fields = [
@@ -101,13 +101,33 @@ class ExperimentCollaboratorSerializer(serializers.ModelSerializer):
 
 
 class ExperimentCollaboratorPermissionSerializer(serializers.ModelSerializer):
+    permission_preset = serializers.ChoiceField(
+        choices=list(PERMISSION_PRESETS.keys()),
+        required=False,
+        write_only=True,
+    )
+    
     class Meta:
         model = ExperimentCollaborator
 
         fields = [
-            "can_edit_experiment",
-            "can_end_experiment",
-        ]
+            *PERMISSION_FIELDS, 
+            "permission_preset"]
+
+    def update(self, instance, validated_data):
+        preset = validated_data.pop("permission_preset", None)
+
+        if preset is not None:
+            allowed = PERMISSION_PRESETS[preset]
+
+            for field in PERMISSION_FIELDS:
+                setattr(instance, field, field in allowed)
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        instance.save()
+        return instance
 
 # CREATE/READ EXPERIMENT
 class ExperimentSerializer(serializers.ModelSerializer):
@@ -189,9 +209,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
             ExperimentCollaborator.objects.bulk_create([
                 ExperimentCollaborator(
                     experiment=experiment,
-                    user=item["user"],
-                    can_edit_experiment=item["can_edit_experiment"],
-                    can_end_experiment=item["can_end_experiment"],
+                    user=item["user"]
                 )
                 for item in initial_collaborators
             ])
@@ -245,30 +263,28 @@ class ExperimentSerializer(serializers.ModelSerializer):
                         "collaborators": "Brak user_id."
                     })
 
-                can_edit = item.get("can_edit_experiment", False)
-                can_end = item.get("can_end_experiment", False)
-
-                if not isinstance(can_edit, bool) or not isinstance(can_end, bool):
-                    raise serializers.ValidationError({
-                        "collaborators": "Uprawnienia muszą mieć wartości true lub false."
-                    })
-
                 membership, created = ExperimentCollaborator.objects.get_or_create(
                     experiment=experiment,
                     user_id=user_id,
-                    defaults={
-                        "can_edit_experiment": can_edit,
-                        "can_end_experiment": can_end,
-                    },
                 )
 
                 if not created:
-                    membership.can_edit_experiment = can_edit
-                    membership.can_end_experiment = can_end
-                    membership.save(update_fields=[
-                        "can_edit_experiment",
-                        "can_end_experiment",
-                    ])
+                    changed_fields = []
+
+                    for field in PERMISSION_FIELDS:
+                        if field in item:
+                            value = item[field]
+
+                            if not isinstance(value, bool):
+                                raise serializers.ValidationError({
+                                    field: "Permission must be true or false."
+                                })
+
+                            setattr(membership, field, value)
+                            changed_fields.append(field)
+
+                    if changed_fields:
+                        membership.save(update_fields=changed_fields)
 
         return experiment
 
@@ -461,6 +477,21 @@ class ExperimentUpdateSerializer(ExperimentSerializer):
         ]
 
     def validate(self, data):
+        request = self.context.get("request")
+
+        if request and self.instance:
+            owner_only_fields = {"collaborators", "is_public"}
+
+            attempted = owner_only_fields.intersection(
+                self.initial_data.keys()
+            )
+
+            if attempted and self.instance.owner_id != request.user.pk:
+                raise serializers.ValidationError({
+                    field: "Tylko właściciel może wprowadzić zmiany."
+                    for field in attempted
+                })
+
         forbidden_fields = (
             self.NONCHANGEABLE_FIELDS
             .intersection(self.initial_data.keys())
