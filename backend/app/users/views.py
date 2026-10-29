@@ -450,9 +450,9 @@ class UserNotificationsView(APIView):
                 thresholds = {
                     "air_temperature": {"max": 45.0, "min": 5.0, "key": "air_temperature"},
                     "soil_temperature": {"max": 45.0, "min": 5.0, "key": "soil_temperature"},
-                    "air_humidity": {"max": 80.0, "min": 5.0, "key": "air_humidity"},
-                    "moisture_percent": {"max": 90.0, "min": 2.0, "key": "soil_moisture"},
-                    "pressure_hpa": {"max": 1050.0, "min": 1000.0, "key": "pressure"}
+                    "air_humidity": {"max": 90.0, "min": 5.0, "key": "air_humidity"},
+                    "moisture_percent": {"max": 50.0, "min": 2.0, "key": "soil_moisture"},
+                    "pressure_hpa": {"max": 1050.0, "min": 900.0, "key": "pressure"}
                 }
 
                 checks = [
