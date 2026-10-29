@@ -417,6 +417,21 @@ class UserNotificationsView(APIView):
                             "created_at": end_warning_time
                         })
 
+                        
+            # 24h przed planowanym rozpoczęciem
+            if exp.started_at:
+                start_warning_time = exp.started_at - timedelta(hours=24)
+                start_notif_id = f"exp_starting_soon_{exp.id}"
+            
+                if start_warning_time <= now and (not exp.started_at or exp.started_at > now):
+                    if start_notif_id not in dismissed_ids:
+                        notifications.append({
+                            "id": start_notif_id,
+                            "type": "experiment_starting_soon",
+                            "experiment_id": exp.id,
+                            "params": {"name": exp.name},
+                            "created_at": start_warning_time
+                        })
 
             # Moment rozpoczęcia eksperymentu
             if exp.started_at and exp.started_at <= now:
