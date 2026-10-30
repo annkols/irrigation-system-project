@@ -191,9 +191,12 @@ body {
   color: var(--color-text-main);
 }
 
-.form-section input[type="text"],
-.date-choice input[type="date"],
-.sensor-freq-row input[type="number"] {
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+select,
+textarea {
   width: 100%;
   padding: 11px 14px;
   border: 1px solid var(--color-border-input);
@@ -202,19 +205,23 @@ body {
   font-family: var(--font-main);
   box-sizing: border-box;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   color: var(--color-text-main);
+  background-color: var(--color-bg-main);
 }
 
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+}
 
 .sensor-name {
   font-size: 13px;
   text-transform: capitalize;
-}
-
-.form-section input[type="text"]:focus,
-.date-choice input[type="date"]:focus {
-  border-color: var(--color-primary);
 }
 
 .dates-choices {
@@ -234,79 +241,9 @@ body {
   color: var(--color-text-main);
 }
 
-.description-textarea {
-  width: 100%;
-  height: 120px;
-  padding: 11px 14px;
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-normal);
-  font-size: 14px;
-  font-family: var(--font-main);
-  box-sizing: border-box;
-  outline: none;
-  transition: border-color 0.2s;
-  color: var(--color-text-main);
-  background-color: var(--color-bg-card);
-  resize: vertical;
-}
-
-.description-textarea:focus {
-  border-color: var(--color-primary);
-}
-
 .description-textarea::placeholder {
   color: var(--color-text-muted);
   opacity: 0.8;
-}
-
-.setup-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.setup-card {
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-normal);
-  padding: 0px;
-  cursor: pointer;
-  background-color: var(--color-bg-card);
-  transition: border-color 0.2s, background-color 0.2s;
-  overflow: hidden;
-}
-
-.setup-card:hover {
-  border-color: var(--color-primary-border-hover);
-}
-
-.setup-card.selected {
-  border-color: var(--color-primary);
-  background-color: var(--color-bg-main);
-  border: 5px solid var(--color-primary);
-}
-
-.setup-card.selected h3 {
-  padding: 16px;
-  background-color: var(--color-primary) !important;
-  color: var(--color-bg-main) !important;
-}
-
-.setup-card h3 {
-  margin: 0;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text-main);
-}
-
-.setup-details {
-  width: 100%;
-  margin-top: 16px;
-  padding: 16px 16px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
 }
 
 .sensor-freq-row {
@@ -377,6 +314,280 @@ body {
   margin-top: 5px;
   display: block;
   font-weight: 500;
+}
+
+
+/* Elastyczny kreator doświadczenia */
+.experiment-designer { 
+    max-width: 900px; 
+    padding: 30px 34px; 
+    border-color: var(--color-border-card); 
+    border-radius: 14px; 
+}
+
+.experiment-designer .step-content { 
+    width: 100%; 
+}
+
+.experiment-designer .description-textarea {    
+    min-height: 122px;    
+    height: 122px;    
+}
+.experiment-designer .keyword-input-wrapper {    
+    align-items: center;    
+}
+
+.experiment-designer .designer-navigation {
+    padding-top: 20px; 
+    border-top: 1px solid var(--color-primary-light); 
+}
+
+.experiment-designer h3 {
+    margin: 26px 0 12px; 
+}
+
+.factor-card { 
+    border: 1px solid var(--color-border-card); 
+    border-radius: 12px; 
+    padding: 18px; 
+    margin: 16px 0; 
+    background: var(--color-bg-card);
+    color: var(--color-text-main);
+}
+
+.designer-row, .level-row { 
+    display: flex; 
+    gap: 12px; 
+    align-items: center; 
+    margin: 10px 0; 
+    flex-wrap: wrap; 
+}
+
+.designer-row > input, .designer-row > select, .level-row > input { 
+    flex: 1 1 180px; 
+    min-width: 0; 
+}
+
+.level-row label { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    white-space: nowrap; 
+}
+
+.designer-remove { 
+    border: 0; 
+    background: transparent; 
+    color: #a33; 
+    cursor: pointer; 
+    padding: 8px; 
+}
+
+.compact-field { 
+    display: flex; 
+    gap: 11px; 
+    align-items: flex-start; 
+    max-width: 420px; 
+}
+
+.compact-field input { 
+    width: 120px; 
+}
+
+.combination-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+    gap: 12px; 
+}
+
+.pot-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(125px, 150px)); 
+    justify-content: center; 
+    gap: 10px; 
+}
+
+.combination-card { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+    border: 2px solid var(--color-border-input); 
+    border-radius: 10px; 
+    padding: 13px; 
+    cursor: pointer; 
+    opacity: .58; }
+
+.combination-card.selected { 
+    border: 1px solid var(--color-primary); 
+    background: var(--color-primary-light); 
+    opacity: 1; 
+}
+
+.combination-card input { 
+    align-self: flex-start; 
+}
+
+.combination-card span { 
+    font-size: 12px; 
+}
+
+.pot-card { 
+    position: relative; 
+    min-height: 76px; 
+    border: 2px solid var(--color-primary); 
+    border-radius: 10px; 
+    padding: 10px; 
+    background: var(--color-bg-card); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 3px; 
+    text-align: center; 
+}
+
+.pot-card small, .frequency-grid small { 
+    display: block; 
+    color: var(--color-primary); 
+}
+
+.pot-card span { 
+    font-size: 11px; 
+}
+
+.pot-card.monitored { 
+    background: var(--color-secondary-light); 
+    border-color: var(--color-secondary); 
+}
+.hardware-layout-preview { 
+    margin: 18px 0 26px; 
+    padding: 16px; 
+    border: 1px solid var(--color-border-card); 
+    border-radius: 12px; 
+    background: var(--color-bg-main); 
+}
+.hardware-layout-preview-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 16px; 
+}
+.hardware-layout-preview-header h3 { 
+    margin: 0; 
+}
+.hardware-layout-preview-header span { 
+    color: var(--color-text-main); 
+    font-size: 13px; 
+}
+.hardware-layout-preview > p { 
+    margin: 6px 0 14px; 
+    color: var(--color-text-main); 
+    font-size: 13px; 
+}
+.pot-grid--reference { 
+    max-height: 285px; 
+    overflow-y: auto; 
+    padding: 3px; 
+    grid-template-columns: repeat(auto-fill, minmax(120px, 140px)); 
+}
+.pot-grid--reference .pot-card { 
+    min-height: 72px; 
+}
+.pot-assignment-treatment { 
+    flex: 1; 
+    color: var(--color-text-main); 
+    font-size: 12px; 
+    margin-left: 4px; 
+}
+.hardware-help { 
+    margin: -4px 0 12px; 
+    color: var(--color-text-main); 
+    font-size: 13px; 
+}
+.designer-help { 
+    color: var(--color-text-main); 
+}
+.hardware-fields { 
+    align-items: flex-end; 
+}
+.hardware-field { 
+    flex: 1 1 190px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 6px; 
+    color: var(--color-text-main); 
+    font-size: 12px; 
+    font-weight: 600; 
+}
+.hardware-field input, .hardware-field select { 
+    width: 100%; 
+}
+.pot-selector { 
+    display: flex; 
+    align-items: center; 
+    gap: 7px; 
+    margin-top: 8px; 
+}
+.pot-selector label { 
+    color: var(--color-text-muted); 
+    font-size: 11px; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+    letter-spacing: .04em; 
+}
+.pot-selector select { 
+    min-width: 74px; 
+    height: 32px; 
+    padding: 4px 26px 4px 9px; 
+    border: 1px solid var(--color-border-input); 
+    border-radius: 7px; 
+    background: var(--color-bg-card); 
+    color: var(--color-text-main); 
+    font-size: 12px; 
+    outline: none; 
+}
+.pot-selector select:focus { 
+    border-color: var(--color-primary); 
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent); 
+}
+.pot-selector--card {
+    margin: 0 0 12px; 
+    justify-content: flex-start; 
+}
+.pot-selector--section { 
+    margin: 0 0 12px; 
+}
+.experiment-layout-card .pot-grid { 
+    width: 100%; 
+    margin-top: 14px; 
+}
+.frequency-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); 
+    gap: 10px; 
+}
+.frequency-grid label { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 10px; 
+    border: 1px solid var(--color-border-light); 
+    padding: 10px; 
+    border-radius: 8px; 
+}
+.frequency-grid input { 
+    width: 95px; 
+    padding: 6px 8px; 
+    border: 1.5px solid var(--color-border-input); 
+    border-radius: 6px; 
+    font-family: var(--font-main); 
+    font-size: 13px; 
+    color: var(--color-text-main); 
+    background: var(--color-bg-main); 
+}
+.frequency-grid input:focus { 
+    outline: none; 
+    border-color: var(--color-primary); 
 }
 
 /* Dashboard */
@@ -4219,329 +4430,6 @@ body {
   color: #102019;
 }
 
-/* Elastyczny kreator doświadczenia */
-.experiment-designer { 
-    max-width: 900px; 
-    padding: 30px 34px; 
-    border-color: var(--color-primary-light); 
-    border-radius: 14px; 
-}
-
-.experiment-designer .step-content { 
-    width: 100%; 
-}
-
-.experiment-designer input:not([type="checkbox"]):not([type="radio"]),
-.experiment-designer select,
-.experiment-designer textarea {
-  border: 1px solid var(--color-primary-light);
-  border-radius: 9px;
-  background: var(--color-bg-card);
-  color: var(--color-text-main);
-  box-sizing: border-box;
-  min-height: 42px;
-  padding: 9px 12px;
-  font: 14px var(--font-main);
-  outline: none;
-  transition: border-color .18s ease, box-shadow .18s ease;
-}
-.experiment-designer input:not([type="checkbox"]):not([type="radio"]):focus,
-.experiment-designer select:focus,
-.experiment-designer textarea:focus {
-  border-color: #929b96;
-  box-shadow: 0 0 0 3px rgba(100, 112, 105, .1);
-}
-.experiment-designer .form-section > input,
-.experiment-designer .description-textarea { 
-    width: 100%; 
-}
-
-.experiment-designer .form-section { 
-    gap: 0;
-}
-
-.experiment-designer .description-textarea { 
-    min-height: 122px; 
-    height: 122px; 
-}
-
-.experiment-designer .date-choice { 
-    gap: 0; 
-}
-
-.experiment-designer .keyword-input-wrapper { 
-    align-items: center; 
-}
-
-.experiment-designer .keyword-input-wrapper .btn-create { 
-    min-width: 82px; 
-}
-
-.experiment-designer .btn-back,
-.experiment-designer .btn-create {
-  width: auto;
-  min-width: 104px;
-  height: 38px;
-  padding: 0 18px;
-  margin: 0;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  align-self: auto;
-}
-
-.experiment-designer .designer-navigation {
-    padding-top: 20px; 
-    border-top: 1px solid var(--color-primary-light); 
-}
-
-.experiment-designer h3 {
-    margin: 26px 0 12px; 
-}
-
-.factor-card { 
-    border: 1px solid var(--color-border-card); 
-    border-radius: 12px; 
-    padding: 18px; 
-    margin: 16px 0; 
-    background: var(--color-primary-light); 
-}
-
-.designer-row, .level-row { 
-    display: flex; 
-    gap: 12px; 
-    align-items: center; 
-    margin: 10px 0; 
-    flex-wrap: wrap; 
-}
-
-.designer-row > input, .designer-row > select, .level-row > input { 
-    flex: 1 1 180px; 
-    min-width: 0; 
-}
-
-.level-row label { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    white-space: nowrap; 
-}
-
-.designer-remove { 
-    border: 0; 
-    background: transparent; 
-    color: #a33; 
-    cursor: pointer; 
-    padding: 8px; 
-}
-
-.compact-field { 
-    display: flex; 
-    gap: 11px; 
-    align-items: flex-start; 
-    max-width: 420px; 
-}
-
-.compact-field input { 
-    width: 120px; 
-}
-
-.combination-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
-    gap: 12px; 
-}
-
-.pot-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(125px, 150px)); 
-    justify-content: center; 
-    gap: 10px; 
-}
-
-.combination-card { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 5px; 
-    border: 2px solid var(--color-border-input); 
-    border-radius: 10px; 
-    padding: 13px; 
-    cursor: pointer; 
-    opacity: .58; }
-
-.combination-card.selected { 
-    border: 1px solid var(--color-primary); 
-    background: var(--color-primary-light); 
-    opacity: 1; 
-}
-
-.combination-card input { 
-    align-self: flex-start; 
-}
-
-.combination-card span { 
-    font-size: 12px; 
-}
-
-.pot-card { 
-    position: relative; 
-    min-height: 76px; 
-    border: 2px solid var(--color-primary); 
-    border-radius: 10px; 
-    padding: 10px; 
-    background: var(--color-bg-card); 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 3px; 
-    text-align: center; 
-}
-
-.pot-card small, .frequency-grid small { 
-    display: block; 
-    color: var(--color-primary); 
-}
-
-.pot-card span { 
-    font-size: 11px; 
-}
-
-.pot-card.monitored { 
-    background: var(--color-secondary-light); 
-    border-color: var(--color-secondary); 
-}
-.hardware-layout-preview { 
-    margin: 18px 0 26px; 
-    padding: 16px; 
-    border: 1px solid var(--color-primary); 
-    border-radius: 12px; 
-    background: var(--color-primary-light); 
-}
-.hardware-layout-preview-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    gap: 16px; 
-}
-.hardware-layout-preview-header h3 { 
-    margin: 0; 
-}
-.hardware-layout-preview-header span { 
-    color: var(--color-text-main); 
-    font-size: 13px; 
-}
-.hardware-layout-preview > p { 
-    margin: 6px 0 14px; 
-    color: var(--color-text-main); 
-    font-size: 13px; 
-}
-.pot-grid--reference { 
-    max-height: 285px; 
-    overflow-y: auto; 
-    padding: 3px; 
-    grid-template-columns: repeat(auto-fill, minmax(120px, 140px)); 
-}
-.pot-grid--reference .pot-card { 
-    min-height: 72px; 
-}
-.pot-assignment-treatment { 
-    flex: 1; 
-    color: var(--color-text-main); 
-    font-size: 12px; 
-    margin-left: 4px; 
-}
-.hardware-help { 
-    margin: -4px 0 12px; 
-    color: var(--color-text-main); 
-    font-size: 13px; 
-}
-.designer-help { 
-    color: var(--color-text-main); 
-}
-.hardware-fields { 
-    align-items: flex-end; 
-}
-.hardware-field { 
-    flex: 1 1 190px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 6px; 
-    color: var(--color-text-main); 
-    font-size: 12px; 
-    font-weight: 600; 
-}
-.hardware-field input, .hardware-field select { 
-    width: 100%; 
-}
-.pot-selector { 
-    display: flex; 
-    align-items: center; 
-    gap: 7px; 
-    margin-top: 8px; 
-}
-.pot-selector label { 
-    color: var(--color-text-muted); 
-    font-size: 11px; 
-    font-weight: 600; 
-    text-transform: uppercase; 
-    letter-spacing: .04em; 
-}
-.pot-selector select { 
-    min-width: 74px; 
-    height: 32px; 
-    padding: 4px 26px 4px 9px; 
-    border: 1px solid var(--color-border-input); 
-    border-radius: 7px; 
-    background: var(--color-bg-card); 
-    color: var(--color-text-main); 
-    font-size: 12px; 
-    outline: none; 
-}
-.pot-selector select:focus { 
-    border-color: var(--color-primary); 
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent); 
-}
-.pot-selector--card {
-    margin: 0 0 12px; 
-    justify-content: flex-start; 
-}
-.pot-selector--section { 
-    margin: 0 0 12px; 
-}
-.experiment-layout-card .pot-grid { 
-    width: 100%; 
-    margin-top: 14px; 
-}
-.frequency-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); 
-    gap: 10px; 
-}
-.frequency-grid label { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    gap: 10px; 
-    border: 1px solid var(--color-border-light); 
-    padding: 10px; 
-    border-radius: 8px; 
-}
-.frequency-grid input { 
-    width: 95px; 
-    padding: 6px 8px; 
-    border: 1.5px solid var(--color-border-input); 
-    border-radius: 6px; 
-    font-family: var(--font-main); 
-    font-size: 13px; 
-    color: var(--color-text-main); 
-    background: var(--color-bg-main); 
-}
-.frequency-grid input:focus { 
-    outline: none; 
-    border-color: var(--color-primary); 
-}
-
 /* ── Experiment edit (matches details layout) ── */
 .exp-edit .exp-tab-actions .exp-btn { white-space: nowrap; }
 
@@ -4667,8 +4555,8 @@ body {
 }
 
 .pot-assignment.monitored { 
-  border-color: var(--color-primary); 
-  background: var(--color-primary-light); 
+  border-color: var(--color-secondary); 
+  background: var(--color-secondary-light); 
 }
 
 .monitor-toggle { 
@@ -4690,7 +4578,7 @@ body {
     padding: 14px;
     border: 1px solid var(--color-border-light);
     border-radius: 10px;
-    background: var(--color-bg-main);
+    background: var(--color-secondary-light);
   }
   .camera-row-actions { 
     display: flex; 
@@ -4707,8 +4595,14 @@ body {
     font-weight: 700;
     cursor: pointer;
   }
-  .camera-verify-btn:disabled { cursor: wait; opacity: .6; }
-  .camera-add-btn { margin-top: 10px; }
+  .camera-verify-btn:disabled { 
+    cursor: wait; 
+    border: 1px solid var(--color-text-muted);
+    color: var(--color-text-muted);
+  }
+  .camera-add-btn { 
+      margin-top: 10px; 
+  }
   .camera-empty-state {
     margin: 0 0 10px;
     padding: 14px;
@@ -4729,8 +4623,8 @@ body {
       color: var(--color-error); 
   }
 .design-summary { 
-    border: 1px solid var(--color-primary); 
-    background: var(--color-primary-light); 
+    border: 2px solid var(--color-border-light); 
+    background: var(--color-bg-main); 
     border-radius: 12px; 
     padding: 18px; 
 }
@@ -5799,10 +5693,6 @@ body {
   border: 2px solid var(--color-error) !important;
 }
 
-.setup-container + .error-text {
-  text-align: center;
-  margin-top: 10px;
-}
 .dates-choices {
   display: flex;
   gap: 40px;
@@ -6108,8 +5998,6 @@ body {
 
   .step-content,
   .factor-card,
-  .setup-container,
-  .setup-card,
   .hardware-layout-preview,
   .design-summary,
   .combination-grid,
@@ -6294,8 +6182,6 @@ body {
   }
 
   .factor-card,
-  .setup-container,
-  .setup-card,
   .hardware-layout-preview,
   .design-summary,
   .combination-grid,
