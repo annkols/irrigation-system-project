@@ -289,6 +289,12 @@
       "connection": "Server connection error."
     }
   },
+  "potModal": {
+    "title": "Edit pot: {{label}}",
+    "labelPlaceholder": "Custom pot name / label",
+    "cancel": "Cancel",
+    "ok": "Save"
+  },
   "newExperiment": {
     "UsersNotFound":"No matching users.",
     "peopleSearching":"Searching for users...",

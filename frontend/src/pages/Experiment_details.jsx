@@ -796,6 +796,11 @@ function Experiment_details() {
                       {design.pots.map((pot) => (
                         <div className={`pot-card ${pot.is_monitored ? "monitored" : ""}`} key={pot.id}>
                           <strong>{pot.label}</strong>
+                          {pot.user_defined_label && (
+                            <span className="pot-custom-label">
+                              {pot.user_defined_label}
+                            </span>
+                          )}
                           <small>{t('newExperiment.replicate', { number: pot.replicate_number })}</small>
                           {pot.treatment_levels.map((item) => (
                             <span key={item.factor}>{item.factor}: {item.level}</span>

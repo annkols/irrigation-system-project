@@ -417,6 +417,21 @@ class UserNotificationsView(APIView):
                             "created_at": end_warning_time
                         })
 
+                        
+            # 24h przed planowanym rozpoczęciem
+            if exp.started_at:
+                start_warning_time = exp.started_at - timedelta(hours=24)
+                start_notif_id = f"exp_starting_soon_{exp.id}"
+            
+                if start_warning_time <= now and (not exp.started_at or exp.started_at > now):
+                    if start_notif_id not in dismissed_ids:
+                        notifications.append({
+                            "id": start_notif_id,
+                            "type": "experiment_starting_soon",
+                            "experiment_id": exp.id,
+                            "params": {"name": exp.name},
+                            "created_at": start_warning_time
+                        })
 
             # Moment rozpoczęcia eksperymentu
             if exp.started_at and exp.started_at <= now:
@@ -435,9 +450,9 @@ class UserNotificationsView(APIView):
                 thresholds = {
                     "air_temperature": {"max": 45.0, "min": 5.0, "key": "air_temperature"},
                     "soil_temperature": {"max": 45.0, "min": 5.0, "key": "soil_temperature"},
-                    "air_humidity": {"max": 80.0, "min": 5.0, "key": "air_humidity"},
-                    "moisture_percent": {"max": 90.0, "min": 2.0, "key": "soil_moisture"},
-                    "pressure_hpa": {"max": 1050.0, "min": 1000.0, "key": "pressure"}
+                    "air_humidity": {"max": 90.0, "min": 5.0, "key": "air_humidity"},
+                    "moisture_percent": {"max": 50.0, "min": 2.0, "key": "soil_moisture"},
+                    "pressure_hpa": {"max": 1050.0, "min": 900.0, "key": "pressure"}
                 }
 
                 checks = [

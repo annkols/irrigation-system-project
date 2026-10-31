@@ -293,6 +293,12 @@
       "connection": "Błąd połączenia z serwerem."
     }
   },
+  "potModal": {
+    "title": "Edycja doniczki: {{label}}",
+    "labelPlaceholder": "Własna nazwa / etykieta doniczki",
+    "cancel": "Anuluj",
+    "ok": "Zapisz"
+  },
   "newExperiment": {
     "UsersNotFound":"Brak pasujących użytkowników.",
     "peopleSearching":"Wyszukiwanie użytkowników...",
