@@ -6,6 +6,7 @@ import LocalizedDateInput from "./LocalizedDateInput";
 import "../App.css";
 import Sidebar from "./Sidebar";
 import TopBar from "./Topbar";
+import PotModal from "./PotModal";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -67,6 +68,8 @@ function New_experiment() {
   const [cameras, setCameras] = useState([]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [activePotModal, setActivePotModal] = useState(null);
+  const [customLabels, setCustomLabels] = useState({});
 
   useEffect(() => {
     const query = collaboratorEmail.trim();
@@ -232,9 +235,17 @@ function New_experiment() {
     let number = 1;
     return selected.flatMap((combination) => Array.from(
       { length: Number(repetitions) || 0 },
-      (_, index) => ({ label: `P${number++}`, replicate: index + 1, combination }),
+      (_, index) => {
+        const label = `P${number++}`;
+        return {
+          label,
+          replicate: index + 1,
+          combination,
+          user_defined_label: customLabels[label] || "",
+        };
+      }
     ));
-  }, [selected, repetitions]);
+  }, [selected, repetitions, customLabels]);
 
   const changeFactor = (index, patch) => {
     setFactors((items) => items.map((item, current) => current === index ? { ...item, ...patch } : item));
@@ -372,7 +383,12 @@ function New_experiment() {
           factors,
           repetitions: Number(repetitions),
           selected_combinations: selected.map((combination) => Object.fromEntries(combination.map((item, index) => [factors[index].name, item.label]))),
-          pot_assignments: pots.map(({ label }) => ({ label, ...hardware[label], is_monitored: Boolean(hardware[label]?.is_monitored) })),
+          pot_assignments: pots.map((pot) => ({ 
+            label: pot.label, 
+            user_defined_label: pot.user_defined_label || "",
+            ...hardware[pot.label], 
+            is_monitored: Boolean(hardware[pot.label]?.is_monitored) 
+          })),
           camera_assignments: cameras.map((item) => ({
             camera_id: Number(item.camera_id),
             pot_label: item.pot_label,
@@ -398,6 +414,13 @@ function New_experiment() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSavePotLabel = (potLabel, newLabel) => {
+    setCustomLabels((prev) => ({
+      ...prev,
+      [potLabel]: newLabel,
+    }));
   };
 
   const error = Object.entries(errors).find(([key, value]) => key !== "cameras" && value)?.[1];
@@ -569,12 +592,76 @@ function New_experiment() {
               <button className="btn-create" type="button" onClick={() => setFactors([...factors, { name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }])}>{t("newExperiment.addFactor")}</button>
             </div>}
 
-            {step === 3 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.selectCombinations")}</h2><p className="designer-help">{t("newExperiment.combinationsHelp")}</p></div>
-              <div className="form-section compact-field"><label>{t("newExperiment.repetitions")}</label><input type="number" min="1" max="50" value={repetitions} onChange={(event) => setRepetitions(event.target.value)} /></div>
-              <div className="combination-grid">{combinations.map((combination) => { const key = keyOf(combination); const enabled = !excluded.includes(key); return <label className={`combination-card ${enabled ? "selected" : ""}`} key={key}><input type="checkbox" checked={enabled} onChange={() => setExcluded(enabled ? [...excluded, key] : excluded.filter((item) => item !== key))} /><strong>{combination.every((item) => item.is_reference) ? t("newExperiment.referenceCombination") : t("newExperiment.treatment")}</strong>{combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</label>; })}</div>
-              <h3>{t("newExperiment.potLayout", { count: pots.length })}</h3><div className="pot-grid">{pots.map((pot) => <div className="pot-card" key={pot.label}><strong>{pot.label}</strong><small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
-            </div>}
+            {step === 3 && (
+              <div className="step-content">
+                <div className="new-exp-form">
+                  <h2>{t("newExperiment.selectCombinations")}</h2>
+                  <p className="designer-help">{t("newExperiment.combinationsHelp")}</p>
+                </div>
+    
+                <div className="form-section compact-field">
+                  <label>{t("newExperiment.repetitions")}</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="50" 
+                    value={repetitions} 
+                    onChange={(event) => setRepetitions(event.target.value)} 
+                  />
+                </div>
+
+                <div className="combination-grid">
+                  {combinations.map((combination) => { 
+                    const key = keyOf(combination); 
+                    const enabled = !excluded.includes(key); 
+                    return (
+                      <label className={`combination-card ${enabled ? "selected" : ""}`} key={key}>
+                        <input 
+                          type="checkbox" 
+                          checked={enabled} 
+                          onChange={() => setExcluded(enabled ? [...excluded, key] : excluded.filter((item) => item !== key))} 
+                        />
+                        <strong>{combination.every((item) => item.is_reference) ? t("newExperiment.referenceCombination") : t("newExperiment.treatment")}</strong>
+                        {combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}
+                      </label>
+                    ); 
+                  })}
+                </div>
+
+                <h3>{t("newExperiment.potLayout", { count: pots.length })}</h3>
+    
+                <div className="pot-grid">
+                  {pots.map((pot) => (
+                    <div 
+                      className="pot-card clickable" 
+                      key={pot.label}
+                      onClick={() => setActivePotModal(pot)} // Otwiera modal
+                    >
+                      <span className="pot-edit-icon">✎</span>
+                      <strong>{pot.label}</strong>
+          
+                      {pot.user_defined_label && (
+                        <span className="pot-custom-label">
+                          {pot.user_defined_label}
+                        </span>
+                      )}
+
+                      <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>
+                      {pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}
+                    </div>
+                  ))}
+                </div>
+
+                {activePotModal && (
+                  <PotModal 
+                    pot={activePotModal}
+                    factors={factors}
+                    onClose={() => setActivePotModal(null)}
+                    onSave={handleSavePotLabel} // Przekazujemy funkcję zapisu
+                  />
+                )}
+              </div>
+            )}
 
             {step === 4 && <div className="step-content">
               <div className="new-exp-form"><h2>{t("newExperiment.assignHardware")}</h2><p>{t("newExperiment.hardwareHelp")}</p></div>
@@ -584,7 +671,15 @@ function New_experiment() {
                   <span>{t("newExperiment.potCount", { count: pots.length })}</span>
                 </div>
                 <p>{t("newExperiment.layoutHelp")}</p>
-                <div className="pot-grid pot-grid--reference">{pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}><strong>{pot.label}</strong><small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
+                <div className="pot-grid pot-grid--reference">
+                  {pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}>
+                    <strong>{pot.label}</strong>
+                      {pot.user_defined_label && (
+                        <span className="pot-custom-label">
+                          {pot.user_defined_label}
+                        </span>
+                      )}
+                    <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
               </section>
               <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => { setSensorSetId(event.target.value); setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); }} /></div>
               <h3>{t("experimentForm.frequencyTitle")}</h3><div className="frequency-grid">{SENSORS.map(([id, labelKey, scopeKey]) => <label key={id}><span>{t(`experimentForm.sensors.${labelKey}`)}<small>{t(`experimentForm.sensors.${scopeKey}`)}</small></span><input type="text" inputMode="decimal" placeholder={t("experimentForm.exampleDecimal")} value={frequencies[id]} onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} /></label>)}</div>

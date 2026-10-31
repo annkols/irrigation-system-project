@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import LocalizedDateInput from "./LocalizedDateInput";
 import TopBar from "./Topbar";
+import PotModal from "./PotModal";
 import "../App.css";
 import logo from "./images/logo-color.png";
 import logoName from "./images/name-color.png";
@@ -66,9 +67,15 @@ function Experiment_edit() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true"
   );
+  const [factors, setFactors] = useState([]);
+  const [repetitions, setRepetitions] = useState(1);
+  const [hardware, setHardware] = useState({});
+  const [customLabels, setCustomLabels] = useState({});
+  const [selectedPot, setSelectedPot] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/experiments/${id}/`, {
+    fetch(`${API_BASE_URL}/experiments/${id}/design/`, {
       headers: getAuthHeaders(),
     })
       .then((res) => {
@@ -80,16 +87,23 @@ function Experiment_edit() {
         if (!res.ok) throw new Error(t("experimentForm.errors.load"));
         return res.json();
       })
-      .then((data) => {
-        setExperimentName(data.name || "");
-        setName(data.name || "");
-        setPlantName(data.plant_name || "");
-        setDescription(data.description || "");
-        setIsPublic(data.is_public || false);
-        setKeywords(data.keywords || []);
+      .then((designData) => {
+        return fetch(`${API_BASE_URL}/experiments/${id}/`, {
+          headers: getAuthHeaders(),
+        })
+          .then(res => res.json())
+          .then(baseData => ({ baseData, designData }));
+      })
+      .then(({ baseData, designData }) => {
+        setExperimentName(baseData.name || "");
+        setName(baseData.name || "");
+        setPlantName(baseData.plant_name || "");
+        setDescription(baseData.description || "");
+        setIsPublic(baseData.is_public || false);
+        setKeywords(baseData.keywords || []);
 
         setCollaborators(
-          (data.collaborators || []).map((item) => ({
+          (baseData.collaborators || []).map((item) => ({
             user_id: item.user?.id ?? item.user_id,
             email: item.user?.email ?? item.user?.username ?? "",
             can_edit_experiment: item.can_edit_experiment ?? false,
@@ -97,16 +111,53 @@ function Experiment_edit() {
           }))
         );
 
-        if (data.started_at) setStartDate(data.started_at.split('T')[0]);
-        if (data.planned_end_at) setEndDate(data.planned_end_at.split('T')[0]);
+        if (baseData.started_at) setStartDate(baseData.started_at.split('T')[0]);
+        if (baseData.planned_end_at) setEndDate(baseData.planned_end_at.split('T')[0]);
 
-        setSelectedSetup(data.sensor_set_id);
+        setSelectedSetup(baseData.sensor_set_id);
 
-        const fallbackFrequency = data.measurement_frequency_seconds || 3600;
+        const fallbackFrequency = baseData.measurement_frequency_seconds || 3600;
         setFrequencies(Object.fromEntries(SENSORS.map((sensor) => [
           sensor.key,
-          secondsToHours(data.sensor_frequencies?.[sensor.key] || fallbackFrequency),
+          secondsToHours(baseData.sensor_frequencies?.[sensor.key] || fallbackFrequency),
         ])));
+
+        if (designData.factors) {
+          setFactors(designData.factors.map(f => ({
+            name: f.name,
+            unit: f.unit || "",
+            levels: f.levels.map(l => ({ label: l.label, value: l.value || "", is_reference: l.is_reference }))
+          })));
+        }
+
+        if (designData.pots) {
+          const initialLabels = {};
+          const initialHardware = {};
+
+          designData.pots.forEach(pot => {
+            if (pot.user_defined_label) {
+              initialLabels[pot.label] = pot.user_defined_label;
+            }
+            
+            const hwData = { is_monitored: pot.is_monitored };
+            pot.hardware_assignments?.forEach(ha => {
+              if (ha.component_type === 'soil_moisture') hwData.soil_moisture = ha.component_identifier;
+              if (ha.component_type === 'soil_temperature') hwData.soil_temperature = ha.component_identifier;
+              if (ha.component_type === 'pump') hwData.pump = ha.component_identifier;
+            });
+            initialHardware[pot.label] = hwData;
+          });
+
+          setCustomLabels(initialLabels);
+          setHardware(initialHardware);
+          
+          if (designData.treatments?.length > 0) {
+            if (designData.repetitions) {
+              setRepetitions(designData.repetitions);
+            }
+          }
+        }
+
         setIsLoading(false);
       })
       .catch((err) => {
@@ -115,6 +166,35 @@ function Experiment_edit() {
         navigate('/dashboard');
       });
   }, [id, navigate, t]);
+
+  const pots = useMemo(() => {
+    if (!factors || factors.length === 0 || factors.some(f => !f.levels || f.levels.length === 0)) {
+      return [];
+    }
+
+    const cartesian = (arr) => arr.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
+    const factorLevelsList = factors.map(f => f.levels.map(l => ({ factor: f.name, level: l.label })));
+    const combinations = cartesian(factorLevelsList);
+
+    let generatedPots = [];
+    let potCounter = 1;
+
+    combinations.forEach((combo) => {
+      for (let rep = 1; rep <= repetitions; rep++) {
+        const label = `P${potCounter}`;
+        generatedPots.push({
+          label,
+          replicate_number: rep,
+          treatment_levels: combo,
+          user_defined_label: customLabels[label] || "",
+          is_monitored: Boolean(hardware[label]?.is_monitored),
+        });
+        potCounter++;
+      }
+    });
+
+    return generatedPots;
+  }, [factors, repetitions, customLabels, hardware]);
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -251,7 +331,7 @@ function Experiment_edit() {
   };
 
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setErrors({});
     const localErrors = {};
 
@@ -331,35 +411,57 @@ function Experiment_edit() {
       is_public: isPublic,
     };
 
+    const designPayload = {
+      factors,
+      repetitions,
+      pot_assignments: pots.map((pot) => ({
+        label: pot.label,
+        user_defined_label: pot.user_defined_label || "",
+        ...hardware[pot.label],
+        is_monitored: Boolean(hardware[pot.label]?.is_monitored)
+      })),
+    };
+
     setIsSaving(true);
-    fetch(`${API_BASE_URL}/experiments/${id}/edit/`, {
-      method: "PATCH",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(updatedExperiment),
-    })
-      .then(async (res) => {
-        const data = await res.json();
+    try {
+      const resEdit = await fetch(`${API_BASE_URL}/experiments/${id}/edit/`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updatedExperiment),
+      });
 
-        if (res.status === 403) {
-          toast.error(t("experimentForm.errors.permission"));
-          navigate(`/experiment/${id}`);
-          return;
-        }
+      if (resEdit.status === 403) {
+        toast.error(t("experimentForm.errors.permission"));
+        navigate(`/experiment/${id}`);
+        return;
+      }
 
-        if (res.ok) {
-          navigate(`/experiment/${id}`, {
-            state: { message: t("editExperiment.updated") },
-          });
-        } else {
-          setErrors(data);
-          toast.error(t("editExperiment.fixFields"));
-        }
-      })
-      .catch((err) => {
-        console.error("Error updating experiment:", err);
-        toast.error(t("experimentForm.errors.connection"));
-      })
-      .finally(() => setIsSaving(false));
+      if (!resEdit.ok) {
+        const data = await resEdit.json();
+        setErrors(data);
+        toast.error(t("editExperiment.fixFields"));
+        return;
+      }
+
+      const resDesign = await fetch(`${API_BASE_URL}/experiments/${id}/design/`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(designPayload),
+      });
+
+      if (resDesign.ok) {
+        navigate(`/experiment/${id}`, {
+          state: { message: t("editExperiment.updated") },
+        });
+      } else {
+        toast.error(t("editExperiment.fixFields"));
+      }
+    } catch (err) {
+      console.error("Error updating experiment:", err);
+      toast.error(t("experimentForm.errors.connection"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -668,6 +770,39 @@ function Experiment_edit() {
                 </div>
               </div>
 
+              {pots.length > 0 && (
+                <div className="exp-overview-card">
+                  <div className="exp-overview-field exp-overview-field--last">
+                    <span className="exp-info-label">{t('experimentDetails.layout')}</span>
+                    <div className="pot-grid">
+                      {pots.map((pot) => (
+                        <div
+                          key={pot.label}
+                          className={`pot-card clickable ${pot.is_monitored ? "monitored" : ""}`}
+                          onClick={() => {
+                            setSelectedPot(pot);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          <div className="pot-card-header">
+                            <strong>{pot.label}</strong>
+                            <span className="material-symbols-outlined pot-edit-icon">edit</span>
+                          </div>
+                          {pot.user_defined_label && (
+                            <span className="pot-custom-label">{pot.user_defined_label}</span>
+                          )}
+                          <small>{t('newExperiment.replicate', { number: pot.replicate_number })}</small>
+                          {pot.treatment_levels.map((item) => (
+                            <span key={item.factor}>{item.factor}: {item.level}</span>
+                          ))}
+                          <small>{pot.is_monitored ? t('newExperiment.monitored') : t('experimentDetails.manual')}</small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="exp-overview-card">
                 <div className="exp-overview-field exp-overview-field--last">
                   <span className="exp-info-label">
@@ -724,6 +859,18 @@ function Experiment_edit() {
           )}
         </div>
       </div>
+      <PotModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        pot={selectedPot}
+        factors={factors}
+        onSave={(label, newLabel) => {
+          setCustomLabels(prev => ({
+            ...prev,
+            [label]: newLabel
+          }));
+        }}
+      />
     </div>
   );
 }

@@ -621,6 +621,7 @@ class FactorDefinitionSerializer(serializers.Serializer):
 
 class PotAssignmentDefinitionSerializer(serializers.Serializer):
     label = serializers.CharField(max_length=30)
+    user_defined_label = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
     is_monitored = serializers.BooleanField(default=False)
     soil_moisture = serializers.CharField(max_length=100, required=False, allow_blank=True)
     soil_temperature = serializers.CharField(max_length=100, required=False, allow_blank=True)
