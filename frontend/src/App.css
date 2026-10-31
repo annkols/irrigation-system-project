@@ -459,6 +459,31 @@ textarea:focus {
     background: var(--color-secondary-light); 
     border-color: var(--color-secondary); 
 }
+
+.pot-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.pot-card.clickable:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.pot-card .pot-edit-icon {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.pot-card.clickable:hover .pot-edit-icon {
+  opacity: 1;
+}
+
 .hardware-layout-preview { 
     margin: 18px 0 26px; 
     padding: 16px; 
@@ -588,6 +613,113 @@ textarea:focus {
 .frequency-grid input:focus { 
     outline: none; 
     border-color: var(--color-primary); 
+}
+
+/* PotModal style */
+.pot-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pot-modal-box {
+  width: 400px;
+  background: var(--color-bg-card);
+  color: var(--color-text-main);
+  border-radius: 20px;
+  padding: 35px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-family: var(--font-main);
+}
+
+.pot-modal-box h2 {
+  margin: 0 0 5px;
+  text-align: center;
+}
+
+.pot-modal-details {
+  font-size: 14px;
+  color: var(--color-text-main);
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pot-modal-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pot-modal-box input {
+  padding: 14px;
+  border: 1px solid var(--back);
+  border-radius: 10px;
+  font-size: 15px;
+  background: var(--color-bg-input);
+  color: var(--color-text-main);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.pot-modal-box input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.pot-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pot-modal-box button[type="submit"] {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.pot-modal-box button[type="submit"]:hover {
+  background: var(--color-primary-hover);
+}
+
+.pot-modal-box .btn-secondary {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--back);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-main);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.pot-modal-box .btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.pot-custom-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* Dashboard */
@@ -1456,13 +1588,16 @@ textarea:focus {
 }
 
 /* Spójne kontrolki i menu w trybie ciemnym. */
-:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-:root[data-theme="dark"] select,
-:root[data-theme="dark"] textarea {
+:root[data-theme="dark"] .experiment-designer input[type="text"],
+:root[data-theme="dark"] .experiment-designer input[type="date"],
+:root[data-theme="dark"] .experiment-designer input[type="number"],
+:root[data-theme="dark"] .experiment-designer input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+:root[data-theme="dark"] .experiment-designer select,
+:root[data-theme="dark"] .experiment-designer textarea {
+  background: var(--color-bg-main);
   border-color: var(--color-border-input);
-  background-color: var(--color-bg-card);
   color: var(--color-text-main);
-  color-scheme: dark;
+  caret-color: var(--color-primary);
 }
 
 :root[data-theme="dark"] select option,

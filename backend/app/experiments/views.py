@@ -205,6 +205,12 @@ class ExperimentDesignView(APIView):
 
         pots_by_label = {}
         pot_position = 1
+
+        assignment_labels_map = {
+            item["label"].casefold(): item.get("user_defined_label", "")
+            for item in data.get("pot_assignments", [])
+        }
+
         for treatment_position, combination in enumerate(combinations, start=1):
             treatment_name = " | ".join(
                 f"{level.factor.name}: {level.label}" for level in combination
@@ -224,12 +230,14 @@ class ExperimentDesignView(APIView):
             ])
             for replicate_number in range(1, repetitions + 1):
                 label = f"P{pot_position}"
+                user_defined_label = assignment_labels_map.get(label.casefold(), "")
                 pot = Pot.objects.create(
                     experiment=experiment,
                     treatment=treatment,
                     label=label,
                     replicate_number=replicate_number,
                     position=pot_position,
+                    user_defined_label=user_defined_label,
                 )
                 pots_by_label[label.casefold()] = pot
                 pot_position += 1
