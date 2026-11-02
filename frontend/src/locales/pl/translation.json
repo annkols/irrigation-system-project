@@ -463,6 +463,7 @@
     "newBbchRecord": "Nowy zapis fazy rozwojowej BBCH",
     "bbchDate": "Data",
     "bbchPhase": "Faza BBCH",
+    "bbchPhasePlaceholder": "np. 12 — rozwinięte dwa liście",
     "bbchRecords": "Zapisane fazy rozwojowe BBCH",
     "bbchRemarks": "Uwagi",
     "bbchRemarksPlaceholder": "Dodaj uwagi dotyczące fazy rozwojowej...",

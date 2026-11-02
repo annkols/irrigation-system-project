@@ -457,6 +457,7 @@
     "newBbchRecord": "New BBCH growth stage record",
     "bbchDate": "Date",
     "bbchPhase": "BBCH stage",
+    "bbchPhasePlaceholder": "e.g. 12 — two leaves unfolded",
     "bbchRecords": "Recorded BBCH growth stages",
     "bbchRemarks": "Notes",
     "bbchRemarksPlaceholder": "Add notes about the growth stage...",
