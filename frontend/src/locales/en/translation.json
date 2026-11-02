@@ -469,6 +469,7 @@
       "waterAll": "Failed to queue watering for all active pots.",
       "updateNote": "Failed to update note ({{status}}).",
       "addImage": "Failed to add image ({{status}}).",
+      "imagesTooLarge": "The images are too large.",
       "deleteImage": "Failed to delete image ({{status}}).",
       "deleteNote": "Failed to delete note ({{status}}).",
       "saveNote": "Failed to save note ({{status}}).",

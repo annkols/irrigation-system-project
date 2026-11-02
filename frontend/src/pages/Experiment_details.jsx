@@ -13,6 +13,76 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 const MEASUREMENT_REFRESH_MS = 10000;
 const CAMERA_FRAME_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
+const NOTE_IMAGE_MAX_BYTES = 700 * 1024;
+const NOTE_IMAGE_MAX_DIMENSION = 1600;
+
+class NoteImageUploadError extends Error {}
+
+const canvasToJpegBlob = (canvas, quality) => new Promise((resolve, reject) => {
+  canvas.toBlob(
+    blob => blob ? resolve(blob) : reject(new NoteImageUploadError()),
+    'image/jpeg',
+    quality,
+  );
+});
+
+const loadImage = file => new Promise((resolve, reject) => {
+  const image = new Image();
+  const source = URL.createObjectURL(file);
+  image.onload = () => resolve({ image, source });
+  image.onerror = () => {
+    URL.revokeObjectURL(source);
+    reject(new NoteImageUploadError());
+  };
+  image.src = source;
+});
+
+const compressNoteImage = async file => {
+  if (file.size <= NOTE_IMAGE_MAX_BYTES) return file;
+
+  const loaded = await loadImage(file);
+  try {
+    const initialScale = Math.min(
+      1,
+      NOTE_IMAGE_MAX_DIMENSION / Math.max(loaded.image.naturalWidth, loaded.image.naturalHeight),
+    );
+    let width = Math.max(1, Math.round(loaded.image.naturalWidth * initialScale));
+    let height = Math.max(1, Math.round(loaded.image.naturalHeight * initialScale));
+    let quality = 0.82;
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new NoteImageUploadError();
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(loaded.image, 0, 0, width, height);
+
+      const blob = await canvasToJpegBlob(canvas, quality);
+      if (blob.size <= NOTE_IMAGE_MAX_BYTES) {
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'note-image';
+        return new File([blob], `${baseName}.jpg`, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+      }
+
+      if (quality > 0.48) {
+        quality -= 0.1;
+      } else {
+        width = Math.max(1, Math.round(width * 0.8));
+        height = Math.max(1, Math.round(height * 0.8));
+        quality = 0.72;
+      }
+    }
+  } finally {
+    URL.revokeObjectURL(loaded.source);
+  }
+
+  throw new NoteImageUploadError();
+};
 
 const irrigationCommands = [
   { command: "ON", labelKey: "experimentDetails.irrigationOn" },
@@ -144,6 +214,37 @@ function Experiment_details() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const uploadNoteImages = async (noteId, files) => {
+    let updatedNote = null;
+
+    for (const file of files) {
+      const compressedFile = await compressNoteImage(file);
+      const formData = new FormData();
+      formData.append('images', compressedFile);
+
+      let response;
+      try {
+        response = await fetch(`${API_BASE_URL}/notes/${noteId}/`, {
+          method: 'PATCH',
+          headers: getAuthTokenHeader(),
+          body: formData,
+        });
+      } catch {
+        throw new NoteImageUploadError();
+      }
+
+      if (!response.ok) {
+        if (response.status === 413) throw new NoteImageUploadError();
+        const error = new Error(String(response.status));
+        error.status = response.status;
+        throw error;
+      }
+      updatedNote = await response.json();
+    }
+
+    return updatedNote;
+  };
+
   const handleSaveCameraFrame = async () => {
     if (selectedCameraPot == null || !cameraFrameAvailable || isSavingFrame) return;
 
@@ -215,22 +316,17 @@ function Experiment_details() {
     if (!openNote || files.length === 0) return;
     setNoteBusy(true);
     try {
-      const formData = new FormData();
-      files.forEach(file => formData.append('images', file));
-      const res = await fetch(`${API_BASE_URL}/notes/${openNote.id}/`, {
-        method: 'PATCH',
-        headers: getAuthTokenHeader(),
-        body: formData,
-      });
-      if (res.ok) {
-        const updated = await res.json();
+      const updated = await uploadNoteImages(openNote.id, files);
+      if (updated) {
         setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
         setOpenNote(updated);
-      } else {
-        toast.error(t('experimentDetails.errors.addImage', { status: res.status }));
       }
-    } catch {
-      toast.error(t('experimentForm.errors.connection'));
+    } catch (error) {
+      if (error instanceof NoteImageUploadError) {
+        toast.error(t('experimentDetails.errors.imagesTooLarge'));
+      } else {
+        toast.error(t('experimentDetails.errors.addImage', { status: error.status ?? '?' }));
+      }
     }
     setNoteBusy(false);
   };
@@ -1377,19 +1473,26 @@ function Experiment_details() {
                         disabled={noteBusy || !draftNote.title.trim()}
                         onClick={async () => {
                           setNoteBusy(true);
-                          const formData = new FormData();
-                          formData.append('title', draftNote.title);
-                          formData.append('content', draftNote.content);
-                          draftNote.images.forEach(img => formData.append('images', img.file));
+                          let savedNote = null;
                           try {
+                            const preparedImages = await Promise.all(
+                              draftNote.images.map(img => compressNoteImage(img.file)),
+                            );
                             const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
                               method: 'POST',
-                              headers: getAuthTokenHeader(),
-                              body: formData,
+                              headers: getAuthHeaders(),
+                              body: JSON.stringify({
+                                title: draftNote.title,
+                                content: draftNote.content,
+                              }),
                             });
                             if (res.ok) {
-                              const saved = await res.json();
-                              setNotes(prev => [saved, ...prev]);
+                              savedNote = await res.json();
+                              if (preparedImages.length > 0) {
+                                const updatedNote = await uploadNoteImages(savedNote.id, preparedImages);
+                                if (updatedNote) savedNote = updatedNote;
+                              }
+                              setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
                               setDraftNote({ title: '', content: '', images: [] });
                             } else {
@@ -1397,8 +1500,17 @@ function Experiment_details() {
                               console.error('Note save error:', res.status, errBody);
                               toast.error(t('experimentDetails.errors.saveNote', { status: res.status }));
                             }
-                          } catch {
-                            toast.error(t('experimentForm.errors.connection'));
+                          } catch (error) {
+                            if (savedNote) {
+                              setNotes(prev => [savedNote, ...prev]);
+                              setNoteFormOpen(false);
+                              setDraftNote({ title: '', content: '', images: [] });
+                            }
+                            if (error instanceof NoteImageUploadError) {
+                              toast.error(t('experimentDetails.errors.imagesTooLarge'));
+                            } else {
+                              toast.error(t('experimentForm.errors.connection'));
+                            }
                           }
                           setNoteBusy(false);
                         }}

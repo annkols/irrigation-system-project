@@ -475,6 +475,7 @@
       "waterAll": "Nie udało się zlecić podlewania wszystkich aktywnych doniczek.",
       "updateNote": "Nie udało się zaktualizować notatki ({{status}}).",
       "addImage": "Nie udało się dodać zdjęcia ({{status}}).",
+      "imagesTooLarge": "Zdjęcia są zbyt duże.",
       "deleteImage": "Nie udało się usunąć zdjęcia ({{status}}).",
       "deleteNote": "Nie udało się usunąć notatki ({{status}}).",
       "saveNote": "Nie udało się zapisać notatki ({{status}}).",
