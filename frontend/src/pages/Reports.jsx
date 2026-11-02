@@ -61,6 +61,19 @@ const responseToDataUrl = (response) => new Promise((resolve, reject) => {
   }).catch(reject);
 });
 
+const safeFileName = (name) => name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
 export default function Reports() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -120,6 +133,23 @@ export default function Reports() {
   const dateTo = toDay ? `${toDay}T${toTime}` : "";
   const invalidRange = useRange && dateFrom && dateTo && dateFrom > dateTo;
 
+  const downloadPhotosZip = async (experiment, rangeStart, rangeEnd, headers) => {
+    const params = new URLSearchParams();
+    if (rangeStart) params.set("date_from", rangeStart);
+    if (rangeEnd) params.set("date_to", rangeEnd);
+    const res = await fetch(`${API_BASE_URL}/experiments/${experiment.id}/photos/archive/?${params}`, { headers });
+    if (res.status === 404) {
+      toast.info(t('reports.photosZip.empty'));
+      return;
+    }
+    if (!res.ok) throw new Error(t('reports.photosZip.error'));
+    downloadBlob(
+      await res.blob(),
+      `photos_${safeFileName(experiment.name)}_${new Date().toISOString().slice(0, 10)}.zip`
+    );
+    toast.success(t('reports.photosZip.downloaded'));
+  };
+
   const generateReport = async () => {
     if (!selectedExperiment) return;
     setGenerating(true);
@@ -136,6 +166,7 @@ export default function Reports() {
 
       const rangeStart = useRange ? toIsoBoundary(dateFrom, false) : null;
       const rangeEnd = useRange ? toIsoBoundary(dateTo, true) : null;
+
       const measurementParams = new URLSearchParams({ experiment_id: experiment.id });
       if (rangeStart) measurementParams.set("date_from", rangeStart);
       if (rangeEnd) measurementParams.set("date_to", rangeEnd);
@@ -232,6 +263,7 @@ export default function Reports() {
       });
 
       toast.success(t('reports.generated'));
+      await downloadPhotosZip(experiment, rangeStart, rangeEnd, headers);
     } catch (err) {
       console.error(err);
       toast.error(err.message || t('reports.errors.generate'));
@@ -345,6 +377,10 @@ export default function Reports() {
                 {generating ? t('reports.generating') : t('reports.generatePdf')}
               </button>
               {allSectionsOff && <span className="error-text">{t('reports.selectSection')}</span>}
+            </div>
+            <div className="reports-photos-info">
+              <span className="material-symbols-outlined">folder_zip</span>
+              <span>{t('reports.photosZip.info')}</span>
             </div>
           </div>
         )}
@@ -532,8 +568,7 @@ async function buildPdf({
     }
   }
 
-  const safeName = experiment.name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
-  savePdf(ctx, `report_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  savePdf(ctx, `report_${safeFileName(experiment.name)}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 function formatDate(value, locale) {
