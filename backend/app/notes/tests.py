@@ -1,6 +1,7 @@
 import io
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -79,6 +80,43 @@ class NoteEditImageTests(APITestCase):
         res = self.client.delete(f'/api/note-images/{image.id}/')
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(NoteImage.objects.filter(id=image.id).exists())
+
+    @override_settings(DEBUG=False)
+    def test_owner_receives_internal_redirect_for_note_image(self):
+        image = NoteImage.objects.create(note=self.note, image=make_image('private.png'))
+        self.client.force_authenticate(self.owner)
+
+        res = self.client.get(f'/api/note-images/{image.id}/content/')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            res['X-Accel-Redirect'],
+            f'/media/{image.image.name}',
+        )
+        self.assertEqual(res['Content-Type'], 'image/png')
+        self.assertIn('inline;', res['Content-Disposition'])
+
+    @override_settings(DEBUG=False)
+    def test_stranger_cannot_read_note_image(self):
+        image = NoteImage.objects.create(note=self.note, image=make_image('private.png'))
+        self.client.force_authenticate(self.stranger)
+
+        res = self.client.get(f'/api/note-images/{image.id}/content/')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_note_image_url_uses_protected_endpoint(self):
+        image = NoteImage.objects.create(note=self.note, image=make_image('private.png'))
+        self.client.force_authenticate(self.owner)
+
+        res = self.client.get(f'/api/notes/{self.note.id}/')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            res.data['images'][0]['image_url'].endswith(
+                f'/api/note-images/{image.id}/content/'
+            )
+        )
 
     def test_collaborator_with_edit_permission_can_edit_own_note(self):
         ExperimentCollaborator.objects.create(

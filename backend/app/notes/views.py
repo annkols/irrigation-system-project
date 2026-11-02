@@ -1,6 +1,12 @@
+import mimetypes
+from pathlib import PurePosixPath
+
+from django.conf import settings
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
+from rest_framework.views import APIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
@@ -70,6 +76,34 @@ class NoteImageDestroyView(generics.DestroyAPIView):
     queryset = NoteImage.objects.select_related('note__experiment')
     serializer_class = NoteImageSerializer
     permission_classes = [IsAuthenticated, CanDeleteNotes]
+
+
+class NoteImageContentView(APIView):
+    permission_classes = [IsAuthenticated, CanViewExperiment]
+
+    def get(self, request, pk):
+        image = get_object_or_404(
+            NoteImage.objects.select_related('note__experiment'),
+            pk=pk,
+        )
+        self.check_object_permissions(request, image)
+
+        content_type, _ = mimetypes.guess_type(image.image.name)
+        if settings.DEBUG:
+            return FileResponse(
+                image.image.open('rb'),
+                content_type=content_type or 'application/octet-stream',
+                as_attachment=False,
+                filename=PurePosixPath(image.image.name).name,
+            )
+
+        response = HttpResponse(content_type=content_type or 'application/octet-stream')
+        response['Content-Disposition'] = (
+            f'inline; filename="{PurePosixPath(image.image.name).name}"'
+        )
+        response['Cache-Control'] = 'private, max-age=300'
+        response['X-Accel-Redirect'] = f'/media/{image.image.name}'
+        return response
 
 
 def _attach_images(note, files):

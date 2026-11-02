@@ -53,16 +53,24 @@ docker compose exec web python manage.py migrate
 
 ## Udostępnianie obrazów
 
-W środowisku developerskim pliki `/media/` udostępnia Django. Na finalnym serwerze, gdzie `DEBUG=False`, ścieżkę `/media/` powinien obsługiwać Nginx:
+W środowisku developerskim chronione endpointy udostępniają pliki bezpośrednio przez Django. Na serwerze produkcyjnym, gdzie `DEBUG=False`, backend po sprawdzeniu uprawnień zwraca nagłówek `X-Accel-Redirect`, a sam plik wysyła Nginx.
+
+Katalogu z mediami nie należy wystawiać publicznie pod `/media/`. Nginx powinien mieć osobną lokalizację dostępną wyłącznie dla przekierowań wewnętrznych:
 
 ```nginx
 location /media/ {
+    internal;
     alias /srv/plantstalker/media/;
-    try_files $uri =404;
 }
 ```
 
-Jeżeli klatki mają być dostępne tylko dla zalogowanych użytkowników, nie należy udostępniać całego katalogu publicznie. Wtedy dostęp powinien być realizowany przez chroniony endpoint backendu albo mechanizm `X-Accel-Redirect` Nginx.
+Przykładowo endpoint `GET /api/note-images/<id>/content/` sprawdza token JWT oraz dostęp użytkownika do eksperymentu, po czym zwraca:
+
+```http
+X-Accel-Redirect: /media/notes/2026/11/02/example.jpg
+```
+
+Bezpośrednie wejście użytkownika na `/media/...` powinno zawsze zwracać `404`. Po zmianie konfiguracji należy wykonać `nginx -t`, a następnie przeładować Nginx.
 
 ## Kopie zapasowe
 

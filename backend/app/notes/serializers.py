@@ -14,12 +14,9 @@ class NoteImageSerializer(serializers.ModelSerializer):
         }
 
     def get_image_url(self, obj):
-        if not obj.image:
-            return None
+        path = f'/api/note-images/{obj.pk}/content/'
         request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
+        return request.build_absolute_uri(path) if request else path
 
 
 class NoteSerializer(serializers.ModelSerializer):

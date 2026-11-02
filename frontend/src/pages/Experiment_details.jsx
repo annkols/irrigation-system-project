@@ -84,6 +84,49 @@ const compressNoteImage = async file => {
   throw new NoteImageUploadError();
 };
 
+function AuthenticatedImage({ src, onImageClick, ...imageProps }) {
+  const [objectUrl, setObjectUrl] = useState(null);
+
+  useEffect(() => {
+    if (!src) return undefined;
+
+    const controller = new AbortController();
+    let currentObjectUrl = null;
+
+    const loadImage = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(src, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+
+        const blob = await response.blob();
+        currentObjectUrl = URL.createObjectURL(blob);
+        setObjectUrl(currentObjectUrl);
+      } catch (error) {
+        if (error.name !== 'AbortError') setObjectUrl(null);
+      }
+    };
+
+    loadImage();
+
+    return () => {
+      controller.abort();
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    };
+  }, [src]);
+
+  return (
+    <img
+      {...imageProps}
+      src={objectUrl || undefined}
+      onClick={objectUrl && onImageClick ? () => onImageClick(objectUrl) : undefined}
+    />
+  );
+}
+
 const irrigationCommands = [
   { command: "ON", labelKey: "experimentDetails.irrigationOn" },
   { command: "OFF", labelKey: "experimentDetails.irrigationOff" },
@@ -1288,10 +1331,10 @@ function Experiment_details() {
                       <div className="note-image-gallery">
                         {openNote.images.map(img => (
                           <div key={img.id} className="note-gallery-item">
-                            <img
+                            <AuthenticatedImage
                               src={img.image_url}
                               alt={t('experimentDetails.noteAttachment')}
-                              onClick={() => setLightboxUrl(img.image_url)}
+                              onImageClick={setLightboxUrl}
                               title={t('experimentDetails.enlarge')}
                             />
                             <button
@@ -1396,7 +1439,11 @@ function Experiment_details() {
                           </div>
                           {note.images?.length > 0 && (
                             <div className="note-thumb-wrap">
-                              <img src={note.images[0].image_url} alt={t('experimentDetails.noteAttachment')} className="note-image" />
+                              <AuthenticatedImage
+                                src={note.images[0].image_url}
+                                alt={t('experimentDetails.noteAttachment')}
+                                className="note-image"
+                              />
                               {note.images.length > 1 && (
                                 <span className="note-thumb-count">+{note.images.length - 1}</span>
                               )}
