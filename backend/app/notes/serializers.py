@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Note, NoteImage
+from .models import BBCHObservation, Note, NoteImage
 
 
 class NoteImageSerializer(serializers.ModelSerializer):
@@ -26,3 +26,24 @@ class NoteSerializer(serializers.ModelSerializer):
         model = Note
         fields = ['id', 'experiment', 'title', 'content', 'images', 'created_at', 'updated_at', 'author']
         read_only_fields = ['id', 'experiment', 'images', 'created_at', 'updated_at', 'author']
+
+
+class BBCHObservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BBCHObservation
+        fields = [
+            'id',
+            'experiment',
+            'observation_date',
+            'phase',
+            'remarks',
+            'created_at',
+            'author',
+        ]
+        read_only_fields = ['id', 'experiment', 'created_at', 'author']
+
+    def validate_phase(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('BBCH phase is required.')
+        return value

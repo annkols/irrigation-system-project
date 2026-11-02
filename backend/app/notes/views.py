@@ -12,8 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from experiments.models import Experiment
 from experiments.permissions import CanEditExperiment, CanViewExperiment, CanAddNotes, CanEditNotes, CanDeleteNotes
-from .models import Note, NoteImage
-from .serializers import NoteImageSerializer, NoteSerializer
+from .models import BBCHObservation, Note, NoteImage
+from .serializers import BBCHObservationSerializer, NoteImageSerializer, NoteSerializer
 
 MAX_IMAGES_PER_NOTE = 10
 
@@ -104,6 +104,30 @@ class NoteImageContentView(APIView):
         response['Cache-Control'] = 'private, max-age=300'
         response['X-Accel-Redirect'] = f'/media/{image.image.name}'
         return response
+
+
+class ExperimentBBCHObservationListCreateView(generics.ListCreateAPIView):
+    serializer_class = BBCHObservationSerializer
+
+    def get_permissions(self):
+        permission = CanViewExperiment if self.request.method in ['GET', 'HEAD'] else CanAddNotes
+        return [IsAuthenticated(), permission()]
+
+    def get_experiment(self):
+        if not hasattr(self, '_experiment'):
+            self._experiment = get_object_or_404(Experiment, pk=self.kwargs['pk'])
+            self.check_object_permissions(self.request, self._experiment)
+        return self._experiment
+
+    def get_queryset(self):
+        return BBCHObservation.objects.filter(experiment_id=self.kwargs['pk'])
+
+    def list(self, request, *args, **kwargs):
+        self.get_experiment()
+        return super().list(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(experiment=self.get_experiment(), author=self.request.user)
 
 
 def _attach_images(note, files):

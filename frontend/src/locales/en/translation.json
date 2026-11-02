@@ -453,6 +453,15 @@
     "deleteNote": "Delete note",
     "fullSize": "Full size",
     "newNote": "New Note",
+    "recordBbch": "Record BBCH growth stage",
+    "newBbchRecord": "New BBCH growth stage record",
+    "bbchDate": "Date",
+    "bbchPhase": "BBCH stage",
+    "bbchRecords": "Recorded BBCH growth stages",
+    "bbchRemarks": "Notes",
+    "bbchRemarksPlaceholder": "Add notes about the growth stage...",
+    "saveBbch": "Save BBCH stage",
+    "noBbchRecords": "No BBCH growth stages have been recorded yet.",
     "noNotes": "No notes yet. Click \"+ New Note\" to add your first observation.",
     "newObservation": "New Observation",
     "preview": "Preview",
@@ -473,6 +482,7 @@
       "deleteImage": "Failed to delete image ({{status}}).",
       "deleteNote": "Failed to delete note ({{status}}).",
       "saveNote": "Failed to save note ({{status}}).",
+      "saveBbch": "Failed to save the BBCH stage ({{status}}).",
       "saveFrame": "Failed to save the current frame."
     }
   },

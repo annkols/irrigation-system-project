@@ -459,6 +459,15 @@
     "deleteNote": "Usuń notatkę",
     "fullSize": "Pełny rozmiar",
     "newNote": "Nowa notatka",
+    "recordBbch": "Odnotuj fazę rozwojową BBCH",
+    "newBbchRecord": "Nowy zapis fazy rozwojowej BBCH",
+    "bbchDate": "Data",
+    "bbchPhase": "Faza BBCH",
+    "bbchRecords": "Zapisane fazy rozwojowe BBCH",
+    "bbchRemarks": "Uwagi",
+    "bbchRemarksPlaceholder": "Dodaj uwagi dotyczące fazy rozwojowej...",
+    "saveBbch": "Zapisz fazę BBCH",
+    "noBbchRecords": "Nie odnotowano jeszcze żadnej fazy rozwojowej BBCH.",
     "noNotes": "Nie ma jeszcze notatek. Kliknij „+ Nowa notatka”, aby dodać pierwszą obserwację.",
     "newObservation": "Nowa obserwacja",
     "preview": "Podgląd",
@@ -479,6 +488,7 @@
       "deleteImage": "Nie udało się usunąć zdjęcia ({{status}}).",
       "deleteNote": "Nie udało się usunąć notatki ({{status}}).",
       "saveNote": "Nie udało się zapisać notatki ({{status}}).",
+      "saveBbch": "Nie udało się zapisać fazy BBCH ({{status}}).",
       "saveFrame": "Nie udało się zapisać bieżącej klatki."
     }
   },

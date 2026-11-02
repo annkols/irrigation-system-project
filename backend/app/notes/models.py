@@ -59,3 +59,28 @@ class NoteImage(models.Model):
         super().delete(*args, **kwargs)
         if image:
             image.delete(save=False)
+
+
+class BBCHObservation(models.Model):
+    experiment = models.ForeignKey(
+        Experiment,
+        on_delete=models.CASCADE,
+        related_name='bbch_observations',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bbch_observations',
+    )
+    observation_date = models.DateField()
+    phase = models.CharField(max_length=20)
+    remarks = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-observation_date', '-created_at']
+
+    def __str__(self):
+        return f'{self.experiment.name} — BBCH {self.phase} ({self.observation_date})'

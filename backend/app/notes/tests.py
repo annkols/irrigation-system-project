@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from experiments.models import Experiment, ExperimentCollaborator
-from notes.models import Note, NoteImage
+from notes.models import BBCHObservation, Note, NoteImage
 
 User = get_user_model()
 
@@ -117,6 +117,45 @@ class NoteEditImageTests(APITestCase):
                 f'/api/note-images/{image.id}/content/'
             )
         )
+
+    def test_owner_can_create_and_list_bbch_observation(self):
+        self.client.force_authenticate(self.owner)
+
+        create_response = self.client.post(
+            f'/api/experiments/{self.experiment.id}/bbch-observations/',
+            {
+                'observation_date': '2026-11-02',
+                'phase': '12',
+                'remarks': 'Two leaves unfolded.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        observation = BBCHObservation.objects.get(experiment=self.experiment)
+        self.assertEqual(observation.author, self.owner)
+        self.assertEqual(observation.phase, '12')
+
+        list_response = self.client.get(
+            f'/api/experiments/{self.experiment.id}/bbch-observations/'
+        )
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+
+    def test_stranger_cannot_create_bbch_observation(self):
+        self.client.force_authenticate(self.stranger)
+
+        response = self.client.post(
+            f'/api/experiments/{self.experiment.id}/bbch-observations/',
+            {
+                'observation_date': '2026-11-02',
+                'phase': '12',
+                'remarks': '',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_collaborator_with_edit_permission_can_edit_own_note(self):
         ExperimentCollaborator.objects.create(

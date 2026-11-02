@@ -3471,6 +3471,8 @@ textarea:focus {
 .notes-header {
   display: flex;
   justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 28px;
 }
 
@@ -3587,6 +3589,84 @@ textarea:focus {
   font-size: 48px;
   display: block;
   margin-bottom: 12px;
+}
+
+.bbch-records-section {
+  margin-top: 30px;
+}
+
+.bbch-records-section > h3 {
+  margin: 0 0 14px;
+  color: var(--color-text-main);
+  font-size: 15px;
+}
+
+.bbch-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bbch-record-card {
+  padding: 16px 18px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+}
+
+.bbch-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bbch-record-meta time {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.bbch-phase-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bbch-record-card p,
+.bbch-empty {
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.bbch-empty {
+  padding: 18px;
+  border: 1px dashed var(--color-border-input);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.bbch-modal {
+  width: 520px;
+}
+
+.bbch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--color-text-main);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bbch-remarks {
+  min-height: 120px;
 }
 
 /* Note create modal */
@@ -6899,6 +6979,7 @@ textarea:focus {
   }
 
   .notes-header {
+    flex-direction: column;
     justify-content: stretch;
     margin-bottom: 18px;
   }

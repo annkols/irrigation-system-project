@@ -16,6 +16,12 @@ const INITIAL_MEASUREMENT_LIMIT = 5000;
 const NOTE_IMAGE_MAX_BYTES = 700 * 1024;
 const NOTE_IMAGE_MAX_DIMENSION = 1600;
 
+const getLocalDateInputValue = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
+
 class NoteImageUploadError extends Error {}
 
 const canvasToJpegBlob = (canvas, quality) => new Promise((resolve, reject) => {
@@ -214,6 +220,14 @@ function Experiment_details() {
   const [noteEditMode, setNoteEditMode] = useState(false);
   const [noteEditDraft, setNoteEditDraft] = useState({ title: '', content: '' });
   const [noteBusy, setNoteBusy] = useState(false);
+  const [bbchRecords, setBbchRecords] = useState([]);
+  const [bbchFormOpen, setBbchFormOpen] = useState(false);
+  const [bbchBusy, setBbchBusy] = useState(false);
+  const [bbchDraft, setBbchDraft] = useState({
+    observation_date: getLocalDateInputValue(),
+    phase: '',
+    remarks: '',
+  });
 
   const columnLabels = {
     moisture_percent: t('experimentForm.sensors.soilMoisture'),
@@ -413,6 +427,41 @@ function Experiment_details() {
     setNoteBusy(false);
   };
 
+  const closeBbchForm = () => {
+    setBbchFormOpen(false);
+    setBbchDraft({
+      observation_date: getLocalDateInputValue(),
+      phase: '',
+      remarks: '',
+    });
+  };
+
+  const handleSaveBbchRecord = async () => {
+    if (!bbchDraft.observation_date || !bbchDraft.phase.trim()) return;
+    setBbchBusy(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiments/${id}/bbch-observations/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          observation_date: bbchDraft.observation_date,
+          phase: bbchDraft.phase.trim(),
+          remarks: bbchDraft.remarks.trim(),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
+      const savedRecord = await response.json();
+      setBbchRecords(previous => [savedRecord, ...previous]);
+      closeBbchForm();
+    } catch (error) {
+      toast.error(t('experimentDetails.errors.saveBbch', { status: error.message || '?' }));
+    } finally {
+      setBbchBusy(false);
+    }
+  };
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/experiments/${id}/`, { headers: getAuthHeaders() })
       .then(res => res.json())
@@ -422,6 +471,11 @@ function Experiment_details() {
     fetch(`${API_BASE_URL}/experiments/${id}/notes/`, { headers: getAuthHeaders() })
       .then(res => res.json())
       .then(data => setNotes(Array.isArray(data) ? data : []))
+      .catch(err => console.error(err));
+
+    fetch(`${API_BASE_URL}/experiments/${id}/bbch-observations/`, { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(data => setBbchRecords(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
 
     let cancelled = false;
@@ -1412,6 +1466,10 @@ function Experiment_details() {
                       <span className="material-symbols-outlined">add</span>
                       {t('experimentDetails.newNote')}
                     </button>
+                    <button className="notes-new-btn" onClick={() => setBbchFormOpen(true)}>
+                      <span className="material-symbols-outlined">psychiatry</span>
+                      {t('experimentDetails.recordBbch')}
+                    </button>
                   </div>
 
                   <div className="notes-timeline-header">
@@ -1453,7 +1511,93 @@ function Experiment_details() {
                       ))
                     )}
                   </div>
+
+                  <section className="bbch-records-section">
+                    <h3>{t('experimentDetails.bbchRecords')}</h3>
+                    {bbchRecords.length === 0 ? (
+                      <p className="bbch-empty">{t('experimentDetails.noBbchRecords')}</p>
+                    ) : (
+                      <div className="bbch-records-list">
+                        {bbchRecords.map(record => (
+                          <article key={record.id} className="bbch-record-card">
+                            <div className="bbch-record-meta">
+                              <time dateTime={record.observation_date}>
+                                {new Date(`${record.observation_date}T00:00:00`).toLocaleDateString(
+                                  i18n.resolvedLanguage,
+                                  { year: 'numeric', month: 'long', day: 'numeric' },
+                                )}
+                              </time>
+                              <span className="bbch-phase-badge">BBCH {record.phase}</span>
+                            </div>
+                            {record.remarks && <p>{record.remarks}</p>}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 </>
+              )}
+
+              {bbchFormOpen && (
+                <div className="note-modal-overlay" onClick={closeBbchForm}>
+                  <div className="note-modal bbch-modal" onClick={event => event.stopPropagation()}>
+                    <h3 className="note-modal-title">{t('experimentDetails.newBbchRecord')}</h3>
+
+                    <label className="bbch-field">
+                      <span>{t('experimentDetails.bbchDate')}</span>
+                      <input
+                        className="note-input"
+                        type="date"
+                        value={bbchDraft.observation_date}
+                        onChange={event => setBbchDraft(previous => ({
+                          ...previous,
+                          observation_date: event.target.value,
+                        }))}
+                      />
+                    </label>
+
+                    <label className="bbch-field">
+                      <span>{t('experimentDetails.bbchPhase')}</span>
+                      <input
+                        className="note-input"
+                        type="text"
+                        maxLength={20}
+                        placeholder={t('experimentDetails.bbchPhasePlaceholder')}
+                        value={bbchDraft.phase}
+                        onChange={event => setBbchDraft(previous => ({
+                          ...previous,
+                          phase: event.target.value,
+                        }))}
+                      />
+                    </label>
+
+                    <label className="bbch-field">
+                      <span>{t('experimentDetails.bbchRemarks')}</span>
+                      <textarea
+                        className="note-textarea bbch-remarks"
+                        placeholder={t('experimentDetails.bbchRemarksPlaceholder')}
+                        value={bbchDraft.remarks}
+                        onChange={event => setBbchDraft(previous => ({
+                          ...previous,
+                          remarks: event.target.value,
+                        }))}
+                      />
+                    </label>
+
+                    <div className="note-modal-actions">
+                      <button className="note-cancel-btn" disabled={bbchBusy} onClick={closeBbchForm}>
+                        {t('experimentForm.cancel')}
+                      </button>
+                      <button
+                        className="note-save-btn"
+                        disabled={bbchBusy || !bbchDraft.observation_date || !bbchDraft.phase.trim()}
+                        onClick={handleSaveBbchRecord}
+                      >
+                        {t('experimentDetails.saveBbch')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {noteFormOpen && (
