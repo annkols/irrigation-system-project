@@ -1,6 +1,9 @@
+import io
+import zipfile
 import shutil
 import tempfile
 
+from django.core.files.base import ContentFile
 from django.test import override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -287,3 +290,48 @@ class CameraFrameApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(CameraFrame.objects.count(), 0)
+
+    def test_photo_archive_contains_camera_frames_and_note_images(self):
+        from notes.models import Note, NoteImage
+
+        self.client.force_authenticate(user=self.user)
+        self.upload_frame()
+        note = Note.objects.create(experiment=self.experiment, author=self.user, title="Leaf check")
+        note_image = NoteImage(note=note)
+        note_image.image.save("leaf.png", ContentFile(b"png-data"), save=True)
+
+        response = self.client.get(
+            reverse("experiment-photo-archive", args=[self.experiment.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+        with zipfile.ZipFile(io.BytesIO(b"".join(response.streaming_content))) as zf:
+            names = zf.namelist()
+            camera_names = [name for name in names if name.startswith("camera/pot_1/")]
+            note_names = [name for name in names if name.startswith("notes/")]
+            self.assertEqual(len(camera_names), 1)
+            self.assertEqual(zf.read(camera_names[0]), b"jpeg-data")
+            self.assertEqual(len(note_names), 1)
+            self.assertTrue(note_names[0].endswith(f"Leaf_check/{note_image.pk}.png"))
+
+    def test_photo_archive_respects_date_range(self):
+        self.client.force_authenticate(user=self.user)
+        self.upload_frame()
+
+        response = self.client.get(
+            reverse("experiment-photo-archive", args=[self.experiment.pk]),
+            {"date_to": "2000-01-01T00:00:00Z"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_photo_archive_rejects_invalid_date(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            reverse("experiment-photo-archive", args=[self.experiment.pk]),
+            {"date_from": "yesterday"},
+        )
+
+        self.assertEqual(response.status_code, 400)

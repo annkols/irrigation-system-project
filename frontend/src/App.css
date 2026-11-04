@@ -5073,6 +5073,19 @@ textarea:focus {
   gap: 8px;
 }
 
+.reports-photos-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: -8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.reports-photos-info .material-symbols-outlined {
+  font-size: 18px;
+}
+
 /*eksport button & pump & end_exp*/
 
 .export-btn {

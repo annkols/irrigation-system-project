@@ -530,6 +530,12 @@
     "generatePdf": "Wygeneruj PDF",
     "selectSection": "Wybierz co najmniej jedną sekcję.",
     "generated": "Raport został wygenerowany.",
+    "photosZip": {
+      "info": "Razem z raportem PDF pobierze się osobny plik ZIP ze wszystkimi zdjęciami z doświadczenia (klatki z kamer i zdjęcia z notatek) z wybranego zakresu danych.",
+      "downloaded": "Pobrano archiwum ze zdjęciami.",
+      "empty": "Brak zdjęć z tego doświadczenia w wybranym zakresie — plik ZIP nie został utworzony.",
+      "error": "Nie udało się pobrać zdjęć."
+    },
     "range": {
       "label": "Zakres danych",
       "all": "Wszystkie dane",

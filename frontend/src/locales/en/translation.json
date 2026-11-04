@@ -524,6 +524,12 @@
     "generatePdf": "Generate PDF",
     "selectSection": "Select at least one section.",
     "generated": "Report generated.",
+    "photosZip": {
+      "info": "Along with the PDF report, a separate ZIP file with all experiment photos (camera frames and note photos) from the selected data range will be downloaded.",
+      "downloaded": "Photo archive downloaded.",
+      "empty": "No photos from this experiment in the selected range — no ZIP file was created.",
+      "error": "Could not download photos."
+    },
     "range": {
       "label": "Data range",
       "all": "All data",
