@@ -69,6 +69,7 @@ function Experiment_edit() {
   );
   const [factors, setFactors] = useState([]);
   const [repetitions, setRepetitions] = useState(1);
+  const [serverPots, setServerPots] = useState([]);
   const [hardware, setHardware] = useState({});
   const [customLabels, setCustomLabels] = useState({});
   const [selectedPot, setSelectedPot] = useState(null);
@@ -130,7 +131,14 @@ function Experiment_edit() {
           })));
         }
 
+        if (designData.pots && designData.pots.length > 0) {
+          const maxRepetition = Math.max(...designData.pots.map(p => p.replicate_number || 1));
+          setRepetitions(maxRepetition);
+        }
+
         if (designData.pots) {
+          setServerPots(designData.pots);
+
           const initialLabels = {};
           const initialHardware = {};
 
@@ -150,12 +158,6 @@ function Experiment_edit() {
 
           setCustomLabels(initialLabels);
           setHardware(initialHardware);
-          
-          if (designData.treatments?.length > 0) {
-            if (designData.repetitions) {
-              setRepetitions(designData.repetitions);
-            }
-          }
         }
 
         setIsLoading(false);
@@ -168,33 +170,14 @@ function Experiment_edit() {
   }, [id, navigate, t]);
 
   const pots = useMemo(() => {
-    if (!factors || factors.length === 0 || factors.some(f => !f.levels || f.levels.length === 0)) {
-      return [];
-    }
+    if (!serverPots || serverPots.length === 0) return [];
 
-    const cartesian = (arr) => arr.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
-    const factorLevelsList = factors.map(f => f.levels.map(l => ({ factor: f.name, level: l.label })));
-    const combinations = cartesian(factorLevelsList);
-
-    let generatedPots = [];
-    let potCounter = 1;
-
-    combinations.forEach((combo) => {
-      for (let rep = 1; rep <= repetitions; rep++) {
-        const label = `P${potCounter}`;
-        generatedPots.push({
-          label,
-          replicate_number: rep,
-          treatment_levels: combo,
-          user_defined_label: customLabels[label] || "",
-          is_monitored: Boolean(hardware[label]?.is_monitored),
-        });
-        potCounter++;
-      }
-    });
-
-    return generatedPots;
-  }, [factors, repetitions, customLabels, hardware]);
+    return serverPots.map((pot) => ({
+      ...pot,
+      user_defined_label: customLabels[pot.label] !== undefined ? customLabels[pot.label] : (pot.user_defined_label || ""),
+      is_monitored: hardware[pot.label]?.is_monitored !== undefined ? hardware[pot.label].is_monitored : pot.is_monitored,
+    }));
+  }, [serverPots, customLabels, hardware]);
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -414,13 +397,31 @@ function Experiment_edit() {
     const designPayload = {
       factors,
       repetitions,
-      pot_assignments: pots.map((pot) => ({
-        label: pot.label,
-        user_defined_label: pot.user_defined_label || "",
-        ...hardware[pot.label],
-        is_monitored: Boolean(hardware[pot.label]?.is_monitored)
-      })),
+      pot_assignments: serverPots.map((serverPot) => {
+        const potHardware = hardware[serverPot.label] || {};
+        const customLabel = customLabels[serverPot.label] !== undefined 
+          ? customLabels[serverPot.label] 
+          : serverPot.user_defined_label;
+
+        const getOriginalHardware = (type) => {
+          const assignment = serverPot.hardware_assignments?.find(
+            (h) => h.component_type === type
+          );
+          return assignment ? assignment.component_identifier : "";
+        };
+
+        return {
+          label: serverPot.label,
+          user_defined_label: customLabel || "",
+          is_monitored: Boolean(potHardware.is_monitored ?? serverPot.is_monitored),
+          soil_moisture: getOriginalHardware('soil_moisture'),
+          soil_temperature: getOriginalHardware('soil_temperature'),
+          pump: getOriginalHardware('pump'),
+        };
+      }),
     };
+
+    console.log("Wysyłany designPayload:", JSON.stringify(designPayload, null, 2));
 
     setIsSaving(true);
     try {
@@ -777,7 +778,7 @@ function Experiment_edit() {
                     <div className="pot-grid">
                       {pots.map((pot) => (
                         <div
-                          key={pot.label}
+                          key={pot.id}
                           className={`pot-card clickable ${pot.is_monitored ? "monitored" : ""}`}
                           onClick={() => {
                             setSelectedPot(pot);
@@ -788,14 +789,28 @@ function Experiment_edit() {
                             <strong>{pot.label}</strong>
                             <span className="material-symbols-outlined pot-edit-icon">edit</span>
                           </div>
+                          
                           {pot.user_defined_label && (
-                            <span className="pot-custom-label">{pot.user_defined_label}</span>
+                            <span className="pot-custom-label">
+                              {pot.user_defined_label}
+                            </span>
                           )}
+                          
                           <small>{t('newExperiment.replicate', { number: pot.replicate_number })}</small>
-                          {pot.treatment_levels.map((item) => (
-                            <span key={item.factor}>{item.factor}: {item.level}</span>
-                          ))}
+                          
+                          {pot.treatment_levels ? (
+                            pot.treatment_levels.map((item) => (
+                              <span key={item.factor}>{item.factor}: {item.level}</span>
+                            ))
+                          ) : (
+                            <span>{pot.treatment_name}</span>
+                          )}
+                          
                           <small>{pot.is_monitored ? t('newExperiment.monitored') : t('experimentDetails.manual')}</small>
+                          
+                          {pot.hardware_assignments?.map((item) => (
+                            <small key={item.id || item.component_identifier}>{item.component_type}: {item.component_identifier}</small>
+                          ))}
                         </div>
                       ))}
                     </div>
