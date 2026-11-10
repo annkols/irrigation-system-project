@@ -4531,6 +4531,9 @@ textarea:focus {
   flex-direction: column;
   gap: 5px;
 }
+.people-search-field .search-input-wrapper input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]) {
+  padding-left: 36px;
+}
 
 .people-search-field label {
   font-size: 10px;
