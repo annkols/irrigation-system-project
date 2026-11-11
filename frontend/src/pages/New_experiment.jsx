@@ -310,27 +310,99 @@ function New_experiment() {
   const validate = () => {
     const next = {};
     if (step === 1) {
-      if (!name.trim()) next.name = t("newExperiment.validation.name");
-      if (!plantName.trim()) next.plant = t("newExperiment.validation.plant");
-      if (!startDate || !endDate) next.dates = t("newExperiment.validation.dates");
-      if (startDate && endDate && new Date(endDate) < new Date(startDate)) next.dates = t("newExperiment.validation.dateOrder");
-      if (!keywords.length) next.keywords = t("newExperiment.validation.keywords");
+      if (!name.trim()) {
+        next.name = t("newExperiment.validation.name");
+      } else if (name.trim().length > 100) {
+        next.name = t("newExperiment.validation.nameTooLong");
+      }
+
+      if (!plantName.trim()) {
+        next.plant = t("newExperiment.validation.plant");
+      } else if (plantName.trim().length > 100) {
+        next.plant = t("newExperiment.validation.plantTooLong");
+      }
+
+      if (description.length > 2000) {
+        next.description = t("newExperiment.validation.descriptionTooLong");
+      }
+
+      if (!startDate || !endDate) {
+        next.dates = t("newExperiment.validation.dates");
+      } else if (new Date(endDate) < new Date(startDate)) {
+        next.dates = t("newExperiment.validation.dateOrder");
+      }
+
+      if (!keywords.length) {
+        next.keywords = t("newExperiment.validation.keywords");
+      }
     }
     if (step === 2) {
-      if (!factors.length) next.factors = t("newExperiment.validation.factor");
-      factors.forEach((factor) => {
-        if (!factor.name.trim() || factor.levels.length < 2 || factor.levels.some((item) => !item.label.trim())) next.factors = t("newExperiment.validation.factorDetails");
-        if (factor.levels.filter((item) => item.is_reference).length !== 1) next.factors = t("newExperiment.validation.reference");
-      });
+      if (!factors.length) {
+        next.factors = t("newExperiment.validation.factor");
+      } else {
+        const factorNames = factors.map((f) => f.name.trim().toLowerCase());
+        const duplicateFactorNames = new Set(factorNames).size !== factorNames.length;
+
+        factors.forEach((factor, fIndex) => {
+          if (!factor.name.trim()) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.factorNameRequired");
+          } else if (factor.name.trim().length > 100) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.factorNameTooLong");
+          } else if (duplicateFactorNames && factorNames.filter(n => n === factor.name.trim().toLowerCase()).length > 1) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.duplicateFactorName");
+          }
+          if (factor.unit && factor.unit.trim().length > 30) {
+            next[`factor_${fIndex}_unit`] = t("newExperiment.validation.factorUnitTooLong");
+          }
+          if (!factor.levels || factor.levels.length < 2) {
+            next[`factor_${fIndex}_levels`] = t("newExperiment.validation.factorDetails");
+          } else {
+            const levelLabels = factor.levels.map((l) => l.label.trim().toLowerCase());
+            const duplicateLevels = new Set(levelLabels).size !== levelLabels.length;
+
+            factor.levels.forEach((level, lIndex) => {
+              if (!level.label.trim()) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.levelRequired");
+              } else if (level.label.trim().length > 100) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.levelTooLong");
+              } else if (duplicateLevels && levelLabels.filter(l => l === level.label.trim().toLowerCase()).length > 1) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.duplicateLevelLabel");
+              }
+
+              if (level.value && level.value.trim().length > 100) {
+                next[`factor_${fIndex}_level_${lIndex}_value`] = t("newExperiment.validation.levelValueTooLong");
+              }
+            });
+          }
+          const refCount = factor.levels.filter((item) => item.is_reference).length;
+          if (refCount !== 1) {
+            next[`factor_${fIndex}_reference`] = t("newExperiment.validation.reference");
+          }
+        });
+      }
     }
     if (step === 3) {
-      if (!selected.length) next.plan = t("newExperiment.validation.combination");
-      if (!Number.isInteger(Number(repetitions)) || Number(repetitions) < 1 || Number(repetitions) > 50) next.plan = t("newExperiment.validation.repetitions");
-      if (pots.length > 500) next.plan = t("newExperiment.validation.potLimit");
+      if (!selected.length) {
+        next.combinations = t("newExperiment.validation.combination");
+      }
+  
+      if (!Number.isInteger(Number(repetitions)) || Number(repetitions) < 1 || Number(repetitions) > 50) {
+        next.repetitions = t("newExperiment.validation.repetitions");
+      }
+  
+      if (pots.length > 500) {
+        next.pots = t("newExperiment.validation.potLimit");
+      }
     }
     if (step === 4) {
-      if (!Number.isInteger(Number(sensorSetId)) || Number(sensorSetId) < 1) next.hardware = t("newExperiment.validation.hardware");
-      if (SENSORS.some(([id]) => !Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0)) next.hardware = t("experimentForm.errors.frequency");
+      if (!Number.isInteger(Number(sensorSetId)) || Number(sensorSetId) < 1) {
+        next.sensorSetId = t("newExperiment.validation.hardware");
+      }
+  
+      if (SENSORS.some(([id]) => !Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0)) {
+        next.frequencies = t("experimentForm.errors.frequency");
+      }
+
       const deviceTypes = ["soil_moisture", "soil_temperature", "pump"];
       const duplicatedType = deviceTypes.find((type) => {
         const identifiers = Object.values(hardware)
@@ -338,12 +410,20 @@ function New_experiment() {
           .filter(Boolean);
         return new Set(identifiers).size !== identifiers.length;
       });
-      if (duplicatedType) next.hardware = t("newExperiment.validation.duplicateDevice");
+      if (duplicatedType) {
+        next.hardwareDevices = t("newExperiment.validation.duplicateDevice");
+      }
+
       const incompleteCamera = cameras.some((camera) => !camera.camera_id || !camera.pot_label);
       const cameraIds = cameras.map((camera) => String(camera.camera_id).trim()).filter(Boolean);
-      if (incompleteCamera) next.cameras = t("newExperiment.validation.cameraIncomplete");
-      else if (new Set(cameraIds).size !== cameraIds.length) next.cameras = t("newExperiment.validation.cameraDuplicate");
-      else if (cameras.some((camera) => camera.verification !== "valid")) next.cameras = t("newExperiment.validation.cameraUnverified");
+  
+      if (incompleteCamera) {
+        next.cameras = t("newExperiment.validation.cameraIncomplete");
+      } else if (new Set(cameraIds).size !== cameraIds.length) {
+        next.cameras = t("newExperiment.validation.cameraDuplicate");
+      } else if (cameras.some((camera) => camera.verification !== "valid")) {
+        next.cameras = t("newExperiment.validation.cameraUnverified");
+      }
     }
     setErrors(next);
     return !Object.keys(next).length;
@@ -434,11 +514,105 @@ function New_experiment() {
           <div className="form-card experiment-designer">
             {step === 1 && <div className="step-content">
               <div className="new-exp-form"><h2>{t("newExperiment.describe")}</h2></div>
-              <div className="form-section"><p>{t("newExperiment.nameLabel")}</p><input value={name} onChange={(event) => setName(event.target.value)} /></div>
-              <div className="form-section"><p>{t("newExperiment.plantSpecies")}</p><input value={plantName} onChange={(event) => setPlantName(event.target.value)} /></div>
-              <div className="dates-choices"><div className="date-choice"><label>{t("experimentForm.startDate")}</label><LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} /></div><div className="date-choice"><label>{t("experimentForm.plannedEndDate")}</label><LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} /></div></div>
-              <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
-              <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
+
+                {/* Nazwa eksperymentu */}
+                <div className="form-section">
+                  <p>{t("newExperiment.nameLabel")}</p>
+                  <input 
+                    value={name} 
+                    onChange={(event) => setName(event.target.value)} 
+                    className={errors.name ? "input-error" : ""}
+                  />
+                  {errors.name && <p className="error-text">{errors.name}</p>}
+                </div>
+
+                {/* Nazwa rośliny */}
+                <div className="form-section">
+                  <p>{t("newExperiment.plantSpecies")}</p>
+                  <input 
+                    value={plantName} 
+                    onChange={(event) => setPlantName(event.target.value)} 
+                    className={errors.plant ? "input-error" : ""}
+                  />
+                  {errors.plant && <p className="error-text">{errors.plant}</p>}
+                </div>
+
+                {/* Daty */}
+                <div className="dates-choices">
+                  <div className="date-choice">
+                    <label>{t("experimentForm.startDate")}</label>
+                    <LocalizedDateInput 
+                      value={startDate} 
+                      onChange={setStartDate} 
+                      ariaLabel={t("experimentForm.startDate")} 
+                      error={Boolean(errors.dates)}
+                    />
+                  </div>
+                  <div className="date-choice">
+                    <label>{t("experimentForm.plannedEndDate")}</label>
+                    <LocalizedDateInput 
+                      value={endDate} 
+                      onChange={setEndDate} 
+                      ariaLabel={t("experimentForm.plannedEndDate")} 
+                      error={Boolean(errors.dates)}
+                    />
+                  </div>
+                </div>
+                {errors.dates && <p className="error-text">{errors.dates}</p>}
+
+                {/* Opis */}
+                <div className="form-section">
+                  <p>{t("newExperiment.descriptionLabel")}</p>
+                  <textarea 
+                    rows="5" 
+                    className={`description-textarea ${errors.description ? "input-error" : ""}`}
+                    value={description} 
+                    onChange={(event) => setDescription(event.target.value)} 
+                  />
+                  {errors.description && <p className="error-text">{errors.description}</p>}
+                </div>
+
+              {/* Słowa kluczowe */}
+                <div className="form-section">
+                  <p>{t("newExperiment.keywordsLabel")}</p>
+                  <div className="keyword-input-wrapper">
+                    <input 
+                      value={keywordInput} 
+                      onChange={(event) => setKeywordInput(event.target.value)} 
+                      className={errors.keywords ? "input-error" : ""}
+                    />
+                    <button 
+                      className="btn-create" 
+                      type="button" 
+                      onClick={() => { 
+                        const value = keywordInput.trim(); 
+                        if (value && !keywords.includes(value)) { 
+                          setKeywords([...keywords, value]); 
+                          setKeywordInput(""); 
+                        } 
+                      }}
+                    >
+                      {t("newExperiment.addUpper")}
+                    </button>
+                  </div>
+                  {errors.keywords && <p className="error-text">{errors.keywords}</p>}
+      
+                  <div className="keywords-tags-container">
+                    {keywords.map((item) => (
+                      <span className="exp-keyword" key={item}>
+                        {item}
+                        <button 
+                          className="btn-remove-tag" 
+                          type="button" 
+                          onClick={() => setKeywords(keywords.filter((value) => value !== item))}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              
               <div className="form-section collaborators-section">
                 <p>{t("experimentDetails.collaborators")}</p>
                 <div className="collaborator-search">
@@ -582,15 +756,138 @@ function New_experiment() {
 
             </div>}
 
-            {step === 2 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.defineFactors")}</h2><p>{t("newExperiment.factorHelp")}</p></div>
-              {factors.map((factor, factorIndex) => <section className="factor-card" key={factorIndex}>
-                <div className="designer-row"><input placeholder={t("newExperiment.factorPlaceholder")} value={factor.name} onChange={(event) => changeFactor(factorIndex, { name: event.target.value })} /><input placeholder={t("newExperiment.unitPlaceholder")} value={factor.unit} onChange={(event) => changeFactor(factorIndex, { unit: event.target.value })} />{factors.length > 1 && <button className="designer-remove" type="button" onClick={() => { setFactors(factors.filter((_, index) => index !== factorIndex)); setExcluded([]); }}>{t("newExperiment.removeFactor")}</button>}</div>
-                {factor.levels.map((item, levelIndex) => <div className="level-row" key={levelIndex}><input placeholder={t("newExperiment.levelPlaceholder")} value={item.label} onChange={(event) => changeLevel(factorIndex, levelIndex, { label: event.target.value })} /><input placeholder={t("newExperiment.valuePlaceholder")} value={item.value} onChange={(event) => changeLevel(factorIndex, levelIndex, { value: event.target.value })} /><label><input type="radio" name={`reference-${factorIndex}`} checked={item.is_reference} onChange={() => changeLevel(factorIndex, levelIndex, { is_reference: true })} /> {t("newExperiment.reference")}</label>{factor.levels.length > 2 && <button className="designer-remove" type="button" onClick={() => { const levels = factor.levels.filter((_, index) => index !== levelIndex); if (!levels.some((value) => value.is_reference)) levels[0].is_reference = true; changeFactor(factorIndex, { levels }); }}>{t("newExperiment.remove")}</button>}</div>)}
-                <button className="btn-back" type="button" onClick={() => changeFactor(factorIndex, { levels: [...factor.levels, level()] })}>{t("newExperiment.addLevel")}</button>
-              </section>)}
-              <button className="btn-create" type="button" onClick={() => setFactors([...factors, { name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }])}>{t("newExperiment.addFactor")}</button>
-            </div>}
+            {step === 2 && (
+              <div className="step-content">
+                <div className="new-exp-form">
+                  <h2>{t("newExperiment.defineFactors")}</h2>
+                  <p>{t("newExperiment.factorHelp")}</p>
+                </div>
+
+                {errors.factors && <p className="error-text">{errors.factors}</p>}
+
+                {factors.map((factor, factorIndex) => (
+                  <section className="factor-card" key={factorIndex}>
+        
+                    {/* czynnik */}
+                    <div className="designer-row">
+                      <div className="input-group">
+                        <input 
+                          placeholder={t("newExperiment.factorPlaceholder")} 
+                          value={factor.name} 
+                          onChange={(event) => changeFactor(factorIndex, { name: event.target.value })} 
+                          className={errors[`factor_${factorIndex}_name`] ? "input-error" : ""}
+                        />
+                        {errors[`factor_${factorIndex}_name`] && (
+                          <p className="error-text">{errors[`factor_${factorIndex}_name`]}</p>
+                        )}
+                      </div>
+
+                      <div className="input-group">
+                        <input 
+                          placeholder={t("newExperiment.unitPlaceholder")} 
+                          value={factor.unit} 
+                          onChange={(event) => changeFactor(factorIndex, { unit: event.target.value })} 
+                          className={errors[`factor_${factorIndex}_unit`] ? "input-error" : ""}
+                        />
+                        {errors[`factor_${factorIndex}_unit`] && (
+                          <p className="error-text">{errors[`factor_${factorIndex}_unit`]}</p>
+                        )}
+                      </div>
+
+                      {factors.length > 1 && (
+                        <button 
+                          className="designer-remove" 
+                          type="button" 
+                          onClick={() => { 
+                            setFactors(factors.filter((_, index) => index !== factorIndex)); 
+                            setExcluded([]); 
+                          }}
+                        >
+                          {t("newExperiment.removeFactor")}
+                        </button>
+                      )}
+                    </div>
+
+                    {errors[`factor_${factorIndex}_levels`] && (
+                      <p className="error-text">{errors[`factor_${factorIndex}_levels`]}</p>
+                    )}
+
+                    {/* poziomy czynnika */}
+                    {factor.levels.map((item, levelIndex) => (
+                      <div className="level-row" key={levelIndex}>
+                        <div className="input-group">
+                          <input 
+                            placeholder={t("newExperiment.levelPlaceholder")} 
+                            value={item.label} 
+                            onChange={(event) => changeLevel(factorIndex, levelIndex, { label: event.target.value })} 
+                            className={errors[`factor_${factorIndex}_level_${levelIndex}_label`] ? "input-error" : ""}
+                          />
+                          {errors[`factor_${factorIndex}_level_${levelIndex}_label`] && (
+                            <p className="error-text">{errors[`factor_${factorIndex}_level_${levelIndex}_label`]}</p>
+                          )}
+                        </div>
+
+                        <div className="input-group">
+                          <input 
+                            placeholder={t("newExperiment.valuePlaceholder")} 
+                            value={item.value} 
+                            onChange={(event) => changeLevel(factorIndex, levelIndex, { value: event.target.value })} 
+                            className={errors[`factor_${factorIndex}_level_${levelIndex}_value`] ? "input-error" : ""}
+                          />
+                          {errors[`factor_${factorIndex}_level_${levelIndex}_value`] && (
+                            <p className="error-text">{errors[`factor_${factorIndex}_level_${levelIndex}_value`]}</p>
+                          )}
+                        </div>
+
+                        <label>
+                          <input 
+                            type="radio" 
+                            name={`reference-${factorIndex}`} 
+                            checked={item.is_reference} 
+                            onChange={() => changeLevel(factorIndex, levelIndex, { is_reference: true })} 
+                          /> 
+                          {t("newExperiment.reference")}
+                        </label>
+
+                        {factor.levels.length > 2 && (
+                          <button 
+                            className="designer-remove" 
+                            type="button" 
+                            onClick={() => { 
+                              const levels = factor.levels.filter((_, index) => index !== levelIndex); 
+                              if (!levels.some((value) => value.is_reference)) levels[0].is_reference = true; 
+                              changeFactor(factorIndex, { levels }); 
+                            }}
+                          >
+                            {t("newExperiment.remove")}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {errors[`factor_${factorIndex}_reference`] && (
+                      <p className="error-text">{errors[`factor_${factorIndex}_reference`]}</p>
+                    )}
+
+                    <button 
+                      className="btn-back" 
+                      type="button" 
+                      onClick={() => changeFactor(factorIndex, { levels: [...factor.levels, level()] })}
+                    >
+                      {t("newExperiment.addLevel")}
+                    </button>
+                  </section>
+                ))}
+
+                <button 
+                  className="btn-create" 
+                  type="button" 
+                  onClick={() => setFactors([...factors, { name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }])}
+                >
+                  {t("newExperiment.addFactor")}
+                </button>
+              </div>
+            )}
 
             {step === 3 && (
               <div className="step-content">
@@ -606,9 +903,13 @@ function New_experiment() {
                     min="1" 
                     max="50" 
                     value={repetitions} 
-                    onChange={(event) => setRepetitions(event.target.value)} 
+                    onChange={(event) => setRepetitions(event.target.value)}
+                    className={errors.repetitions ? "input-error" : ""}
                   />
+                  {errors.repetitions && <p className="error-text">{errors.repetitions}</p>}
                 </div>
+
+                {errors.combinations && <p className="error-text">{errors.combinations}</p>}
 
                 <div className="combination-grid">
                   {combinations.map((combination) => { 
@@ -629,6 +930,8 @@ function New_experiment() {
                 </div>
 
                 <h3>{t("newExperiment.potLayout", { count: pots.length })}</h3>
+
+                {errors.pots && <p className="error-text">{errors.pots}</p>}
     
                 <div className="pot-grid">
                   {pots.map((pot) => (
@@ -654,75 +957,183 @@ function New_experiment() {
 
                 {activePotModal && (
                   <PotModal 
+                    isOpen={Boolean(activePotModal)}
                     pot={activePotModal}
                     factors={factors}
                     onClose={() => setActivePotModal(null)}
-                    onSave={handleSavePotLabel} // Przekazujemy funkcję zapisu
+                    onSave={handleSavePotLabel}
                   />
                 )}
               </div>
             )}
 
-            {step === 4 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.assignHardware")}</h2><p>{t("newExperiment.hardwareHelp")}</p></div>
-              <section className="hardware-layout-preview">
-                <div className="hardware-layout-preview-header">
-                  <h3>{t("newExperiment.layoutReference")}</h3>
-                  <span>{t("newExperiment.potCount", { count: pots.length })}</span>
+            {step === 4 && (
+              <div className="step-content">
+                <div className="new-exp-form">
+                  <h2>{t("newExperiment.assignHardware")}</h2>
+                  <p>{t("newExperiment.hardwareHelp")}</p>
                 </div>
-                <p>{t("newExperiment.layoutHelp")}</p>
-                <div className="pot-grid pot-grid--reference">
-                  {pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}>
-                    <strong>{pot.label}</strong>
-                      {pot.user_defined_label && (
-                        <span className="pot-custom-label">
-                          {pot.user_defined_label}
-                        </span>
-                      )}
-                    <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
-              </section>
-              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => { setSensorSetId(event.target.value); setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); }} /></div>
-              <h3>{t("experimentForm.frequencyTitle")}</h3><div className="frequency-grid">{SENSORS.map(([id, labelKey, scopeKey]) => <label key={id}><span>{t(`experimentForm.sensors.${labelKey}`)}<small>{t(`experimentForm.sensors.${scopeKey}`)}</small></span><input type="text" inputMode="decimal" placeholder={t("experimentForm.exampleDecimal")} value={frequencies[id]} onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} /></label>)}</div>
-              <h3>{t("newExperiment.individualHardware")}</h3>
-              <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
-              <div className="pot-assignment-list">{pots.map((pot) => { const assignment = hardware[pot.label] || {}; return <div className={`pot-assignment ${assignment.is_monitored ? "monitored" : ""}`} key={pot.label}><label className="monitor-toggle"><input type="checkbox" checked={Boolean(assignment.is_monitored)} onChange={(event) => changeHardware(pot.label, { is_monitored: event.target.checked })} /><strong>{pot.label}</strong><span className="pot-assignment-treatment">{pot.combination.map((item) => item.label).join(" · ")}</span><span>{assignment.is_monitored ? t("newExperiment.monitored") : t("newExperiment.notMonitored")}</span></label>{assignment.is_monitored && <div className="designer-row hardware-fields"><label className="hardware-field"><span>{t("newExperiment.soilMoistureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_moisture || ""} onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.soilTemperatureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_temperature || ""} onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.pumpId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.pump || ""} onChange={(event) => changeHardware(pot.label, { pump: event.target.value })} /></label></div>}</div>; })}</div>
-              <h3>{t("newExperiment.cameraAssignment")}</h3>
-              <p className="hardware-help">{t("newExperiment.cameraHelp")}</p>
-              {!cameras.length && <p className="camera-empty-state">{t("newExperiment.noCameras")}</p>}
-              <div className="camera-assignment-list">
-                {cameras.map((camera, index) => (
-                  <div className="designer-row camera-row" key={index}>
-                    <label className="hardware-field">
-                      <span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder={t("newExperiment.exampleId")}
-                        value={camera.camera_id}
-                        onChange={(event) => changeCamera(index, { camera_id: event.target.value, verification: "idle", camera_name: "" })}
+
+                <section className="hardware-layout-preview">
+                  <div className="hardware-layout-preview-header">
+                    <h3>{t("newExperiment.layoutReference")}</h3>
+                    <span>{t("newExperiment.potCount", { count: pots.length })}</span>
+                  </div>
+                  <p>{t("newExperiment.layoutHelp")}</p>
+                  <div className="pot-grid pot-grid--reference">
+                    {pots.map((pot) => (
+                      <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}>
+                        <strong>{pot.label}</strong>
+                        {pot.user_defined_label && (
+                          <span className="pot-custom-label">
+                            {pot.user_defined_label}
+                          </span>
+                        )}
+                        <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>
+                        {pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="form-section compact-field">
+                  <label>{t("experimentForm.hardwareSetId")}</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={sensorSetId} 
+                    onChange={(event) => { 
+                      setSensorSetId(event.target.value); 
+                      setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); 
+                    }} 
+                    className={errors.sensorSetId ? "input-error" : ""}
+                  />
+                  {errors.sensorSetId && <p className="error-text">{errors.sensorSetId}</p>}
+                </div>
+
+                <h3>{t("experimentForm.frequencyTitle")}</h3>
+                {errors.frequencies && <p className="error-text">{errors.frequencies}</p>}
+                <div className="frequency-grid">
+                  {SENSORS.map(([id, labelKey, scopeKey]) => (
+                    <label key={id}>
+                      <span>
+                        {t(`experimentForm.sensors.${labelKey}`)}
+                        <small>{t(`experimentForm.sensors.${scopeKey}`)}</small>
+                      </span>
+                      <input 
+                        type="text" 
+                        inputMode="decimal" 
+                        placeholder={t("experimentForm.exampleDecimal")} 
+                        value={frequencies[id]} 
+                        onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} 
+                        className={errors.frequencies ? "input-error" : ""}
                       />
                     </label>
-                    <label className="hardware-field">
-                      <span>{t("newExperiment.observedPot")}</span>
-                      <select value={camera.pot_label} onChange={(event) => changeCamera(index, { pot_label: event.target.value })}>
-                        <option value="">{t("newExperiment.selectPot")}</option>
-                        {pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}
-                      </select>
-                    </label>
-                    <div className="camera-row-actions">
-                      <button className="camera-verify-btn" type="button" onClick={() => verifyCamera(index)} disabled={camera.verification === "checking" || !camera.camera_id}>
-                        {camera.verification === "checking" ? t("newExperiment.cameraChecking") : t("newExperiment.cameraVerify")}
-                      </button>
-                      <button className="designer-remove" type="button" onClick={() => removeCamera(index)}>{t("newExperiment.removeCamera")}</button>
+                  ))}
+                </div>
+
+                <h3>{t("newExperiment.individualHardware")}</h3>
+                <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
+    
+                {errors.hardwareDevices && <p className="error-text">{errors.hardwareDevices}</p>}
+
+                <div className="pot-assignment-list">
+                  {pots.map((pot) => { 
+                    const assignment = hardware[pot.label] || {}; 
+                    return (
+                      <div className={`pot-assignment ${assignment.is_monitored ? "monitored" : ""}`} key={pot.label}>
+                        <label className="monitor-toggle">
+                          <input 
+                            type="checkbox" 
+                            checked={Boolean(assignment.is_monitored)} 
+                            onChange={(event) => changeHardware(pot.label, { is_monitored: event.target.checked })} 
+                          />
+                          <strong>{pot.label}</strong>
+                          <span className="pot-assignment-treatment">{pot.combination.map((item) => item.label).join(" · ")}</span>
+                          <span>{assignment.is_monitored ? t("newExperiment.monitored") : t("newExperiment.notMonitored")}</span>
+                        </label>
+                        {assignment.is_monitored && (
+                          <div className="designer-row hardware-fields">
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.soilMoistureId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.soil_moisture || ""} 
+                                onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.soil_moisture ? "input-error" : ""}
+                              />
+                            </label>
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.soilTemperatureId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.soil_temperature || ""} 
+                                onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.soil_temperature ? "input-error" : ""}
+                              />
+                            </label>
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.pumpId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.pump || ""} 
+                                onChange={(event) => changeHardware(pot.label, { pump: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.pump ? "input-error" : ""}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ); 
+                  })}
+                </div>
+
+                <h3>{t("newExperiment.cameraAssignment")}</h3>
+                <p className="hardware-help">{t("newExperiment.cameraHelp")}</p>
+                {!cameras.length && <p className="camera-empty-state">{t("newExperiment.noCameras")}</p>}
+    
+                <div className="camera-assignment-list">
+                  {cameras.map((camera, index) => (
+                    <div className="designer-row camera-row" key={index}>
+                      <label className="hardware-field">
+                        <span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={t("newExperiment.exampleId")}
+                          value={camera.camera_id}
+                          onChange={(event) => changeCamera(index, { camera_id: event.target.value, verification: "idle", camera_name: "" })}
+                          className={errors.cameras ? "input-error" : ""}
+                        />
+                      </label>
+                      <label className="hardware-field">
+                        <span>{t("newExperiment.observedPot")}</span>
+                        <select 
+                          value={camera.pot_label} 
+                          onChange={(event) => changeCamera(index, { pot_label: event.target.value })}
+                          className={errors.cameras ? "input-error" : ""}
+                        >
+                          <option value="">{t("newExperiment.selectPot")}</option>
+                          {pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}
+                        </select>
+                      </label>
+                      <div className="camera-row-actions">
+                        <button className="camera-verify-btn" type="button" onClick={() => verifyCamera(index)} disabled={camera.verification === "checking" || !camera.camera_id}>
+                          {camera.verification === "checking" ? t("newExperiment.cameraChecking") : t("newExperiment.cameraVerify")}
+                        </button>
+                        <button className="designer-remove" type="button" onClick={() => removeCamera(index)}>{t("newExperiment.removeCamera")}</button>
+                      </div>
+                      {camera.verification === "valid" && <span className="camera-verification camera-verification--valid">{t("newExperiment.cameraVerified", { name: camera.camera_name })}</span>}
+                      {camera.verification === "invalid" && <span className="camera-verification camera-verification--invalid">{t("newExperiment.cameraNotFound")}</span>}
                     </div>
-                    {camera.verification === "valid" && <span className="camera-verification camera-verification--valid">{t("newExperiment.cameraVerified", { name: camera.camera_name })}</span>}
-                    {camera.verification === "invalid" && <span className="camera-verification camera-verification--invalid">{t("newExperiment.cameraNotFound")}</span>}
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                <button className="btn-back camera-add-btn" type="button" onClick={addCamera}>{t("newExperiment.addCamera")}</button>
+    
+                {errors.cameras && <p className="error-text designer-error">{errors.cameras}</p>}
               </div>
-              <button className="btn-back camera-add-btn" type="button" onClick={addCamera}>{t("newExperiment.addCamera")}</button>
-              {errors.cameras && <span className="error-text designer-error">{errors.cameras}</span>}
-            </div>}
+            )}
 
             {step === 5 && <div className="step-content">
               <div className="new-exp-form"><h2>{t("newExperiment.review")}</h2></div>

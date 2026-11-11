@@ -421,7 +421,6 @@ function Experiment_edit() {
       }),
     };
 
-    console.log("Wysyłany designPayload:", JSON.stringify(designPayload, null, 2));
 
     setIsSaving(true);
     try {
@@ -590,46 +589,6 @@ function Experiment_edit() {
               </div>
 
               <div className="exp-overview-card">
-                <div className="exp-overview-field">
-                  <span className="exp-info-label">{t("experimentForm.keywords")}</span>
-                  <div className="exp-edit-keyword-row">
-                    <input
-                      className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
-                      type="text"
-                      placeholder={t("editExperiment.keywordPlaceholder")}
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddKeyword();
-                        }
-                      }}
-                    />
-                    <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
-                      {t("experimentForm.add")}
-                    </button>
-                  </div>
-                  {keywords.length > 0 && (
-                    <div className="exp-details-keywords">
-                      {keywords.map((kw, index) => (
-                        <span key={index} className="exp-keyword">
-                          {kw}
-                          <button
-                            type="button"
-                            className="btn-remove-tag"
-                            onClick={() => handleRemoveKeyword(index)}
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
-                </div>
-
-                <div className="exp-overview-card">
                   <div className="exp-overview-field exp-overview-field--last">
                     <span className="exp-info-label">
                       {t("experimentDetails.collaborators")}
@@ -755,16 +714,58 @@ function Experiment_edit() {
                     </div>
                   </div>
                 </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field">
+                  <span className="exp-info-label">{t("experimentForm.keywords")}</span>
+                  <div className="exp-edit-keyword-row">
+                    <input
+                      className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
+                      type="text"
+                      placeholder={t("editExperiment.keywordPlaceholder")}
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddKeyword();
+                        }
+                      }}
+                    />
+                    <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
+                      {t("experimentForm.add")}
+                    </button>
+                  </div>
+                  {keywords.length > 0 && (
+                    <div className="exp-details-keywords">
+                      {keywords.map((kw, index) => (
+                        <span key={index} className="exp-keyword">
+                          {kw}
+                          <button
+                            type="button"
+                            className="btn-remove-tag"
+                            onClick={() => handleRemoveKeyword(index)}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
+                </div>
+
+                
                 <div className="exp-overview-field exp-overview-field--last">
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="start_date">{t("experimentForm.startDate")}</label>
-                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} />
+                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} error={errors.started_at} />
                       {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
                     </div>
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="end_date">{t("experimentForm.plannedEndDate")}</label>
-                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} />
+                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} error={errors.planned_end_at} />
                       {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
                     </div>
                   </div>

@@ -309,7 +309,7 @@ textarea:focus {
 }
 
 .error-text {
-  color: var(--color-error);
+  color: var(--color-error) !important;
   font-size: 12px;
   margin-top: 5px;
   display: block;
@@ -363,9 +363,13 @@ textarea:focus {
     flex-wrap: wrap; 
 }
 
-.designer-row > input, .designer-row > select, .level-row > input { 
+.designer-row > .input-group, .designer-row > select, .level-row > input { 
     flex: 1 1 180px; 
     min-width: 0; 
+}
+
+.input-group input {
+    width: 100%;
 }
 
 .level-row label { 
@@ -2140,6 +2144,7 @@ textarea:focus {
 .card-footer {
   display: flex;
   justify-content: space-between;
+  gap: 4px;
   align-items: center;
   margin-top: 12px;
 }
@@ -4672,7 +4677,8 @@ textarea:focus {
 }
 
 .exp-edit-input--error {
-  border-color: var(--color-error);
+  border: 2px solid var(--color-error) !important;
+
 }
 
 .exp-edit-textarea {

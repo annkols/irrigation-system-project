@@ -6,9 +6,11 @@ function PotModal({ isOpen, pot, factors, onClose, onSave }) {
   if (!isOpen || !pot) return null;
   const { t } = useTranslation();
   const [userDefinedLabel, setUserDefinedLabel] = useState(pot.user_defined_label || "");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setUserDefinedLabel(pot.user_defined_label || "");
+    setError("");
   }, [pot]);
 
   const handleSubmit = (e) => {
@@ -43,13 +45,20 @@ function PotModal({ isOpen, pot, factors, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            maxLength={50}
-            placeholder={t("potModal.labelPlaceholder")}
-            value={userDefinedLabel}
-            onChange={(e) => setUserDefinedLabel(e.target.value)}
-          />
+          <div className="pot-modal-field">
+            <input
+              type="text"
+              maxLength={50}
+              placeholder={t("potModal.labelPlaceholder")}
+              value={userDefinedLabel}
+              onChange={(e) => {
+                setUserDefinedLabel(e.target.value);
+                if (error) setError("");
+              }}
+              className={error ? "exp-edit-input--error" : ""}
+            />
+            {error && <span className="error-text">{error}</span>}
+          </div>
 
           <div className="pot-modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>

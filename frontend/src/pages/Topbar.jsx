@@ -248,6 +248,7 @@ export default function TopBar({ experimentName, personName }) {
     setLoading(true);
 
     const accessToken = localStorage.getItem("token");
+    const refreshToken = localStorage.getItem("refresh");
 
         try {
             if (accessToken) {
@@ -257,12 +258,14 @@ export default function TopBar({ experimentName, personName }) {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${accessToken}`
                     },
+                    body: JSON.stringify({ refresh: refreshToken })
                 });
             }
         } catch (err) {
             console.error("Błąd podczas wylogowywania:", err);
         } finally {
             localStorage.removeItem("token");
+            localStorage.removeItem("refresh");
             setLoading(false);
             setIsMenuOpen(false);
             navigate("/");
