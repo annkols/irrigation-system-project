@@ -395,8 +395,14 @@ function New_experiment() {
       }
     }
     if (step === 4) {
-      if (!Number.isInteger(Number(sensorSetId)) || Number(sensorSetId) < 1) next.hardware = t("newExperiment.validation.hardware");
-      if (SENSORS.some(([id]) => !Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0)) next.hardware = t("experimentForm.errors.frequency");
+      if (!Number.isInteger(Number(sensorSetId)) || Number(sensorSetId) < 1) {
+        next.sensorSetId = t("newExperiment.validation.hardware");
+      }
+  
+      if (SENSORS.some(([id]) => !Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0)) {
+        next.frequencies = t("experimentForm.errors.frequency");
+      }
+
       const deviceTypes = ["soil_moisture", "soil_temperature", "pump"];
       const duplicatedType = deviceTypes.find((type) => {
         const identifiers = Object.values(hardware)
@@ -404,12 +410,20 @@ function New_experiment() {
           .filter(Boolean);
         return new Set(identifiers).size !== identifiers.length;
       });
-      if (duplicatedType) next.hardware = t("newExperiment.validation.duplicateDevice");
+      if (duplicatedType) {
+        next.hardwareDevices = t("newExperiment.validation.duplicateDevice");
+      }
+
       const incompleteCamera = cameras.some((camera) => !camera.camera_id || !camera.pot_label);
       const cameraIds = cameras.map((camera) => String(camera.camera_id).trim()).filter(Boolean);
-      if (incompleteCamera) next.cameras = t("newExperiment.validation.cameraIncomplete");
-      else if (new Set(cameraIds).size !== cameraIds.length) next.cameras = t("newExperiment.validation.cameraDuplicate");
-      else if (cameras.some((camera) => camera.verification !== "valid")) next.cameras = t("newExperiment.validation.cameraUnverified");
+  
+      if (incompleteCamera) {
+        next.cameras = t("newExperiment.validation.cameraIncomplete");
+      } else if (new Set(cameraIds).size !== cameraIds.length) {
+        next.cameras = t("newExperiment.validation.cameraDuplicate");
+      } else if (cameras.some((camera) => camera.verification !== "valid")) {
+        next.cameras = t("newExperiment.validation.cameraUnverified");
+      }
     }
     setErrors(next);
     return !Object.keys(next).length;
@@ -943,75 +957,183 @@ function New_experiment() {
 
                 {activePotModal && (
                   <PotModal 
+                    isOpen={Boolean(activePotModal)}
                     pot={activePotModal}
                     factors={factors}
                     onClose={() => setActivePotModal(null)}
-                    onSave={handleSavePotLabel} // Przekazujemy funkcję zapisu
+                    onSave={handleSavePotLabel}
                   />
                 )}
               </div>
             )}
 
-            {step === 4 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.assignHardware")}</h2><p>{t("newExperiment.hardwareHelp")}</p></div>
-              <section className="hardware-layout-preview">
-                <div className="hardware-layout-preview-header">
-                  <h3>{t("newExperiment.layoutReference")}</h3>
-                  <span>{t("newExperiment.potCount", { count: pots.length })}</span>
+            {step === 4 && (
+              <div className="step-content">
+                <div className="new-exp-form">
+                  <h2>{t("newExperiment.assignHardware")}</h2>
+                  <p>{t("newExperiment.hardwareHelp")}</p>
                 </div>
-                <p>{t("newExperiment.layoutHelp")}</p>
-                <div className="pot-grid pot-grid--reference">
-                  {pots.map((pot) => <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}>
-                    <strong>{pot.label}</strong>
-                      {pot.user_defined_label && (
-                        <span className="pot-custom-label">
-                          {pot.user_defined_label}
-                        </span>
-                      )}
-                    <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>{pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}</div>)}</div>
-              </section>
-              <div className="form-section compact-field"><label>{t("experimentForm.hardwareSetId")}</label><input type="number" min="1" value={sensorSetId} onChange={(event) => { setSensorSetId(event.target.value); setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); }} /></div>
-              <h3>{t("experimentForm.frequencyTitle")}</h3><div className="frequency-grid">{SENSORS.map(([id, labelKey, scopeKey]) => <label key={id}><span>{t(`experimentForm.sensors.${labelKey}`)}<small>{t(`experimentForm.sensors.${scopeKey}`)}</small></span><input type="text" inputMode="decimal" placeholder={t("experimentForm.exampleDecimal")} value={frequencies[id]} onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} /></label>)}</div>
-              <h3>{t("newExperiment.individualHardware")}</h3>
-              <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
-              <div className="pot-assignment-list">{pots.map((pot) => { const assignment = hardware[pot.label] || {}; return <div className={`pot-assignment ${assignment.is_monitored ? "monitored" : ""}`} key={pot.label}><label className="monitor-toggle"><input type="checkbox" checked={Boolean(assignment.is_monitored)} onChange={(event) => changeHardware(pot.label, { is_monitored: event.target.checked })} /><strong>{pot.label}</strong><span className="pot-assignment-treatment">{pot.combination.map((item) => item.label).join(" · ")}</span><span>{assignment.is_monitored ? t("newExperiment.monitored") : t("newExperiment.notMonitored")}</span></label>{assignment.is_monitored && <div className="designer-row hardware-fields"><label className="hardware-field"><span>{t("newExperiment.soilMoistureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_moisture || ""} onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.soilTemperatureId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.soil_temperature || ""} onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} /></label><label className="hardware-field"><span>{t("newExperiment.pumpId")}</span><input placeholder={t("newExperiment.exampleId")} value={assignment.pump || ""} onChange={(event) => changeHardware(pot.label, { pump: event.target.value })} /></label></div>}</div>; })}</div>
-              <h3>{t("newExperiment.cameraAssignment")}</h3>
-              <p className="hardware-help">{t("newExperiment.cameraHelp")}</p>
-              {!cameras.length && <p className="camera-empty-state">{t("newExperiment.noCameras")}</p>}
-              <div className="camera-assignment-list">
-                {cameras.map((camera, index) => (
-                  <div className="designer-row camera-row" key={index}>
-                    <label className="hardware-field">
-                      <span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder={t("newExperiment.exampleId")}
-                        value={camera.camera_id}
-                        onChange={(event) => changeCamera(index, { camera_id: event.target.value, verification: "idle", camera_name: "" })}
+
+                <section className="hardware-layout-preview">
+                  <div className="hardware-layout-preview-header">
+                    <h3>{t("newExperiment.layoutReference")}</h3>
+                    <span>{t("newExperiment.potCount", { count: pots.length })}</span>
+                  </div>
+                  <p>{t("newExperiment.layoutHelp")}</p>
+                  <div className="pot-grid pot-grid--reference">
+                    {pots.map((pot) => (
+                      <div className={`pot-card ${hardware[pot.label]?.is_monitored ? "monitored" : ""}`} key={pot.label}>
+                        <strong>{pot.label}</strong>
+                        {pot.user_defined_label && (
+                          <span className="pot-custom-label">
+                            {pot.user_defined_label}
+                          </span>
+                        )}
+                        <small>{t("newExperiment.replicate", { number: pot.replicate })}</small>
+                        {pot.combination.map((item, index) => <span key={index}>{factors[index].name}: {item.label}</span>)}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="form-section compact-field">
+                  <label>{t("experimentForm.hardwareSetId")}</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={sensorSetId} 
+                    onChange={(event) => { 
+                      setSensorSetId(event.target.value); 
+                      setCameras((items) => items.map((item) => ({ ...item, verification: "idle", camera_name: "" }))); 
+                    }} 
+                    className={errors.sensorSetId ? "input-error" : ""}
+                  />
+                  {errors.sensorSetId && <p className="error-text">{errors.sensorSetId}</p>}
+                </div>
+
+                <h3>{t("experimentForm.frequencyTitle")}</h3>
+                {errors.frequencies && <p className="error-text">{errors.frequencies}</p>}
+                <div className="frequency-grid">
+                  {SENSORS.map(([id, labelKey, scopeKey]) => (
+                    <label key={id}>
+                      <span>
+                        {t(`experimentForm.sensors.${labelKey}`)}
+                        <small>{t(`experimentForm.sensors.${scopeKey}`)}</small>
+                      </span>
+                      <input 
+                        type="text" 
+                        inputMode="decimal" 
+                        placeholder={t("experimentForm.exampleDecimal")} 
+                        value={frequencies[id]} 
+                        onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} 
+                        className={errors.frequencies ? "input-error" : ""}
                       />
                     </label>
-                    <label className="hardware-field">
-                      <span>{t("newExperiment.observedPot")}</span>
-                      <select value={camera.pot_label} onChange={(event) => changeCamera(index, { pot_label: event.target.value })}>
-                        <option value="">{t("newExperiment.selectPot")}</option>
-                        {pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}
-                      </select>
-                    </label>
-                    <div className="camera-row-actions">
-                      <button className="camera-verify-btn" type="button" onClick={() => verifyCamera(index)} disabled={camera.verification === "checking" || !camera.camera_id}>
-                        {camera.verification === "checking" ? t("newExperiment.cameraChecking") : t("newExperiment.cameraVerify")}
-                      </button>
-                      <button className="designer-remove" type="button" onClick={() => removeCamera(index)}>{t("newExperiment.removeCamera")}</button>
+                  ))}
+                </div>
+
+                <h3>{t("newExperiment.individualHardware")}</h3>
+                <p className="hardware-help">{t("newExperiment.deviceIdHelp")}</p>
+    
+                {errors.hardwareDevices && <p className="error-text">{errors.hardwareDevices}</p>}
+
+                <div className="pot-assignment-list">
+                  {pots.map((pot) => { 
+                    const assignment = hardware[pot.label] || {}; 
+                    return (
+                      <div className={`pot-assignment ${assignment.is_monitored ? "monitored" : ""}`} key={pot.label}>
+                        <label className="monitor-toggle">
+                          <input 
+                            type="checkbox" 
+                            checked={Boolean(assignment.is_monitored)} 
+                            onChange={(event) => changeHardware(pot.label, { is_monitored: event.target.checked })} 
+                          />
+                          <strong>{pot.label}</strong>
+                          <span className="pot-assignment-treatment">{pot.combination.map((item) => item.label).join(" · ")}</span>
+                          <span>{assignment.is_monitored ? t("newExperiment.monitored") : t("newExperiment.notMonitored")}</span>
+                        </label>
+                        {assignment.is_monitored && (
+                          <div className="designer-row hardware-fields">
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.soilMoistureId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.soil_moisture || ""} 
+                                onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.soil_moisture ? "input-error" : ""}
+                              />
+                            </label>
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.soilTemperatureId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.soil_temperature || ""} 
+                                onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.soil_temperature ? "input-error" : ""}
+                              />
+                            </label>
+                            <label className="hardware-field">
+                              <span>{t("newExperiment.pumpId")}</span>
+                              <input 
+                                placeholder={t("newExperiment.exampleId")} 
+                                value={assignment.pump || ""} 
+                                onChange={(event) => changeHardware(pot.label, { pump: event.target.value })} 
+                                className={errors.hardwareDevices && !assignment.pump ? "input-error" : ""}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ); 
+                  })}
+                </div>
+
+                <h3>{t("newExperiment.cameraAssignment")}</h3>
+                <p className="hardware-help">{t("newExperiment.cameraHelp")}</p>
+                {!cameras.length && <p className="camera-empty-state">{t("newExperiment.noCameras")}</p>}
+    
+                <div className="camera-assignment-list">
+                  {cameras.map((camera, index) => (
+                    <div className="designer-row camera-row" key={index}>
+                      <label className="hardware-field">
+                        <span>{t("newExperiment.cameraDevice", { number: index + 1 })}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder={t("newExperiment.exampleId")}
+                          value={camera.camera_id}
+                          onChange={(event) => changeCamera(index, { camera_id: event.target.value, verification: "idle", camera_name: "" })}
+                          className={errors.cameras ? "input-error" : ""}
+                        />
+                      </label>
+                      <label className="hardware-field">
+                        <span>{t("newExperiment.observedPot")}</span>
+                        <select 
+                          value={camera.pot_label} 
+                          onChange={(event) => changeCamera(index, { pot_label: event.target.value })}
+                          className={errors.cameras ? "input-error" : ""}
+                        >
+                          <option value="">{t("newExperiment.selectPot")}</option>
+                          {pots.map((pot) => <option key={pot.label}>{pot.label}</option>)}
+                        </select>
+                      </label>
+                      <div className="camera-row-actions">
+                        <button className="camera-verify-btn" type="button" onClick={() => verifyCamera(index)} disabled={camera.verification === "checking" || !camera.camera_id}>
+                          {camera.verification === "checking" ? t("newExperiment.cameraChecking") : t("newExperiment.cameraVerify")}
+                        </button>
+                        <button className="designer-remove" type="button" onClick={() => removeCamera(index)}>{t("newExperiment.removeCamera")}</button>
+                      </div>
+                      {camera.verification === "valid" && <span className="camera-verification camera-verification--valid">{t("newExperiment.cameraVerified", { name: camera.camera_name })}</span>}
+                      {camera.verification === "invalid" && <span className="camera-verification camera-verification--invalid">{t("newExperiment.cameraNotFound")}</span>}
                     </div>
-                    {camera.verification === "valid" && <span className="camera-verification camera-verification--valid">{t("newExperiment.cameraVerified", { name: camera.camera_name })}</span>}
-                    {camera.verification === "invalid" && <span className="camera-verification camera-verification--invalid">{t("newExperiment.cameraNotFound")}</span>}
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                <button className="btn-back camera-add-btn" type="button" onClick={addCamera}>{t("newExperiment.addCamera")}</button>
+    
+                {errors.cameras && <p className="error-text designer-error">{errors.cameras}</p>}
               </div>
-              <button className="btn-back camera-add-btn" type="button" onClick={addCamera}>{t("newExperiment.addCamera")}</button>
-              {errors.cameras && <span className="error-text designer-error">{errors.cameras}</span>}
-            </div>}
+            )}
 
             {step === 5 && <div className="step-content">
               <div className="new-exp-form"><h2>{t("newExperiment.review")}</h2></div>
