@@ -361,6 +361,9 @@
     "validation": {
       "name": "Experiment name is required.",
       "plant": "Plant species is required.",
+      "descriptionTooLong": "Description cannot exceed 2000 characters.",
+      "nameTooLong": "Experiment name cannot exceed 100 characters.",
+      "plantTooLong": "Plant species cannot exceed 100 characters.",
       "dates": "Both dates are required.",
       "dateOrder": "End date cannot be earlier than start date.",
       "keywords": "Add at least one keyword.",

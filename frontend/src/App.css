@@ -309,7 +309,7 @@ textarea:focus {
 }
 
 .error-text {
-  color: var(--color-error);
+  color: var(--color-error) !important;
   font-size: 12px;
   margin-top: 5px;
   display: block;

@@ -310,11 +310,31 @@ function New_experiment() {
   const validate = () => {
     const next = {};
     if (step === 1) {
-      if (!name.trim()) next.name = t("newExperiment.validation.name");
-      if (!plantName.trim()) next.plant = t("newExperiment.validation.plant");
-      if (!startDate || !endDate) next.dates = t("newExperiment.validation.dates");
-      if (startDate && endDate && new Date(endDate) < new Date(startDate)) next.dates = t("newExperiment.validation.dateOrder");
-      if (!keywords.length) next.keywords = t("newExperiment.validation.keywords");
+      if (!name.trim()) {
+        next.name = t("newExperiment.validation.name");
+      } else if (name.trim().length > 100) {
+        next.name = t("newExperiment.validation.nameTooLong");
+      }
+
+      if (!plantName.trim()) {
+        next.plant = t("newExperiment.validation.plant");
+      } else if (plantName.trim().length > 100) {
+        next.plant = t("newExperiment.validation.plantTooLong");
+      }
+
+      if (description.length > 2000) {
+        next.description = t("newExperiment.validation.descriptionTooLong");
+      }
+
+      if (!startDate || !endDate) {
+        next.dates = t("newExperiment.validation.dates");
+      } else if (new Date(endDate) < new Date(startDate)) {
+        next.dates = t("newExperiment.validation.dateOrder");
+      }
+
+      if (!keywords.length) {
+        next.keywords = t("newExperiment.validation.keywords");
+      }
     }
     if (step === 2) {
       if (!factors.length) next.factors = t("newExperiment.validation.factor");
@@ -434,11 +454,105 @@ function New_experiment() {
           <div className="form-card experiment-designer">
             {step === 1 && <div className="step-content">
               <div className="new-exp-form"><h2>{t("newExperiment.describe")}</h2></div>
-              <div className="form-section"><p>{t("newExperiment.nameLabel")}</p><input value={name} onChange={(event) => setName(event.target.value)} /></div>
-              <div className="form-section"><p>{t("newExperiment.plantSpecies")}</p><input value={plantName} onChange={(event) => setPlantName(event.target.value)} /></div>
-              <div className="dates-choices"><div className="date-choice"><label>{t("experimentForm.startDate")}</label><LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} /></div><div className="date-choice"><label>{t("experimentForm.plannedEndDate")}</label><LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} /></div></div>
-              <div className="form-section"><p>{t("newExperiment.descriptionLabel")}</p><textarea rows="5" className="description-textarea" value={description} onChange={(event) => setDescription(event.target.value)} /></div>
-              <div className="form-section"><p>{t("newExperiment.keywordsLabel")}</p><div className="keyword-input-wrapper"><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} /><button className="btn-create" type="button" onClick={() => { const value = keywordInput.trim(); if (value && !keywords.includes(value)) { setKeywords([...keywords, value]); setKeywordInput(""); } }}>{t("newExperiment.addUpper")}</button></div><div className="keywords-tags-container">{keywords.map((item) => <span className="exp-keyword" key={item}>{item}<button className="btn-remove-tag" type="button" onClick={() => setKeywords(keywords.filter((value) => value !== item))}>&times;</button></span>)}</div></div>
+
+                {/* Nazwa eksperymentu */}
+                <div className="form-section">
+                  <p>{t("newExperiment.nameLabel")}</p>
+                  <input 
+                    value={name} 
+                    onChange={(event) => setName(event.target.value)} 
+                    className={errors.name ? "input-error" : ""}
+                  />
+                  {errors.name && <p className="error-text">{errors.name}</p>}
+                </div>
+
+                {/* Nazwa rośliny */}
+                <div className="form-section">
+                  <p>{t("newExperiment.plantSpecies")}</p>
+                  <input 
+                    value={plantName} 
+                    onChange={(event) => setPlantName(event.target.value)} 
+                    className={errors.plant ? "input-error" : ""}
+                  />
+                  {errors.plant && <p className="error-text">{errors.plant}</p>}
+                </div>
+
+                {/* Daty */}
+                <div className="dates-choices">
+                  <div className="date-choice">
+                    <label>{t("experimentForm.startDate")}</label>
+                    <LocalizedDateInput 
+                      value={startDate} 
+                      onChange={setStartDate} 
+                      ariaLabel={t("experimentForm.startDate")} 
+                      error={Boolean(errors.dates)}
+                    />
+                  </div>
+                  <div className="date-choice">
+                    <label>{t("experimentForm.plannedEndDate")}</label>
+                    <LocalizedDateInput 
+                      value={endDate} 
+                      onChange={setEndDate} 
+                      ariaLabel={t("experimentForm.plannedEndDate")} 
+                      error={Boolean(errors.dates)}
+                    />
+                  </div>
+                </div>
+                {errors.dates && <p className="error-text">{errors.dates}</p>}
+
+                {/* Opis */}
+                <div className="form-section">
+                  <p>{t("newExperiment.descriptionLabel")}</p>
+                  <textarea 
+                    rows="5" 
+                    className={`description-textarea ${errors.description ? "input-error" : ""}`}
+                    value={description} 
+                    onChange={(event) => setDescription(event.target.value)} 
+                  />
+                  {errors.description && <p className="error-text">{errors.description}</p>}
+                </div>
+
+              {/* Słowa kluczowe */}
+                <div className="form-section">
+                  <p>{t("newExperiment.keywordsLabel")}</p>
+                  <div className="keyword-input-wrapper">
+                    <input 
+                      value={keywordInput} 
+                      onChange={(event) => setKeywordInput(event.target.value)} 
+                      className={errors.keywords ? "input-error" : ""}
+                    />
+                    <button 
+                      className="btn-create" 
+                      type="button" 
+                      onClick={() => { 
+                        const value = keywordInput.trim(); 
+                        if (value && !keywords.includes(value)) { 
+                          setKeywords([...keywords, value]); 
+                          setKeywordInput(""); 
+                        } 
+                      }}
+                    >
+                      {t("newExperiment.addUpper")}
+                    </button>
+                  </div>
+                  {errors.keywords && <p className="error-text">{errors.keywords}</p>}
+      
+                  <div className="keywords-tags-container">
+                    {keywords.map((item) => (
+                      <span className="exp-keyword" key={item}>
+                        {item}
+                        <button 
+                          className="btn-remove-tag" 
+                          type="button" 
+                          onClick={() => setKeywords(keywords.filter((value) => value !== item))}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              
               <div className="form-section collaborators-section">
                 <p>{t("experimentDetails.collaborators")}</p>
                 <div className="collaborator-search">
