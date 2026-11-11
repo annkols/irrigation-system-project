@@ -337,11 +337,49 @@ function New_experiment() {
       }
     }
     if (step === 2) {
-      if (!factors.length) next.factors = t("newExperiment.validation.factor");
-      factors.forEach((factor) => {
-        if (!factor.name.trim() || factor.levels.length < 2 || factor.levels.some((item) => !item.label.trim())) next.factors = t("newExperiment.validation.factorDetails");
-        if (factor.levels.filter((item) => item.is_reference).length !== 1) next.factors = t("newExperiment.validation.reference");
-      });
+      if (!factors.length) {
+        next.factors = t("newExperiment.validation.factor");
+      } else {
+        const factorNames = factors.map((f) => f.name.trim().toLowerCase());
+        const duplicateFactorNames = new Set(factorNames).size !== factorNames.length;
+
+        factors.forEach((factor, fIndex) => {
+          if (!factor.name.trim()) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.factorNameRequired");
+          } else if (factor.name.trim().length > 100) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.factorNameTooLong");
+          } else if (duplicateFactorNames && factorNames.filter(n => n === factor.name.trim().toLowerCase()).length > 1) {
+            next[`factor_${fIndex}_name`] = t("newExperiment.validation.duplicateFactorName");
+          }
+          if (factor.unit && factor.unit.trim().length > 30) {
+            next[`factor_${fIndex}_unit`] = t("newExperiment.validation.factorUnitTooLong");
+          }
+          if (!factor.levels || factor.levels.length < 2) {
+            next[`factor_${fIndex}_levels`] = t("newExperiment.validation.factorDetails");
+          } else {
+            const levelLabels = factor.levels.map((l) => l.label.trim().toLowerCase());
+            const duplicateLevels = new Set(levelLabels).size !== levelLabels.length;
+
+            factor.levels.forEach((level, lIndex) => {
+              if (!level.label.trim()) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.levelRequired");
+              } else if (level.label.trim().length > 100) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.levelTooLong");
+              } else if (duplicateLevels && levelLabels.filter(l => l === level.label.trim().toLowerCase()).length > 1) {
+                next[`factor_${fIndex}_level_${lIndex}_label`] = t("newExperiment.validation.duplicateLevelLabel");
+              }
+
+              if (level.value && level.value.trim().length > 100) {
+                next[`factor_${fIndex}_level_${lIndex}_value`] = t("newExperiment.validation.levelValueTooLong");
+              }
+            });
+          }
+          const refCount = factor.levels.filter((item) => item.is_reference).length;
+          if (refCount !== 1) {
+            next[`factor_${fIndex}_reference`] = t("newExperiment.validation.reference");
+          }
+        });
+      }
     }
     if (step === 3) {
       if (!selected.length) next.plan = t("newExperiment.validation.combination");
@@ -696,15 +734,138 @@ function New_experiment() {
 
             </div>}
 
-            {step === 2 && <div className="step-content">
-              <div className="new-exp-form"><h2>{t("newExperiment.defineFactors")}</h2><p>{t("newExperiment.factorHelp")}</p></div>
-              {factors.map((factor, factorIndex) => <section className="factor-card" key={factorIndex}>
-                <div className="designer-row"><input placeholder={t("newExperiment.factorPlaceholder")} value={factor.name} onChange={(event) => changeFactor(factorIndex, { name: event.target.value })} /><input placeholder={t("newExperiment.unitPlaceholder")} value={factor.unit} onChange={(event) => changeFactor(factorIndex, { unit: event.target.value })} />{factors.length > 1 && <button className="designer-remove" type="button" onClick={() => { setFactors(factors.filter((_, index) => index !== factorIndex)); setExcluded([]); }}>{t("newExperiment.removeFactor")}</button>}</div>
-                {factor.levels.map((item, levelIndex) => <div className="level-row" key={levelIndex}><input placeholder={t("newExperiment.levelPlaceholder")} value={item.label} onChange={(event) => changeLevel(factorIndex, levelIndex, { label: event.target.value })} /><input placeholder={t("newExperiment.valuePlaceholder")} value={item.value} onChange={(event) => changeLevel(factorIndex, levelIndex, { value: event.target.value })} /><label><input type="radio" name={`reference-${factorIndex}`} checked={item.is_reference} onChange={() => changeLevel(factorIndex, levelIndex, { is_reference: true })} /> {t("newExperiment.reference")}</label>{factor.levels.length > 2 && <button className="designer-remove" type="button" onClick={() => { const levels = factor.levels.filter((_, index) => index !== levelIndex); if (!levels.some((value) => value.is_reference)) levels[0].is_reference = true; changeFactor(factorIndex, { levels }); }}>{t("newExperiment.remove")}</button>}</div>)}
-                <button className="btn-back" type="button" onClick={() => changeFactor(factorIndex, { levels: [...factor.levels, level()] })}>{t("newExperiment.addLevel")}</button>
-              </section>)}
-              <button className="btn-create" type="button" onClick={() => setFactors([...factors, { name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }])}>{t("newExperiment.addFactor")}</button>
-            </div>}
+            {step === 2 && (
+              <div className="step-content">
+                <div className="new-exp-form">
+                  <h2>{t("newExperiment.defineFactors")}</h2>
+                  <p>{t("newExperiment.factorHelp")}</p>
+                </div>
+
+                {errors.factors && <p className="error-text">{errors.factors}</p>}
+
+                {factors.map((factor, factorIndex) => (
+                  <section className="factor-card" key={factorIndex}>
+        
+                    {/* czynnik */}
+                    <div className="designer-row">
+                      <div className="input-group">
+                        <input 
+                          placeholder={t("newExperiment.factorPlaceholder")} 
+                          value={factor.name} 
+                          onChange={(event) => changeFactor(factorIndex, { name: event.target.value })} 
+                          className={errors[`factor_${factorIndex}_name`] ? "input-error" : ""}
+                        />
+                        {errors[`factor_${factorIndex}_name`] && (
+                          <p className="error-text">{errors[`factor_${factorIndex}_name`]}</p>
+                        )}
+                      </div>
+
+                      <div className="input-group">
+                        <input 
+                          placeholder={t("newExperiment.unitPlaceholder")} 
+                          value={factor.unit} 
+                          onChange={(event) => changeFactor(factorIndex, { unit: event.target.value })} 
+                          className={errors[`factor_${factorIndex}_unit`] ? "input-error" : ""}
+                        />
+                        {errors[`factor_${factorIndex}_unit`] && (
+                          <p className="error-text">{errors[`factor_${factorIndex}_unit`]}</p>
+                        )}
+                      </div>
+
+                      {factors.length > 1 && (
+                        <button 
+                          className="designer-remove" 
+                          type="button" 
+                          onClick={() => { 
+                            setFactors(factors.filter((_, index) => index !== factorIndex)); 
+                            setExcluded([]); 
+                          }}
+                        >
+                          {t("newExperiment.removeFactor")}
+                        </button>
+                      )}
+                    </div>
+
+                    {errors[`factor_${factorIndex}_levels`] && (
+                      <p className="error-text">{errors[`factor_${factorIndex}_levels`]}</p>
+                    )}
+
+                    {/* poziomy czynnika */}
+                    {factor.levels.map((item, levelIndex) => (
+                      <div className="level-row" key={levelIndex}>
+                        <div className="input-group">
+                          <input 
+                            placeholder={t("newExperiment.levelPlaceholder")} 
+                            value={item.label} 
+                            onChange={(event) => changeLevel(factorIndex, levelIndex, { label: event.target.value })} 
+                            className={errors[`factor_${factorIndex}_level_${levelIndex}_label`] ? "input-error" : ""}
+                          />
+                          {errors[`factor_${factorIndex}_level_${levelIndex}_label`] && (
+                            <p className="error-text">{errors[`factor_${factorIndex}_level_${levelIndex}_label`]}</p>
+                          )}
+                        </div>
+
+                        <div className="input-group">
+                          <input 
+                            placeholder={t("newExperiment.valuePlaceholder")} 
+                            value={item.value} 
+                            onChange={(event) => changeLevel(factorIndex, levelIndex, { value: event.target.value })} 
+                            className={errors[`factor_${factorIndex}_level_${levelIndex}_value`] ? "input-error" : ""}
+                          />
+                          {errors[`factor_${factorIndex}_level_${levelIndex}_value`] && (
+                            <p className="error-text">{errors[`factor_${factorIndex}_level_${levelIndex}_value`]}</p>
+                          )}
+                        </div>
+
+                        <label>
+                          <input 
+                            type="radio" 
+                            name={`reference-${factorIndex}`} 
+                            checked={item.is_reference} 
+                            onChange={() => changeLevel(factorIndex, levelIndex, { is_reference: true })} 
+                          /> 
+                          {t("newExperiment.reference")}
+                        </label>
+
+                        {factor.levels.length > 2 && (
+                          <button 
+                            className="designer-remove" 
+                            type="button" 
+                            onClick={() => { 
+                              const levels = factor.levels.filter((_, index) => index !== levelIndex); 
+                              if (!levels.some((value) => value.is_reference)) levels[0].is_reference = true; 
+                              changeFactor(factorIndex, { levels }); 
+                            }}
+                          >
+                            {t("newExperiment.remove")}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {errors[`factor_${factorIndex}_reference`] && (
+                      <p className="error-text">{errors[`factor_${factorIndex}_reference`]}</p>
+                    )}
+
+                    <button 
+                      className="btn-back" 
+                      type="button" 
+                      onClick={() => changeFactor(factorIndex, { levels: [...factor.levels, level()] })}
+                    >
+                      {t("newExperiment.addLevel")}
+                    </button>
+                  </section>
+                ))}
+
+                <button 
+                  className="btn-create" 
+                  type="button" 
+                  onClick={() => setFactors([...factors, { name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }])}
+                >
+                  {t("newExperiment.addFactor")}
+                </button>
+              </div>
+            )}
 
             {step === 3 && (
               <div className="step-content">
