@@ -382,9 +382,17 @@ function New_experiment() {
       }
     }
     if (step === 3) {
-      if (!selected.length) next.plan = t("newExperiment.validation.combination");
-      if (!Number.isInteger(Number(repetitions)) || Number(repetitions) < 1 || Number(repetitions) > 50) next.plan = t("newExperiment.validation.repetitions");
-      if (pots.length > 500) next.plan = t("newExperiment.validation.potLimit");
+      if (!selected.length) {
+        next.combinations = t("newExperiment.validation.combination");
+      }
+  
+      if (!Number.isInteger(Number(repetitions)) || Number(repetitions) < 1 || Number(repetitions) > 50) {
+        next.repetitions = t("newExperiment.validation.repetitions");
+      }
+  
+      if (pots.length > 500) {
+        next.pots = t("newExperiment.validation.potLimit");
+      }
     }
     if (step === 4) {
       if (!Number.isInteger(Number(sensorSetId)) || Number(sensorSetId) < 1) next.hardware = t("newExperiment.validation.hardware");
@@ -881,9 +889,13 @@ function New_experiment() {
                     min="1" 
                     max="50" 
                     value={repetitions} 
-                    onChange={(event) => setRepetitions(event.target.value)} 
+                    onChange={(event) => setRepetitions(event.target.value)}
+                    className={errors.repetitions ? "input-error" : ""}
                   />
+                  {errors.repetitions && <p className="error-text">{errors.repetitions}</p>}
                 </div>
+
+                {errors.combinations && <p className="error-text">{errors.combinations}</p>}
 
                 <div className="combination-grid">
                   {combinations.map((combination) => { 
@@ -904,6 +916,8 @@ function New_experiment() {
                 </div>
 
                 <h3>{t("newExperiment.potLayout", { count: pots.length })}</h3>
+
+                {errors.pots && <p className="error-text">{errors.pots}</p>}
     
                 <div className="pot-grid">
                   {pots.map((pot) => (

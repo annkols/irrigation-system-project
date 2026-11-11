@@ -363,9 +363,13 @@ textarea:focus {
     flex-wrap: wrap; 
 }
 
-.designer-row > input, .designer-row > select, .level-row > input { 
+.designer-row > .input-group, .designer-row > select, .level-row > input { 
     flex: 1 1 180px; 
     min-width: 0; 
+}
+
+.input-group input {
+    width: 100%;
 }
 
 .level-row label { 
