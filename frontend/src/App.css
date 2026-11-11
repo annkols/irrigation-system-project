@@ -2140,6 +2140,7 @@ textarea:focus {
 .card-footer {
   display: flex;
   justify-content: space-between;
+  gap: 4px;
   align-items: center;
   margin-top: 12px;
 }
