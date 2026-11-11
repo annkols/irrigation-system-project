@@ -760,12 +760,12 @@ function Experiment_edit() {
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="start_date">{t("experimentForm.startDate")}</label>
-                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} />
+                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} error={errors.started_at} />
                       {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
                     </div>
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="end_date">{t("experimentForm.plannedEndDate")}</label>
-                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} />
+                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} error={errors.planned_end_at} />
                       {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
                     </div>
                   </div>

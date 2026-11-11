@@ -4673,7 +4673,8 @@ textarea:focus {
 }
 
 .exp-edit-input--error {
-  border-color: var(--color-error);
+  border: 2px solid var(--color-error) !important;
+
 }
 
 .exp-edit-textarea {
