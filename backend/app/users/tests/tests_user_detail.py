@@ -79,6 +79,7 @@ class UserViewTests(APITestCase):
         self.assertEqual(response.data["id"], self.viewed.pk)
 
     def test_inactive_user_cannot_view_user(self):
+        
         self.viewer.is_active = False
         self.viewer.save(update_fields=["is_active"])
 

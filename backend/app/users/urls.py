@@ -16,6 +16,9 @@ from .views import (
     UserProfilePictureView,
     UserNotificationsView,
     DismissNotificationView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView
+
 )
 
 urlpatterns = [
@@ -35,4 +38,6 @@ urlpatterns = [
     path("users/<int:pk>/avatar/", UserProfilePictureView.as_view(), name="user-avatar"),
     path('notifications/', UserNotificationsView.as_view(), name='user-notifications'),
     path('notifications/dismiss/', DismissNotificationView.as_view(), name='notification-dismiss'),
+    path("auth/password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset"),
+    path("auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm")
 ]
