@@ -1,20 +1,18 @@
-from io import BytesIO
-
-from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.urls import reverse
-
-from PIL import Image
-
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.models import UserProfile
+
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 User = get_user_model()
 
 class UserProfileEditTests(APITestCase):
+
     def setUp(self):
+
         self.user = User.objects.create_user(
             username="test.user",
             email="test@example.com",
@@ -33,26 +31,35 @@ class UserProfileEditTests(APITestCase):
 
         self.url = reverse("auth-me")
 
-    # LOGGED IN USER CAN EDIT USERNAME -> 200
+
+    def authenticate(self, user):
+
+        access = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+
     def test_authenticated_user_can_edit_username(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
-            {"username": "test.user.changed"},
+            {
+                "username": "anna.nowak"
+            },
             format="json"
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.user.refresh_from_db()
-        self.assertEqual(self.user.username, "test.user.changed")
+        self.assertEqual(self.user.username, "anna.nowak")
 
 
-    # LOGGED IN USER CAN EDIT FIRST AND LAST NAME -> 200
     def test_authenticated_user_can_edit_first_and_last_name(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
             {
@@ -69,10 +76,10 @@ class UserProfileEditTests(APITestCase):
         self.assertEqual(self.user.last_name, "Nowak")
 
 
-    # LOGGED IN USER CAN EDIT PROFILE INFORMATION -> 200
-    def test_authenticated_user_can_edit_profile(self):
+    def test_active_user_can_edit_profile(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
             {
@@ -86,18 +93,20 @@ class UserProfileEditTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        self.user.refresh_from_db()
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.university, "UAM")
         self.assertEqual(self.profile.department, "WMI")
         self.assertEqual(self.profile.role, "student")
 
-    # ANONYMOUS USER CANNOT EDIT PROFILE -> 401
-    def test_unauthenticated_user_cannot_edit_profile(self):
 
-        self.client.force_authenticate(user=None)
+    def test_anonymous_user_cannot_edit_profile(self):
+
         response = self.client.patch(
             self.url,
-            {"first_name": "Anna"},
+            {
+                "first_name": "Anna"
+            },
             format="json"
         )
 
@@ -107,13 +116,36 @@ class UserProfileEditTests(APITestCase):
         self.assertEqual(self.user.first_name, "Test")
 
 
-    # USER CANNOT CHANGE EMAIL -> 200
-    def test_user_cannot_edit_email(self):
+    def test_inactive_user_cannot_edit_profile(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
-            {"email": "changedtest@example.com"},
+            {
+                "first_name": "Anna"
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Test")
+
+
+    def test_user_cannot_edit_email(self):
+
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            self.url,
+            {
+                "email": "anna.nowak@example.com"
+            },
             format="json"
         )
 
@@ -123,10 +155,10 @@ class UserProfileEditTests(APITestCase):
         self.assertEqual(self.user.email, "test@example.com")
 
 
-    # USER CANNOT CHANGE ADMIN PERMISSIONS -> 200
     def test_user_cannot_edit_admin_fields(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
             {
@@ -142,13 +174,14 @@ class UserProfileEditTests(APITestCase):
         self.user.refresh_from_db()
         self.assertFalse(self.user.is_staff)
         self.assertFalse(self.user.is_superuser)
+
         self.assertTrue(self.user.is_active)
 
 
-    # USER CANNOT CHANGE AVATAR THROUGH PROFILE EDIT -> 200
     def test_user_cannot_edit_profile_picture(self):
 
-        self.client.force_authenticate(user=self.user)
+        self.authenticate(self.user)
+
         self.profile.profile_picture = "profile_pictures/old.jpg"
         self.profile.save(update_fields=["profile_picture"])
 
@@ -167,10 +200,11 @@ class UserProfileEditTests(APITestCase):
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.profile_picture.name, "profile_pictures/old.jpg")
 
-    # USER CANNOT CHANGE AVATAR THROUGH PROFILE EDIT -> 400
-    def test_user_cannot_update_data_if_field_is_invalid(self):
 
-        self.client.force_authenticate(user=self.user)
+    def test_user_cannot_update_data_if_any_field_is_invalid(self):
+
+        self.authenticate(self.user)
+
         response = self.client.patch(
             self.url,
             {
@@ -186,5 +220,63 @@ class UserProfileEditTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.user.refresh_from_db()
+        self.profile.refresh_from_db()  
         self.assertEqual(self.user.first_name, "Test")
         self.assertEqual(self.profile.role, "student")
+
+
+    def test_user_cannot_set_empty_username(self):
+        
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            self.url,
+            {
+                "username": "   "
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "test.user")
+
+
+    def test_user_cannot_set_empty_first_name(self):
+
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            self.url,
+            {
+                "first_name": "   "
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("first_name", response.data)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Test")
+
+
+    def test_user_cannot_set_empty_last_name(self):
+
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            self.url,
+            {
+                "last_name": "   "
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("last_name", response.data)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.last_name, "User")

@@ -25,6 +25,7 @@ def create_test_avatar_file(name="avatar.jpg", image_format="JPEG"):
 class UserProfilePictureTests(APITestCase):
 
     def setUp(self):
+
         self.user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
@@ -33,8 +34,15 @@ class UserProfilePictureTests(APITestCase):
 
         self.url = reverse("auth-me-avatar")
 
-    # LOGGED IN USER CAN CHANGE AN AVATAR -> 200
+        self.viewer = User.objects.create_user(
+            username="viewer",
+            email="viewer@example.com",
+            password="TestPass123",
+        )
+
+
     def test_authenticated_user_can_upload_avatar(self):
+
         self.client.force_authenticate(user=self.user)
 
         image = create_test_avatar_file()
@@ -50,8 +58,8 @@ class UserProfilePictureTests(APITestCase):
         self.assertIn("profile_picture", response.data["user"]["profile"])
 
 
-    # ANONYMOUS TRIES TO UPLOAD AN AVATAR -> 401
     def test_unauthenticated_user_cannot_upload_avatar(self):
+
         image = create_test_avatar_file()
 
         response = self.client.patch(self.url, {"profile_picture": image}, format="multipart")
@@ -59,8 +67,8 @@ class UserProfilePictureTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-    # LOGGED IN USER CAN DELETE AN AVATAR -> 200
     def test_authenticated_user_can_delete_avatar(self):
+
         self.client.force_authenticate(user=self.user)
 
         profile, created = UserProfile.objects.get_or_create(user=self.user)
@@ -76,8 +84,9 @@ class UserProfilePictureTests(APITestCase):
 
         self.assertFalse(profile.profile_picture)
 
-    # LOGGED IN USER CAN DOWNLOAD THEIR AVATAR -> 200
+
     def test_authenticated_user_can_download_avatar(self):
+
         self.client.force_authenticate(user=self.user)
 
         profile, created = UserProfile.objects.get_or_create(user=self.user)
@@ -89,51 +98,52 @@ class UserProfilePictureTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "image/jpeg")
 
-    # USER WITHOUT AN AVATAR GETS 404
+
     def test_user_without_avatar_gets_not_found(self):
+
         self.client.force_authenticate(user=self.user)
 
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    # ANONYMOUS USER CANNOT DOWNLOAD AN AVATAR -> 401
+
     def test_unauthenticated_user_cannot_download_avatar(self):
+
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+
     def test_authenticated_user_can_download_another_users_avatar(self):
-        viewer = User.objects.create_user(
-            username="viewer",
-            email="viewer@example.com",
-            password="TestPass123",
-        )
+
         profile, created = UserProfile.objects.get_or_create(user=self.user)
         profile.profile_picture = create_test_avatar_file()
         profile.save()
-        self.client.force_authenticate(user=viewer)
+        self.client.force_authenticate(user=self.viewer)
 
         response = self.client.get(reverse("user-avatar", kwargs={"pk": self.user.pk}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "image/jpeg")
 
+
     def test_unauthenticated_user_cannot_download_another_users_avatar(self):
+
         response = self.client.get(reverse("user-avatar", kwargs={"pk": self.user.pk}))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-    # ANONYMOUS TRIES TO DELETE AN AVATAR -> 401
     def test_unauthenticated_user_cannot_delete_avatar(self):
+
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-    # UPLOAD WITHOUT FILE -> 400
     def test_upload_without_file(self):
+
         self.client.force_authenticate(user=self.user)
 
         response = self.client.patch(self.url, {}, format="multipart")
@@ -142,8 +152,8 @@ class UserProfilePictureTests(APITestCase):
         self.assertIn("profile_picture", response.data)
 
 
-    # UPLOADING A FILE TOO LARGE -> 400
     def test_upload_a_too_big_file(self):
+
         self.client.force_authenticate(user=self.user)
 
         big_file = SimpleUploadedFile("large.jpg", b"a" * (6 * 1024 * 1024), content_type="image/jpeg")
@@ -153,8 +163,9 @@ class UserProfilePictureTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("profile_picture", response.data)
 
-    # UPLOADNIG AN EMPTY EXISTING FILE -> 400
+
     def test_upload_empty_file(self):
+
         self.client.force_authenticate(user=self.user)
 
         empty_file = SimpleUploadedFile("empty.jpg", b"", content_type="image/jpeg")

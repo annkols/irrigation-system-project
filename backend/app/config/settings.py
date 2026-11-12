@@ -76,7 +76,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -173,6 +173,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'password_reset': '5/hour',
+        'password_reset_confirm': '20/hour',
+    },
 }
 
 SIMPLE_JWT = {
@@ -184,3 +188,32 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'CHECK_REVOKE_TOKEN': True,
 }
+
+# EMAIL settings - for password management
+# https://docs.djangoproject.com/en/6.1/topics/auth/passwords/
+# https://docs.djangoproject.com/en/6.1/topics/email/
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER,
+)
+
+# Password reset configuration
+PASSWORD_RESET_TIMEOUT = int(
+    os.getenv("PASSWORD_RESET_TIMEOUT", "3600")
+)
+
+PASSWORD_RESET_FRONTEND_URL = os.getenv(
+    "PASSWORD_RESET_FRONTEND_URL",
+    "http://localhost:5173/reset-password"
+)

@@ -4,6 +4,14 @@ from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
+from django.conf import settings
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
+
+from binascii import Error as BinasciiError
+
 import mimetypes
 
 from experiments.models import Experiment
@@ -20,6 +28,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTTokenRefreshView
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.throttling import ScopedRateThrottle
+
+
 
 from .permissions import CanViewUsers, CanChangeUsers, IsSuperUser
 
@@ -499,3 +510,119 @@ class UserNotificationsView(APIView):
                             })
 
         return Response(notifications)
+
+
+class PasswordResetRequestView(APIView):
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+
+        language = request.data.get("language", "en")
+
+        if language not in ("en", "pl"):
+            return Response(
+                {"language": ["Supported languages: en, pl."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        form = PasswordResetForm(data={"email": request.data.get("email", "")})
+
+        if not form.is_valid():
+            return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        form.save(
+            request=request,
+            use_https=request.is_secure(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            email_template_name=f"emails/{language}_password_reset_content.txt",
+            subject_template_name=f"emails/{language}_password_reset_subject.txt",
+            extra_email_context={
+                "frontend_reset_url": settings.PASSWORD_RESET_FRONTEND_URL
+            })
+
+        messages = {
+            "en": "A password reset link has been sent to the given email.",
+            "pl": "Na podany mail wysłano formularz zmiany hasła.",
+        }
+
+        return Response(
+            {"detail": messages[language]},
+            status=status.HTTP_200_OK,
+        )
+
+class PasswordResetConfirmView(APIView):
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset_confirm"
+
+    def post(self, request):
+
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+
+        language = request.data.get("language", "en")
+
+        if language not in ("en", "pl"):
+            return Response(
+                {"language": ["Supported languages: en, pl."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        messages = {
+            "pl": "Błędny lub nieważny link do resetowania hasła.",
+            "en": "Invalid or expired password reset link."
+        }
+
+        if not isinstance(uid, str) or not isinstance(token, str):
+
+            return Response(
+                {"detail": messages[language]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user_pk = force_str(urlsafe_base64_decode(uid))
+            user = User._default_manager.get(pk=user_pk)
+
+        except (
+            TypeError,
+            ValueError,
+            OverflowError,
+            UnicodeDecodeError,
+            BinasciiError,
+            User.DoesNotExist,
+        ):
+            
+            return Response(
+                {"detail": messages[language]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+        if not user.is_active or not default_token_generator.check_token(user, token):
+            return Response(
+                {"detail": messages[language]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        form = SetPasswordForm(user, data=request.data)
+
+        if not form.is_valid():
+            return Response(
+                form.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        form.save()
+
+        messages = {
+            "pl": "Hasło zostało zresetowane poprawnie.",
+            "en": "Password has been reset successfuly."
+        }
+        return Response(
+            {"detail": messages[language]},
+            status=status.HTTP_200_OK,
+        )
