@@ -7,7 +7,7 @@ from datetime import timedelta
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import PumpCommand
+from pump_control.models import PumpCommand
 
 from experiments.models import Experiment, Pot, Treatment
 
