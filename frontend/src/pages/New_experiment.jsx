@@ -60,6 +60,7 @@ function New_experiment() {
   const [searchingCollaborators, setSearchingCollaborators] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [sensorSetId, setSensorSetId] = useState(1);
+  const [enabledSensors, setEnabledSensors] = useState(() => SENSORS.map(([id]) => id));
   const [frequencies, setFrequencies] = useState(Object.fromEntries(SENSORS.map(([id]) => [id, "1"])));
   const [factors, setFactors] = useState([{ name: "", unit: "", levels: [level(t("newExperiment.control"), true), level()] }]);
   const [repetitions, setRepetitions] = useState(1);
@@ -118,7 +119,7 @@ function New_experiment() {
         if (!cancelled) {
           setCollaboratorSuggestions(filteredUsers);
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setCollaboratorSuggestions([]);
         }
@@ -399,7 +400,9 @@ function New_experiment() {
         next.sensorSetId = t("newExperiment.validation.hardware");
       }
   
-      if (SENSORS.some(([id]) => !Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0)) {
+      if (!enabledSensors.length) {
+        next.frequencies = t("experimentForm.errors.sensorRequired");
+      } else if (SENSORS.some(([id]) => enabledSensors.includes(id) && (!Number.isFinite(parseHours(frequencies[id])) || parseHours(frequencies[id]) <= 0))) {
         next.frequencies = t("experimentForm.errors.frequency");
       }
 
@@ -434,7 +437,9 @@ function New_experiment() {
     setErrors({});
     let experimentId;
     try {
-      const numericFrequencies = Object.fromEntries(Object.entries(frequencies).map(([id, value]) => [id, hoursToSeconds(value)]));
+      const numericFrequencies = Object.fromEntries(
+        enabledSensors.map((id) => [id, hoursToSeconds(frequencies[id])])
+      );
       const experimentResponse = await fetch(`${api}/experiments/`, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -1012,11 +1017,20 @@ function New_experiment() {
                 </div>
 
                 <h3>{t("experimentForm.frequencyTitle")}</h3>
+                <p className="hardware-help">{t("experimentForm.selectAvailableSensors")}</p>
                 {errors.frequencies && <p className="error-text">{errors.frequencies}</p>}
                 <div className="frequency-grid">
                   {SENSORS.map(([id, labelKey, scopeKey]) => (
                     <label key={id}>
-                      <span>
+                      <span className="frequency-sensor-label">
+                        <input
+                          type="checkbox"
+                          className="sensor-toggle-checkbox"
+                          checked={enabledSensors.includes(id)}
+                          onChange={(event) => setEnabledSensors((current) => event.target.checked
+                            ? [...current, id]
+                            : current.filter((sensorId) => sensorId !== id))}
+                        />
                         {t(`experimentForm.sensors.${labelKey}`)}
                         <small>{t(`experimentForm.sensors.${scopeKey}`)}</small>
                       </span>
@@ -1025,6 +1039,7 @@ function New_experiment() {
                         inputMode="decimal" 
                         placeholder={t("experimentForm.exampleDecimal")} 
                         value={frequencies[id]} 
+                        disabled={!enabledSensors.includes(id)}
                         onChange={(event) => setFrequencies({ ...frequencies, [id]: event.target.value })} 
                         className={errors.frequencies ? "input-error" : ""}
                       />

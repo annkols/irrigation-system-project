@@ -1,17 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "../App.css";
 import { useTranslation } from "react-i18next";
 
-function PotModal({ isOpen, pot, factors, onClose, onSave }) {
-  if (!isOpen || !pot) return null;
+function PotModalContent({ pot, factors, onClose, onSave }) {
   const { t } = useTranslation();
   const [userDefinedLabel, setUserDefinedLabel] = useState(pot.user_defined_label || "");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    setUserDefinedLabel(pot.user_defined_label || "");
-    setError("");
-  }, [pot]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -71,6 +65,20 @@ function PotModal({ isOpen, pot, factors, onClose, onSave }) {
         </form>
       </div>
     </div>
+  );
+}
+
+function PotModal({ isOpen, pot, factors, onClose, onSave }) {
+  if (!isOpen || !pot) return null;
+
+  return (
+    <PotModalContent
+      key={pot.label ?? pot.id}
+      pot={pot}
+      factors={factors}
+      onClose={onClose}
+      onSave={onSave}
+    />
   );
 }
 

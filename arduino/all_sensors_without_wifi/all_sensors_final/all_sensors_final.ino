@@ -362,7 +362,8 @@ int configInt(String command, String key) {
 }
 
 void setInterval(String command, String key, unsigned long &interval) {
-  int seconds = configInt(command, key); if (seconds > 0) interval = (unsigned long)seconds * 1000UL;
+  int seconds = configInt(command, key);
+  interval = seconds > 0 ? (unsigned long)seconds * 1000UL : 0;
 }
 
 void nullable(float value, bool valid) {

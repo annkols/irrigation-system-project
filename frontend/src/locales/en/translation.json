@@ -257,6 +257,7 @@
     "hardwareSetId": "Hardware set ID",
     "readingFrequency": "reading frequency (hours)",
     "frequencyTitle": "Reading frequency (hours)",
+    "selectAvailableSensors": "Select the sensors physically available in this hardware set.",
     "exampleDecimal": "e.g. 0.3",
     "makePublic": "Make my experiment public and let other users see the data.",
     "sensors": {
@@ -281,6 +282,7 @@
       "keywordLength": "Ensure each keyword has no more than 50 characters.",
       "hardwareMissing": "Hardware set ID is missing.",
       "frequency": "Frequencies must be positive numbers of hours, for example 1 or 0.3.",
+      "sensorRequired": "Select at least one available sensor.",
       "startRequired": "Start date is required.",
       "endRequired": "Planned end date is required.",
       "endBeforeStart": "Planned end date cannot be earlier than start date.",

@@ -482,6 +482,9 @@ class UserNotificationsView(APIView):
                     if not cfg:
                         continue
 
+                    if exp.sensor_frequencies and cfg["key"] not in exp.sensor_frequencies:
+                        continue
+
                     is_anomaly = False
                     condition_type = ""
 

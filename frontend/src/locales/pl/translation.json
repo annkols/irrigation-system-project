@@ -261,6 +261,7 @@
     "hardwareSetId": "Identyfikator zestawu sprzętu",
     "readingFrequency": "częstotliwość odczytu (godziny)",
     "frequencyTitle": "Częstotliwość odczytu (godziny)",
+    "selectAvailableSensors": "Zaznacz czujniki fizycznie dostępne w tym zestawie.",
     "exampleDecimal": "np. 0,3",
     "makePublic": "Upublicznij doświadczenie i pozwól innym użytkownikom wyświetlać dane.",
     "sensors": {
@@ -285,6 +286,7 @@
       "keywordLength": "Każde słowo kluczowe może mieć maksymalnie 50 znaków.",
       "hardwareMissing": "Brakuje identyfikatora zestawu sprzętu.",
       "frequency": "Częstotliwości muszą być dodatnią liczbą godzin, np. 1 lub 0,3.",
+      "sensorRequired": "Wybierz co najmniej jeden dostępny czujnik.",
       "startRequired": "Data rozpoczęcia jest wymagana.",
       "endRequired": "Planowana data zakończenia jest wymagana.",
       "endBeforeStart": "Planowana data zakończenia nie może być wcześniejsza od daty rozpoczęcia.",

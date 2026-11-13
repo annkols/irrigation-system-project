@@ -60,6 +60,7 @@ function Experiment_edit() {
   const [collaboratorError, setCollaboratorError] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
+  const [enabledSensors, setEnabledSensors] = useState(() => SENSORS.map((sensor) => sensor.key));
   const [frequencies, setFrequencies] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,6 +119,10 @@ function Experiment_edit() {
         setSelectedSetup(baseData.sensor_set_id);
 
         const fallbackFrequency = baseData.measurement_frequency_seconds || 3600;
+        const configuredSensors = baseData.sensor_frequencies && Object.keys(baseData.sensor_frequencies).length
+          ? Object.keys(baseData.sensor_frequencies).filter((key) => SENSORS.some((sensor) => sensor.key === key))
+          : SENSORS.map((sensor) => sensor.key);
+        setEnabledSensors(configuredSensors);
         setFrequencies(Object.fromEntries(SENSORS.map((sensor) => [
           sensor.key,
           secondsToHours(baseData.sensor_frequencies?.[sensor.key] || fallbackFrequency),
@@ -345,7 +350,8 @@ function Experiment_edit() {
     if (!selectedSetup) {
       localErrors.sensor_set_id = [t("experimentForm.errors.hardwareMissing")];
     } else {
-      const invalidSensors = SENSORS.some(sensor => {
+      const invalidSensors = !enabledSensors.length || SENSORS.some(sensor => {
+        if (!enabledSensors.includes(sensor.key)) return false;
         const val = frequencies[sensor.key];
         const numVal = parseHours(val);
         const isEmpty = !val || val.trim() === "";
@@ -354,7 +360,7 @@ function Experiment_edit() {
         return isEmpty || isNotNumber || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = [t("experimentForm.errors.frequency")];
+        localErrors.sensor_set_id = [t(!enabledSensors.length ? "experimentForm.errors.sensorRequired" : "experimentForm.errors.frequency")];
       }
     }
 
@@ -374,7 +380,7 @@ function Experiment_edit() {
     }
 
     const sensorFrequencies = Object.fromEntries(
-      SENSORS.map(sensor => [sensor.key, hoursToSeconds(frequencies[sensor.key])])
+      enabledSensors.map(sensorKey => [sensorKey, hoursToSeconds(frequencies[sensorKey])])
     );
 
     const updatedExperiment = {
@@ -824,16 +830,28 @@ function Experiment_edit() {
                   <span className="exp-info-label">
                     {t("experimentForm.hardwareSetId")}: <strong>{selectedSetup}</strong> · {t("experimentForm.readingFrequency")}
                   </span>
+                  <p className="hardware-help">{t("experimentForm.selectAvailableSensors")}</p>
                   <div className="frequency-grid">
                     {SENSORS.map((sensor) => (
                       <label key={sensor.key}>
-                        <span>{t(`experimentForm.sensors.${sensor.labelKey}`)} ({t(`experimentForm.sensors.${sensor.scopeKey}`)})</span>
+                        <span className="frequency-sensor-label">
+                          <input
+                            type="checkbox"
+                            className="sensor-toggle-checkbox"
+                            checked={enabledSensors.includes(sensor.key)}
+                            onChange={(event) => setEnabledSensors((current) => event.target.checked
+                              ? [...current, sensor.key]
+                              : current.filter((sensorKey) => sensorKey !== sensor.key))}
+                          />
+                          {t(`experimentForm.sensors.${sensor.labelKey}`)} ({t(`experimentForm.sensors.${sensor.scopeKey}`)})
+                        </span>
                         <input
                           type="text"
                           inputMode="decimal"
                           placeholder={t("experimentForm.exampleDecimal")}
                           className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "exp-edit-input--error" : ""}
                           value={frequencies[sensor.key] || ""}
+                          disabled={!enabledSensors.includes(sensor.key)}
                           onKeyDown={(e) => {
                             if (["e", "E"].includes(e.key)) e.preventDefault();
                           }}

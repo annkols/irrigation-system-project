@@ -621,6 +621,22 @@ textarea:focus {
     outline: none; 
     border-color: var(--color-primary); 
 }
+.frequency-grid .frequency-sensor-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.frequency-grid .sensor-toggle-checkbox {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    flex: 0 0 18px;
+    accent-color: var(--color-primary);
+}
+.frequency-grid input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
 
 /* PotModal style */
 .pot-modal-overlay {
