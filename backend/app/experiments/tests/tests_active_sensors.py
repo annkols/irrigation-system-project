@@ -63,7 +63,7 @@ class ExperimentActiveSensorConfigTests(APITestCase):
         self.assertEqual(response.data["sensor_frequencies"]["pressure"], 0)
 
 
-    def test_active_sensor_config_keeps_soil_moisture_enabled(self):
+    def test_active_sensor_config_disables_unselected_soil_moisture(self):
 
         self.new_experiment(
             sensor_set_id=2,
@@ -80,7 +80,8 @@ class ExperimentActiveSensorConfigTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 90)
+        self.assertEqual(response.data["sensor_frequencies"]["soil_moisture"], 0)
+        self.assertEqual(response.data["sensor_frequencies"]["air_temperature"], 30)
 
         
     def test_active_sensor_config_returns_404_when_no_experiment_exists(self):
