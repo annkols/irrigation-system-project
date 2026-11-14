@@ -11,7 +11,7 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from experiments.models import Experiment
+from experiments.models import Experiment, ExperimentCollaborator
 from notes.models import Note
 
 User = get_user_model()
@@ -82,3 +82,44 @@ class ExperimentNotesTests(APITestCase):
         self.assertEqual(note.author, self.owner)
         self.assertEqual(note.experiment, self.experiment)
         self.assertEqual(note.images.count(), 2)
+
+    def test_collaborator_can_create_note(self):
+        collaborator = User.objects.create_user(
+            username="collaborator",
+            email="collaborator@example.com",
+            password="Pass123!",
+            is_active=True,
+        )
+        ExperimentCollaborator.objects.create(
+            experiment=self.experiment,
+            user=collaborator,
+        )
+        self.client.force_authenticate(user=collaborator)
+
+        response = self.client.post(
+            self.url,
+            {"title": "Collaborator note", "content": "Observation"},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        note = Note.objects.get(pk=response.data["id"])
+        self.assertEqual(note.author, collaborator)
+        self.assertEqual(note.experiment, self.experiment)
+
+    def test_unrelated_user_cannot_create_note(self):
+        unrelated_user = User.objects.create_user(
+            username="unrelated",
+            email="unrelated@example.com",
+            password="Pass123!",
+            is_active=True,
+        )
+        self.client.force_authenticate(user=unrelated_user)
+
+        response = self.client.post(
+            self.url,
+            {"title": "Forbidden note", "content": "Observation"},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

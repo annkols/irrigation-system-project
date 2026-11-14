@@ -59,7 +59,8 @@ float lightLux = 0, airTemperature = 0, airHumidity = 0, pressureHpa = 0;
 unsigned long soilMoistureIntervalMs = 10000, soilTemperatureIntervalMs = 10000;
 unsigned long lightIntervalMs = 10000, airTemperatureIntervalMs = 10000;
 unsigned long airHumidityIntervalMs = 10000, pressureIntervalMs = 10000;
-unsigned long lastMoistureAt = 0, lastSoilTemperatureAt = 0, lastLightAt = 0, lastAirAt = 0;
+unsigned long lastMoistureAt = 0, lastSoilTemperatureAt = 0, lastLightAt = 0;
+unsigned long lastAirTemperatureAt = 0, lastAirHumidityAt = 0, lastPressureAt = 0;
 int activeChannel = -1, nextChannel = 0;
 unsigned long wateringStartedAt = 0;
 bool irrigationStateChanged = false;
@@ -67,7 +68,9 @@ bool measurementPending[CHANNEL_COUNT] = {false, false, false};
 bool pendingMoisture[CHANNEL_COUNT] = {false, false, false};
 bool pendingSoilTemperature[CHANNEL_COUNT] = {false, false, false};
 bool pendingLight[CHANNEL_COUNT] = {false, false, false};
-bool pendingAir[CHANNEL_COUNT] = {false, false, false};
+bool pendingAirTemperature[CHANNEL_COUNT] = {false, false, false};
+bool pendingAirHumidity[CHANNEL_COUNT] = {false, false, false};
+bool pendingPressure[CHANNEL_COUNT] = {false, false, false};
 byte nextMeasurementChannel = 0;
 unsigned long lastMeasurementSentAt = 0;
 
@@ -99,22 +102,28 @@ void loop() {
   bool moistureUpdated = due(lastMoistureAt, soilMoistureIntervalMs, now);
   bool soilTemperatureUpdated = due(lastSoilTemperatureAt, soilTemperatureIntervalMs, now);
   bool lightUpdated = hasLightSensor && due(lastLightAt, lightIntervalMs, now);
-  unsigned long airInterval = min(airTemperatureIntervalMs, min(airHumidityIntervalMs, pressureIntervalMs));
-  bool airUpdated = hasAirSensor && due(lastAirAt, airInterval, now);
+  bool airTemperatureUpdated = hasAirSensor && due(lastAirTemperatureAt, airTemperatureIntervalMs, now);
+  bool airHumidityUpdated = hasAirSensor && due(lastAirHumidityAt, airHumidityIntervalMs, now);
+  bool pressureUpdated = hasAirSensor && due(lastPressureAt, pressureIntervalMs, now);
+  bool airUpdated = airTemperatureUpdated || airHumidityUpdated || pressureUpdated;
 
   if (moistureUpdated) { readMoisture(); lastMoistureAt = now; }
   if (soilTemperatureUpdated) { readSoilTemperatures(); lastSoilTemperatureAt = millis(); }
   if (lightUpdated) { lightLux = lightMeter.readLightLevel(); lastLightAt = now; }
   if (airUpdated) {
     airTemperature = bme.readTemperature(); airHumidity = bme.readHumidity();
-    pressureHpa = bme.readPressure() / 100.0F; lastAirAt = now;
+    pressureHpa = bme.readPressure() / 100.0F;
+    if (airTemperatureUpdated) lastAirTemperatureAt = now;
+    if (airHumidityUpdated) lastAirHumidityAt = now;
+    if (pressureUpdated) lastPressureAt = now;
   }
 
   updateAutoDemand();
   updateIrrigation(now);
   if (assignmentReady && (moistureUpdated || soilTemperatureUpdated || lightUpdated || airUpdated || irrigationStateChanged)) {
     for (byte i = 0; i < CHANNEL_COUNT; i++) if (channels[i].potNumber > 0)
-      queueMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated, airUpdated);
+      queueMeasurement(i, moistureUpdated, soilTemperatureUpdated, lightUpdated,
+        airTemperatureUpdated, airHumidityUpdated, pressureUpdated);
     irrigationStateChanged = false;
   }
   flushMeasurementQueue(now);
@@ -300,6 +309,13 @@ void applyConfig(String command) {
   setInterval(command, "soil_temperature", soilTemperatureIntervalMs);
   setInterval(command, "light", lightIntervalMs); setInterval(command, "air_temperature", airTemperatureIntervalMs);
   setInterval(command, "air_humidity", airHumidityIntervalMs); setInterval(command, "pressure", pressureIntervalMs);
+  for (byte i = 0; i < CHANNEL_COUNT; i++) {
+    if (soilMoistureIntervalMs == 0) {
+      channels[i].moistureValid = false;
+      channels[i].autoDemand = false;
+    }
+    if (soilTemperatureIntervalMs == 0) channels[i].temperatureValid = false;
+  }
   bool configValid = newExperimentId > 0 && newStationNumber > 0 && anyPot;
   if (!configValid) {
     clearAssignments();
@@ -327,7 +343,8 @@ void applyConfig(String command) {
     channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
     measurementPending[i] = false;
     pendingMoisture[i] = false; pendingSoilTemperature[i] = false;
-    pendingLight[i] = false; pendingAir[i] = false;
+    pendingLight[i] = false; pendingAirTemperature[i] = false;
+    pendingAirHumidity[i] = false; pendingPressure[i] = false;
   }
   nextMeasurementChannel = 0;
   lastMeasurementSentAt = 0;
@@ -336,7 +353,9 @@ void applyConfig(String command) {
   lastMoistureAt = 0;
   lastSoilTemperatureAt = 0;
   lastLightAt = 0;
-  lastAirAt = 0;
+  lastAirTemperatureAt = 0;
+  lastAirHumidityAt = 0;
+  lastPressureAt = 0;
   Serial.print("Konfiguracja: P"); Serial.print(channels[0].potNumber);
   Serial.print(", P"); Serial.print(channels[1].potNumber);
   Serial.print(", P"); Serial.println(channels[2].potNumber);
@@ -349,7 +368,8 @@ void clearAssignments() {
     channels[i].timedUntil = 0; channels[i].timedDurationMs = 0;
     measurementPending[i] = false;
     pendingMoisture[i] = false; pendingSoilTemperature[i] = false;
-    pendingLight[i] = false; pendingAir[i] = false;
+    pendingLight[i] = false; pendingAirTemperature[i] = false;
+    pendingAirHumidity[i] = false; pendingPressure[i] = false;
   }
   Serial.println("Brak przypisania sprzetu");
 }
@@ -370,12 +390,15 @@ void nullable(float value, bool valid) {
   if (valid && !isnan(value)) EspSerial.print(value, 2); else EspSerial.print("null");
 }
 
-void queueMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated, bool airUpdated) {
+void queueMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated,
+    bool airTemperatureUpdated, bool airHumidityUpdated, bool pressureUpdated) {
   measurementPending[channel] = true;
   pendingMoisture[channel] = pendingMoisture[channel] || moistureUpdated;
   pendingSoilTemperature[channel] = pendingSoilTemperature[channel] || temperatureUpdated;
   pendingLight[channel] = pendingLight[channel] || lightUpdated;
-  pendingAir[channel] = pendingAir[channel] || airUpdated;
+  pendingAirTemperature[channel] = pendingAirTemperature[channel] || airTemperatureUpdated;
+  pendingAirHumidity[channel] = pendingAirHumidity[channel] || airHumidityUpdated;
+  pendingPressure[channel] = pendingPressure[channel] || pressureUpdated;
 }
 
 void flushMeasurementQueue(unsigned long now) {
@@ -386,25 +409,28 @@ void flushMeasurementQueue(unsigned long now) {
     byte channel = (nextMeasurementChannel + offset) % CHANNEL_COUNT;
     if (!measurementPending[channel]) continue;
 
-    sendMeasurement(channel, pendingMoisture[channel], pendingSoilTemperature[channel], pendingLight[channel], pendingAir[channel]);
+    sendMeasurement(channel, pendingMoisture[channel], pendingSoilTemperature[channel], pendingLight[channel],
+      pendingAirTemperature[channel], pendingAirHumidity[channel], pendingPressure[channel]);
     measurementPending[channel] = false;
     pendingMoisture[channel] = false; pendingSoilTemperature[channel] = false;
-    pendingLight[channel] = false; pendingAir[channel] = false;
+    pendingLight[channel] = false; pendingAirTemperature[channel] = false;
+    pendingAirHumidity[channel] = false; pendingPressure[channel] = false;
     nextMeasurementChannel = (channel + 1) % CHANNEL_COUNT;
     lastMeasurementSentAt = millis();
     return;
   }
 }
 
-void sendMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated, bool airUpdated) {
+void sendMeasurement(byte channel, bool moistureUpdated, bool temperatureUpdated, bool lightUpdated,
+    bool airTemperatureUpdated, bool airHumidityUpdated, bool pressureUpdated) {
   ChannelState &state = channels[channel];
   EspSerial.print("{\"experiment_id\":"); EspSerial.print(experimentId);
   EspSerial.print(",\"station_number\":"); EspSerial.print(stationNumber);
   EspSerial.print(",\"pot_number\":"); EspSerial.print(state.potNumber);
   EspSerial.print(",\"moisture_percent\":"); nullable(state.moisture, moistureUpdated && state.moistureValid);
-  EspSerial.print(",\"air_temperature\":"); nullable(airTemperature, airUpdated && hasAirSensor);
-  EspSerial.print(",\"air_humidity\":"); nullable(airHumidity, airUpdated && hasAirSensor);
-  EspSerial.print(",\"pressure_hpa\":"); nullable(pressureHpa, airUpdated && hasAirSensor);
+  EspSerial.print(",\"air_temperature\":"); nullable(airTemperature, airTemperatureUpdated && hasAirSensor);
+  EspSerial.print(",\"air_humidity\":"); nullable(airHumidity, airHumidityUpdated && hasAirSensor);
+  EspSerial.print(",\"pressure_hpa\":"); nullable(pressureHpa, pressureUpdated && hasAirSensor);
   EspSerial.print(",\"soil_temperature\":"); nullable(state.soilTemperature, temperatureUpdated && state.temperatureValid);
   EspSerial.print(",\"light_lux\":"); nullable(lightLux, lightUpdated && hasLightSensor);
   EspSerial.print(",\"pump_on\":"); EspSerial.print(activeChannel == channel ? "true" : "false");

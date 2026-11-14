@@ -1069,24 +1069,28 @@ function New_experiment() {
                         </label>
                         {assignment.is_monitored && (
                           <div className="designer-row hardware-fields">
-                            <label className="hardware-field">
-                              <span>{t("newExperiment.soilMoistureId")}</span>
-                              <input 
-                                placeholder={t("newExperiment.exampleId")} 
-                                value={assignment.soil_moisture || ""} 
-                                onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })} 
-                                className={errors.hardwareDevices && !assignment.soil_moisture ? "input-error" : ""}
-                              />
-                            </label>
-                            <label className="hardware-field">
-                              <span>{t("newExperiment.soilTemperatureId")}</span>
-                              <input 
-                                placeholder={t("newExperiment.exampleId")} 
-                                value={assignment.soil_temperature || ""} 
-                                onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })} 
-                                className={errors.hardwareDevices && !assignment.soil_temperature ? "input-error" : ""}
-                              />
-                            </label>
+                            {enabledSensors.includes("soil_moisture") && (
+                              <label className="hardware-field">
+                                <span>{t("newExperiment.soilMoistureId")}</span>
+                                <input
+                                  placeholder={t("newExperiment.exampleId")}
+                                  value={assignment.soil_moisture || ""}
+                                  onChange={(event) => changeHardware(pot.label, { soil_moisture: event.target.value })}
+                                  className={errors.hardwareDevices && !assignment.soil_moisture ? "input-error" : ""}
+                                />
+                              </label>
+                            )}
+                            {enabledSensors.includes("soil_temperature") && (
+                              <label className="hardware-field">
+                                <span>{t("newExperiment.soilTemperatureId")}</span>
+                                <input
+                                  placeholder={t("newExperiment.exampleId")}
+                                  value={assignment.soil_temperature || ""}
+                                  onChange={(event) => changeHardware(pot.label, { soil_temperature: event.target.value })}
+                                  className={errors.hardwareDevices && !assignment.soil_temperature ? "input-error" : ""}
+                                />
+                              </label>
+                            )}
                             <label className="hardware-field">
                               <span>{t("newExperiment.pumpId")}</span>
                               <input 

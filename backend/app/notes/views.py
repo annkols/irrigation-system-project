@@ -12,7 +12,6 @@ from rest_framework.permissions import IsAuthenticated
 
 from experiments.models import Experiment
 from experiments.permissions import (
-    CanAddNotes,
     CanDeleteNotes,
     CanEditExperiment,
     CanEditNotes,
@@ -30,7 +29,11 @@ class ExperimentNoteListCreateView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
-        permission = CanViewExperiment if self.request.method in ['GET', 'HEAD'] else CanAddNotes
+        permission = (
+            CanViewExperiment
+            if self.request.method in ['GET', 'HEAD']
+            else IsExperimentOwnerOrCollaborator
+        )
         return [IsAuthenticated(), permission()]
 
     def get_experiment(self):
