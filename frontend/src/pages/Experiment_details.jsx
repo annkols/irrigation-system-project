@@ -1676,24 +1676,23 @@ function Experiment_details() {
                             const preparedImages = await Promise.all(
                               draftNote.images.map(img => compressNoteImage(img.file)),
                             );
+                            const formData = new FormData();
+                            formData.append('title', draftNote.title);
+                            formData.append('content', draftNote.content);
+                            preparedImages.forEach(image => formData.append('images', image));
+
                             const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
                               method: 'POST',
-                              headers: getAuthHeaders(),
-                              body: JSON.stringify({
-                                title: draftNote.title,
-                                content: draftNote.content,
-                              }),
+                              headers: getAuthTokenHeader(),
+                              body: formData,
                             });
                             if (res.ok) {
                               savedNote = await res.json();
-                              if (preparedImages.length > 0) {
-                                const updatedNote = await uploadNoteImages(savedNote.id, preparedImages);
-                                if (updatedNote) savedNote = updatedNote;
-                              }
                               setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
                               setDraftNote({ title: '', content: '', images: [] });
                             } else {
+                              if (res.status === 413) throw new NoteImageUploadError();
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
                               toast.error(t('experimentDetails.errors.saveNote', { status: res.status }));

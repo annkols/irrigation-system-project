@@ -98,7 +98,11 @@ class ExperimentNotesTests(APITestCase):
 
         response = self.client.post(
             self.url,
-            {"title": "Collaborator note", "content": "Observation"},
+            {
+                "title": "Collaborator note",
+                "content": "Observation",
+                "images": [self.make_image("collaborator.png")],
+            },
             format="multipart",
         )
 
@@ -106,6 +110,7 @@ class ExperimentNotesTests(APITestCase):
         note = Note.objects.get(pk=response.data["id"])
         self.assertEqual(note.author, collaborator)
         self.assertEqual(note.experiment, self.experiment)
+        self.assertEqual(note.images.count(), 1)
 
     def test_unrelated_user_cannot_create_note(self):
         unrelated_user = User.objects.create_user(
