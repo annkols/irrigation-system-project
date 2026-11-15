@@ -223,22 +223,26 @@ export default function Reports() {
         }));
       }
 
-      let noteThumbnails = new Map();
+      let noteImages = new Map();
       if (sections.notes) {
         const entries = await Promise.all(
           notes
             .filter((note) => note.images?.length)
             .map(async (note) => {
-              try {
-                const res = await fetch(note.images[0].image_url, { headers });
-                if (!res.ok) return [note.id, null];
-                return [note.id, await responseToDataUrl(res)];
-              } catch {
-                return [note.id, null];
-              }
+              const images = await Promise.all(
+                note.images.map(async (image) => {
+                  try {
+                    const res = await fetch(image.image_url, { headers });
+                    return res.ok ? await responseToDataUrl(res) : null;
+                  } catch {
+                    return null;
+                  }
+                })
+              );
+              return [note.id, images.filter(Boolean)];
             })
         );
-        noteThumbnails = new Map(entries);
+        noteImages = new Map(entries);
       }
 
       await buildPdf({
@@ -247,7 +251,7 @@ export default function Reports() {
         collaborators,
         measurements,
         notes,
-        noteThumbnails,
+        noteImages,
         potNumbers,
         cameraPotNumbers,
         cameraImages,
@@ -390,7 +394,7 @@ export default function Reports() {
 }
 
 async function buildPdf({
-  experiment, design, collaborators, measurements, notes, noteThumbnails,
+  experiment, design, collaborators, measurements, notes, noteImages,
   potNumbers, cameraPotNumbers, cameraImages, sections, dateRange, generatedBy, t, locale,
 }) {
   const ctx = await createReport();
@@ -555,15 +559,14 @@ async function buildPdf({
       notes.forEach((note) => {
         addSubheading(ctx, `${note.title} — ${new Date(note.created_at).toLocaleString(locale, { hourCycle: "h23" })}`);
         if (note.content) addParagraph(ctx, note.content);
-        const thumbnail = noteThumbnails.get(note.id);
-        if (thumbnail) {
+        const attachedImages = noteImages.get(note.id) || [];
+        attachedImages.forEach((dataUrl) => {
           addImage(ctx, {
-            dataUrl: thumbnail,
-            caption: note.images.length > 1 ? t('reports.pdf.morePhotos', { count: note.images.length - 1 }) : null,
-            maxWidth: 60,
-            maxHeight: 45,
+            dataUrl,
+            maxWidth: 80,
+            maxHeight: 60,
           });
-        }
+        });
       });
     }
   }

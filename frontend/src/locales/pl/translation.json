@@ -576,7 +576,7 @@
       "camera": "Widok kamery",
       "cameraDescription": "Najnowsza klatka z kamery dla każdej monitorowanej doniczki.",
       "notes": "Notatki",
-      "notesDescription": "Oś czasu obserwacji wraz z pierwszym załączonym zdjęciem."
+      "notesDescription": "Oś czasu obserwacji wraz ze wszystkimi załączonymi zdjęciami."
     },
     "errors": {
       "loadExperiments": "Nie udało się wczytać Twoich doświadczeń.",

@@ -570,7 +570,7 @@
       "camera": "Camera view",
       "cameraDescription": "Latest camera frame for every monitored pot.",
       "notes": "Notes",
-      "notesDescription": "Timeline observations, with the first attached photo."
+      "notesDescription": "Timeline observations, with all attached photos."
     },
     "errors": {
       "loadExperiments": "Could not load your experiments.",
