@@ -115,12 +115,11 @@ class NoteDetailsTests(APITestCase):
         )
 
 
-    def test_collaborator_with_edit_permission_can_edit_own_note(self):
+    def test_collaborator_can_edit_own_note_and_add_image(self):
 
         ExperimentCollaborator.objects.create(
             experiment=self.experiment,
             user=self.stranger,
-            can_edit_notes=True,
         )
 
         note = Note.objects.create(
@@ -134,12 +133,20 @@ class NoteDetailsTests(APITestCase):
 
         url = f"/api/notes/{note.pk}/"
 
-        response = self.client.patch(url, {"title": "New"},format="json")
+        response = self.client.patch(
+            url,
+            {
+                "title": "New",
+                "images": [self.make_image("collaborator.png")],
+            },
+            format="multipart",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         note.refresh_from_db()
         self.assertEqual(note.title, "New")
+        self.assertEqual(note.images.count(), 1)
 
 
     def test_collaborator_with_edit_permission_cannot_edit_others_note(self):

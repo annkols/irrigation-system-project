@@ -11,7 +11,7 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from experiments.models import Experiment
+from experiments.models import Experiment, ExperimentCollaborator
 from notes.models import Note, NoteImage
 
 User = get_user_model()
@@ -99,3 +99,25 @@ class NoteImageDeletionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.assertTrue( NoteImage.objects.filter(pk=self.image.pk).exists())
+
+    def test_collaborator_can_delete_image_from_own_note(self):
+        ExperimentCollaborator.objects.create(
+            experiment=self.experiment,
+            user=self.stranger,
+        )
+        own_note = Note.objects.create(
+            experiment=self.experiment,
+            title="Own note",
+            content="Note body",
+            author=self.stranger,
+        )
+        own_image = NoteImage.objects.create(
+            note=own_note,
+            image=self.make_image("own.png"),
+        )
+        self.client.force_authenticate(user=self.stranger)
+
+        response = self.client.delete(f"/api/note-images/{own_image.pk}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(NoteImage.objects.filter(pk=own_image.pk).exists())
