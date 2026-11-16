@@ -3893,6 +3893,101 @@ textarea:focus {
   gap: 10px;
 }
 
+.note-attachment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.note-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.note-attachment-download {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-divider);
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+}
+
+button.note-attachment-download {
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+button.note-attachment-download:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.note-attachment-download .material-symbols-outlined {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.note-attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-attachment-size {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.note-attachment-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.note-attachment-remove:hover:not(:disabled) {
+  color: var(--color-error);
+}
+
+.note-attachment-remove .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.note-attachments-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.note-attachments-count .material-symbols-outlined {
+  font-size: 16px;
+}
+
 .note-gallery-item {
   position: relative;
   width: 120px;

@@ -15,6 +15,8 @@ const CAMERA_FRAME_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
 const NOTE_IMAGE_MAX_BYTES = 700 * 1024;
 const NOTE_IMAGE_MAX_DIMENSION = 1600;
+const NOTE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const NOTE_ATTACHMENTS_MAX_COUNT = 10;
 
 const getLocalDateInputValue = () => {
   const now = new Date();
@@ -23,6 +25,13 @@ const getLocalDateInputValue = () => {
 };
 
 class NoteImageUploadError extends Error {}
+class NoteAttachmentUploadError extends Error {}
+
+const formatFileSize = bytes => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const canvasToJpegBlob = (canvas, quality) => new Promise((resolve, reject) => {
   canvas.toBlob(
@@ -214,7 +223,7 @@ function Experiment_details() {
   const [errorTime, setErrorTime] = useState(null);
   const [notes, setNotes] = useState([]);
   const [noteFormOpen, setNoteFormOpen] = useState(false);
-  const [draftNote, setDraftNote] = useState({ title: '', content: '', images: [] });
+  const [draftNote, setDraftNote] = useState({ title: '', content: '', images: [], attachments: [] });
   const [openNote, setOpenNote] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [noteEditMode, setNoteEditMode] = useState(false);
@@ -302,6 +311,61 @@ function Experiment_details() {
     return updatedNote;
   };
 
+  // Pliki wysyłane pojedynczo, żeby jeden duży plik nie blokował pozostałych
+  const uploadNoteAttachments = async (noteId, files, existingCount = 0) => {
+    if (existingCount + files.length > NOTE_ATTACHMENTS_MAX_COUNT) {
+      throw new NoteAttachmentUploadError(
+        t('experimentDetails.errors.tooManyFiles', { max: NOTE_ATTACHMENTS_MAX_COUNT }),
+      );
+    }
+    const tooLarge = files.find(file => file.size > NOTE_ATTACHMENT_MAX_BYTES);
+    if (tooLarge) {
+      throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
+        name: tooLarge.name,
+        max: NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
+      }));
+    }
+
+    let updatedNote = null;
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('attachments', file);
+      const response = await fetch(`${API_BASE_URL}/notes/${noteId}/`, {
+        method: 'PATCH',
+        headers: getAuthTokenHeader(),
+        body: formData,
+      });
+      if (!response.ok) {
+        if (response.status === 413) {
+          throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
+            name: file.name,
+            max: NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
+          }));
+        }
+        throw new NoteAttachmentUploadError(t('experimentDetails.errors.addFile', { status: response.status }));
+      }
+      updatedNote = await response.json();
+    }
+    return updatedNote;
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    try {
+      const response = await fetch(attachment.file_url, { headers: getAuthTokenHeader() });
+      if (!response.ok) throw new Error(String(response.status));
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch {
+      toast.error(t('experimentDetails.errors.downloadFile'));
+    }
+  };
+
   const handleSaveCameraFrame = async () => {
     if (selectedCameraPot == null || !cameraFrameAvailable || isSavingFrame) return;
 
@@ -384,6 +448,42 @@ function Experiment_details() {
       } else {
         toast.error(t('experimentDetails.errors.addImage', { status: error.status ?? '?' }));
       }
+    }
+    setNoteBusy(false);
+  };
+
+  const handleAddNoteAttachments = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!openNote || files.length === 0) return;
+    setNoteBusy(true);
+    try {
+      const updated = await uploadNoteAttachments(openNote.id, files, openNote.attachments?.length ?? 0);
+      if (updated) {
+        setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+        setOpenNote(updated);
+      }
+    } catch (error) {
+      await refreshNote(openNote.id);
+      toast.error(error instanceof NoteAttachmentUploadError ? error.message : t('experimentForm.errors.connection'));
+    }
+    setNoteBusy(false);
+  };
+
+  const handleDeleteNoteAttachment = async (attachmentId) => {
+    if (!openNote) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/note-attachments/${attachmentId}/`, {
+        method: 'DELETE',
+        headers: getAuthTokenHeader(),
+      });
+      if (res.ok || res.status === 404) {
+        await refreshNote(openNote.id);
+      } else {
+        toast.error(t('experimentDetails.errors.deleteFile', { status: res.status }));
+      }
+    } catch {
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -1404,6 +1504,33 @@ function Experiment_details() {
                       </div>
                     )}
 
+                    {(openNote.attachments?.length > 0) && (
+                      <ul className="note-attachment-list">
+                        {openNote.attachments.map(attachment => (
+                          <li key={attachment.id} className="note-attachment-item">
+                            <button
+                              className="note-attachment-download"
+                              title={t('experimentDetails.downloadFile')}
+                              onClick={() => handleDownloadAttachment(attachment)}
+                            >
+                              <span className="material-symbols-outlined">description</span>
+                              <span className="note-attachment-name">{attachment.name}</span>
+                              <span className="note-attachment-size">{formatFileSize(attachment.size)}</span>
+                              <span className="material-symbols-outlined">download</span>
+                            </button>
+                            <button
+                              className="note-attachment-remove"
+                              disabled={noteBusy}
+                              title={t('experimentDetails.removeFile')}
+                              onClick={() => handleDeleteNoteAttachment(attachment.id)}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
                     <div className="note-detail-actions">
                       {noteEditMode ? (
                         <>
@@ -1417,6 +1544,17 @@ function Experiment_details() {
                               style={{ display: 'none' }}
                               disabled={noteBusy}
                               onChange={e => { handleAddNoteImages(e.target.files); e.target.value = ''; }}
+                            />
+                          </label>
+                          <label className="note-image-upload">
+                            <span className="material-symbols-outlined">attach_file</span>
+                            {t('experimentDetails.addFiles')}
+                            <input
+                              type="file"
+                              multiple
+                              style={{ display: 'none' }}
+                              disabled={noteBusy}
+                              onChange={e => { handleAddNoteAttachments(e.target.files); e.target.value = ''; }}
                             />
                           </label>
                           <div className="note-detail-actions-right">
@@ -1494,6 +1632,12 @@ function Experiment_details() {
                             </span>
                             <h3 className="note-title">{note.title}</h3>
                             {note.content && <p className="note-content">{note.content}</p>}
+                            {note.attachments?.length > 0 && (
+                              <span className="note-attachments-count">
+                                <span className="material-symbols-outlined">attach_file</span>
+                                {t('experimentDetails.filesCount', { count: note.attachments.length })}
+                              </span>
+                            )}
                           </div>
                           {note.images?.length > 0 && (
                             <div className="note-thumb-wrap">
@@ -1635,6 +1779,46 @@ function Experiment_details() {
                         }}
                       />
                     </label>
+                    <label className="note-image-upload">
+                      <span className="material-symbols-outlined">attach_file</span>
+                      {t('experimentDetails.addFiles')}
+                      <input
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length) setDraftNote(prev => ({
+                            ...prev,
+                            attachments: [...prev.attachments, ...files],
+                          }));
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    {draftNote.attachments.length > 0 && (
+                      <ul className="note-attachment-list">
+                        {draftNote.attachments.map((file, idx) => (
+                          <li key={idx} className="note-attachment-item">
+                            <span className="note-attachment-download">
+                              <span className="material-symbols-outlined">description</span>
+                              <span className="note-attachment-name">{file.name}</span>
+                              <span className="note-attachment-size">{formatFileSize(file.size)}</span>
+                            </span>
+                            <button
+                              className="note-attachment-remove"
+                              title={t('experimentDetails.removeFile')}
+                              onClick={() => setDraftNote(prev => ({
+                                ...prev,
+                                attachments: prev.attachments.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {draftNote.images.length > 0 && (
                       <div className="note-image-gallery">
                         {draftNote.images.map((img, idx) => (
@@ -1657,7 +1841,7 @@ function Experiment_details() {
                     <div className="note-modal-actions">
                       <button className="note-cancel-btn" onClick={() => {
                         setNoteFormOpen(false);
-                        setDraftNote({ title: '', content: '', images: [] });
+                        setDraftNote({ title: '', content: '', images: [], attachments: [] });
                       }}>{t('experimentForm.cancel')}</button>
                       <button
                         className="note-save-btn"
@@ -1683,9 +1867,13 @@ function Experiment_details() {
                                 const updatedNote = await uploadNoteImages(savedNote.id, preparedImages);
                                 if (updatedNote) savedNote = updatedNote;
                               }
+                              if (draftNote.attachments.length > 0) {
+                                const updatedNote = await uploadNoteAttachments(savedNote.id, draftNote.attachments);
+                                if (updatedNote) savedNote = updatedNote;
+                              }
                               setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
-                              setDraftNote({ title: '', content: '', images: [] });
+                              setDraftNote({ title: '', content: '', images: [], attachments: [] });
                             } else {
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
@@ -1695,10 +1883,13 @@ function Experiment_details() {
                             if (savedNote) {
                               setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
-                              setDraftNote({ title: '', content: '', images: [] });
+                              setDraftNote({ title: '', content: '', images: [], attachments: [] });
                             }
+                            if (savedNote) refreshNote(savedNote.id);
                             if (error instanceof NoteImageUploadError) {
                               toast.error(t('experimentDetails.errors.imagesTooLarge'));
+                            } else if (error instanceof NoteAttachmentUploadError) {
+                              toast.error(error.message);
                             } else {
                               toast.error(t('experimentForm.errors.connection'));
                             }
