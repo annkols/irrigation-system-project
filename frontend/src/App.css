@@ -309,7 +309,7 @@ textarea:focus {
 }
 
 .error-text {
-  color: var(--color-error);
+  color: var(--color-error) !important;
   font-size: 12px;
   margin-top: 5px;
   display: block;
@@ -363,9 +363,13 @@ textarea:focus {
     flex-wrap: wrap; 
 }
 
-.designer-row > input, .designer-row > select, .level-row > input { 
+.designer-row > .input-group, .designer-row > select, .level-row > input { 
     flex: 1 1 180px; 
     min-width: 0; 
+}
+
+.input-group input {
+    width: 100%;
 }
 
 .level-row label { 
@@ -616,6 +620,22 @@ textarea:focus {
 .frequency-grid input:focus { 
     outline: none; 
     border-color: var(--color-primary); 
+}
+.frequency-grid .frequency-sensor-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.frequency-grid .sensor-toggle-checkbox {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    flex: 0 0 18px;
+    accent-color: var(--color-primary);
+}
+.frequency-grid input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 /* PotModal style */
@@ -2140,6 +2160,7 @@ textarea:focus {
 .card-footer {
   display: flex;
   justify-content: space-between;
+  gap: 4px;
   align-items: center;
   margin-top: 12px;
 }
@@ -4626,6 +4647,9 @@ button.note-attachment-download:hover {
   flex-direction: column;
   gap: 5px;
 }
+.people-search-field .search-input-wrapper input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]) {
+  padding-left: 36px;
+}
 
 .people-search-field label {
   font-size: 10px;
@@ -4764,7 +4788,8 @@ button.note-attachment-download:hover {
 }
 
 .exp-edit-input--error {
-  border-color: var(--color-error);
+  border: 2px solid var(--color-error) !important;
+
 }
 
 .exp-edit-textarea {

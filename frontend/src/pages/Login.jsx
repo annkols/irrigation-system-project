@@ -31,6 +31,9 @@ function Login({ onClose }) {
 
       if (response.ok) {
         localStorage.setItem("token", data.access || data.token);
+        if (data.refresh) {
+            localStorage.setItem("refresh", data.refresh);
+        }
         onClose();
         navigate("/dashboard");
       } else {

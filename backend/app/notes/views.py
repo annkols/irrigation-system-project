@@ -14,7 +14,13 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 
 from experiments.models import Experiment
-from experiments.permissions import CanEditExperiment, CanViewExperiment, CanAddNotes, CanEditNotes, CanDeleteNotes
+from experiments.permissions import (
+    CanDeleteNotes,
+    CanEditExperiment,
+    CanEditNotes,
+    CanViewExperiment,
+    IsExperimentOwnerOrCollaborator,
+)
 from .models import BBCHObservation, Note, NoteAttachment, NoteImage
 from .serializers import BBCHObservationSerializer, NoteAttachmentSerializer, NoteImageSerializer, NoteSerializer
 
@@ -28,7 +34,11 @@ class ExperimentNoteListCreateView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_permissions(self):
-        permission = CanViewExperiment if self.request.method in ['GET', 'HEAD'] else CanAddNotes
+        permission = (
+            CanViewExperiment
+            if self.request.method in ['GET', 'HEAD']
+            else IsExperimentOwnerOrCollaborator
+        )
         return [IsAuthenticated(), permission()]
 
     def get_experiment(self):
@@ -158,7 +168,11 @@ class ExperimentBBCHObservationListCreateView(generics.ListCreateAPIView):
     serializer_class = BBCHObservationSerializer
 
     def get_permissions(self):
-        permission = CanViewExperiment if self.request.method in ['GET', 'HEAD'] else CanAddNotes
+        permission = (
+            CanViewExperiment
+            if self.request.method in ['GET', 'HEAD']
+            else IsExperimentOwnerOrCollaborator
+        )
         return [IsAuthenticated(), permission()]
 
     def get_experiment(self):

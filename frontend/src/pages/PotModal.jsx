@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "../App.css";
 import { useTranslation } from "react-i18next";
 
-function PotModal({ isOpen, pot, factors, onClose, onSave }) {
-  if (!isOpen || !pot) return null;
+function PotModalContent({ pot, factors, onClose, onSave }) {
   const { t } = useTranslation();
   const [userDefinedLabel, setUserDefinedLabel] = useState(pot.user_defined_label || "");
-
-  useEffect(() => {
-    setUserDefinedLabel(pot.user_defined_label || "");
-  }, [pot]);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,13 +39,20 @@ function PotModal({ isOpen, pot, factors, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            maxLength={50}
-            placeholder={t("potModal.labelPlaceholder")}
-            value={userDefinedLabel}
-            onChange={(e) => setUserDefinedLabel(e.target.value)}
-          />
+          <div className="pot-modal-field">
+            <input
+              type="text"
+              maxLength={50}
+              placeholder={t("potModal.labelPlaceholder")}
+              value={userDefinedLabel}
+              onChange={(e) => {
+                setUserDefinedLabel(e.target.value);
+                if (error) setError("");
+              }}
+              className={error ? "exp-edit-input--error" : ""}
+            />
+            {error && <span className="error-text">{error}</span>}
+          </div>
 
           <div className="pot-modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>
@@ -62,6 +65,20 @@ function PotModal({ isOpen, pot, factors, onClose, onSave }) {
         </form>
       </div>
     </div>
+  );
+}
+
+function PotModal({ isOpen, pot, factors, onClose, onSave }) {
+  if (!isOpen || !pot) return null;
+
+  return (
+    <PotModalContent
+      key={pot.label ?? pot.id}
+      pot={pot}
+      factors={factors}
+      onClose={onClose}
+      onSave={onSave}
+    />
   );
 }
 

@@ -430,9 +430,6 @@ class ActiveExperimentSensorConfigView(APIView):
                 for key in ALLOWED_SENSOR_FREQUENCY_KEYS
             }
 
-        if not frequencies.get("soil_moisture"):
-            frequencies["soil_moisture"] = experiment.measurement_frequency_seconds
-
         response_data = {
             "experiment_id": experiment.id,
             "sensor_set_id": experiment.sensor_set_id,

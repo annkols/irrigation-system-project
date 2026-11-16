@@ -7,15 +7,14 @@
 unsigned long lastCommandCheckAt = 0, lastConfigCheckAt = 0;
 const unsigned long commandCheckIntervalMs = 5000, configCheckIntervalMs = 30000;
 int assignedExperimentId = 0, assignedStationNumber = 0;
-int assignedPotNumbers[POT_CHANNEL_COUNT] = {0, 0, 0};
-int lastForwardedCommandIds[POT_CHANNEL_COUNT] = {0, 0, 0};
+int assignedPotNumbers[POT_CHANNEL_COUNT] = {};
+int lastForwardedCommandIds[POT_CHANNEL_COUNT] = {};
 String lastForwardedConfig = "";
 bool assignmentReady = false;
 
 void setup() {
-  // Mega wysyla trzy rekordy jeden po drugim. W czasie wykonywania HTTPS POST
-  // ESP nie czyta UART, dlatego domyslny bufor moze zgubic drugi lub trzeci
-  // rekord. 1024 bajty mieszcza caly pakiet dla trzech doniczek.
+  // Mega może wysłać kilka rekordów jeden po drugim. W czasie wykonywania HTTPS
+  // POST ESP nie czyta UART, dlatego powiększony bufor chroni kolejne rekordy.
   Serial.setRxBufferSize(1024);
   Serial.begin(9600);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -59,16 +58,23 @@ void sendToBackend(String payload) {
 void fetchSensorConfigs() {
   if (!ensureWifi()) return;
   int experiment = 0, station = 0;
-  int pots[POT_CHANNEL_COUNT] = {0, 0, 0};
+  int pots[POT_CHANNEL_COUNT] = {};
   String frequencyResponse = "";
 
   for (byte channel = 0; channel < POT_CHANNEL_COUNT; channel++) {
+    String moistureId = String(SOIL_MOISTURE_IDS[channel]);
+    String temperatureId = String(SOIL_TEMPERATURE_IDS[channel]);
+    String pumpId = String(PUMP_IDS[channel]);
+    moistureId.trim(); temperatureId.trim(); pumpId.trim();
+    if (moistureId.length() == 0 && temperatureId.length() == 0 && pumpId.length() == 0) continue;
+
     BearSSL::WiFiClientSecure client; client.setInsecure();
     HTTPClient http;
     String url = String(ACTIVE_SENSOR_CONFIG_API_URL)
-      + "?sensor_set_id=" + String(SENSOR_SET_ID)
-      + "&soil_moisture_id=" + urlEncode(SOIL_MOISTURE_IDS[channel])
-      + "&soil_temperature_id=" + urlEncode(SOIL_TEMPERATURE_IDS[channel]);
+      + "?sensor_set_id=" + String(SENSOR_SET_ID);
+    if (moistureId.length() > 0) url += "&soil_moisture_id=" + urlEncode(moistureId.c_str());
+    if (temperatureId.length() > 0) url += "&soil_temperature_id=" + urlEncode(temperatureId.c_str());
+    if (pumpId.length() > 0) url += "&pump_id=" + urlEncode(pumpId.c_str());
     http.begin(client, url);
     int status = http.GET();
     if (status == 200) {

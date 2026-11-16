@@ -209,7 +209,11 @@ class ExperimentSerializer(serializers.ModelSerializer):
             ExperimentCollaborator.objects.bulk_create([
                 ExperimentCollaborator(
                     experiment=experiment,
-                    user=item["user"]
+                    user=item["user"],
+                    **{
+                        field: item.get(field, False)
+                        for field in PERMISSION_FIELDS
+                    }
                 )
                 for item in initial_collaborators
             ])
@@ -266,6 +270,10 @@ class ExperimentSerializer(serializers.ModelSerializer):
                 membership, created = ExperimentCollaborator.objects.get_or_create(
                     experiment=experiment,
                     user_id=user_id,
+                    defaults={
+                        field: item.get(field, False)
+                        for field in PERMISSION_FIELDS
+                    },
                 )
 
                 if not created:

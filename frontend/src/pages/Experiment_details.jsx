@@ -248,6 +248,13 @@ function Experiment_details() {
     pump_on: t('experimentDetails.pumpStatus'),
   };
 
+  const enabledSensorKeys = useMemo(() => {
+    const configured = experiment?.sensor_frequencies;
+    return configured && Object.keys(configured).length
+      ? new Set(Object.keys(configured))
+      : new Set(['air_temperature', 'air_humidity', 'pressure', 'light', 'soil_moisture', 'soil_temperature']);
+  }, [experiment?.sensor_frequencies]);
+
   const handleExportClick = (format) => {
     setExportFormat(format);
     setExportOpen(false);
@@ -1182,14 +1189,14 @@ function Experiment_details() {
                 </div>
                 <div className="exp-sensors-grid">
                   {[
-                    { icon: 'device_thermostat', label: t('experimentDetails.tempInside'), value: latestShared?.air_temperature, unit: '°C' },
-                    { icon: 'water_drop', label: t('experimentForm.sensors.soilMoisture'), value: latest?.moisture_percent, unit: '%' },
-                    { icon: 'cloud', label: t('experimentForm.sensors.airHumidity'), value: latestShared?.air_humidity, unit: '%' },
-                    { icon: 'light_mode', label: t('experimentForm.sensors.light'), value: latestShared?.light_lux, unit: 'lx' },
-                    { icon: 'thermostat', label: t('experimentForm.sensors.soilTemperature'), value: latest?.soil_temperature, unit: '°C' },
-                    { icon: 'speed', label: t('experimentForm.sensors.pressure'), value: latestShared?.pressure_hpa, unit: 'hPa' },
-                  ].map(({ icon, label, value, unit }) => (
-                    <div key={label} className="exp-sensor-card">
+                    { key: 'air_temperature', icon: 'device_thermostat', label: t('experimentDetails.tempInside'), value: latestShared?.air_temperature, unit: '°C' },
+                    { key: 'soil_moisture', icon: 'water_drop', label: t('experimentForm.sensors.soilMoisture'), value: latest?.moisture_percent, unit: '%' },
+                    { key: 'air_humidity', icon: 'cloud', label: t('experimentForm.sensors.airHumidity'), value: latestShared?.air_humidity, unit: '%' },
+                    { key: 'light', icon: 'light_mode', label: t('experimentForm.sensors.light'), value: latestShared?.light_lux, unit: 'lx' },
+                    { key: 'soil_temperature', icon: 'thermostat', label: t('experimentForm.sensors.soilTemperature'), value: latest?.soil_temperature, unit: '°C' },
+                    { key: 'pressure', icon: 'speed', label: t('experimentForm.sensors.pressure'), value: latestShared?.pressure_hpa, unit: 'hPa' },
+                  ].filter(({ key }) => enabledSensorKeys.has(key)).map(({ key, icon, label, value, unit }) => (
+                    <div key={key} className="exp-sensor-card">
                       <span className="material-symbols-outlined exp-sensor-icon">{icon}</span>
                       <span className="exp-sensor-label">{label}</span>
                       <span className="exp-sensor-value">
@@ -1408,12 +1415,12 @@ function Experiment_details() {
                     <thead>
                       <tr>
                         <th>{t('experimentDetails.dateTime')}</th>
-                        <th>{t('experimentDetails.airTemp')} (°C)</th>
-                        <th>{t('experimentForm.sensors.soilMoisture')} (%)</th>
-                        <th>{t('experimentForm.sensors.airHumidity')} (%)</th>
-                        <th>{t('experimentDetails.light')} (lx)</th>
-                        <th>{t('experimentDetails.soilTemp')} (°C)</th>
-                        <th>{t('experimentForm.sensors.pressure')} (hPa)</th>
+                        {enabledSensorKeys.has('air_temperature') && <th>{t('experimentDetails.airTemp')} (°C)</th>}
+                        {enabledSensorKeys.has('soil_moisture') && <th>{t('experimentForm.sensors.soilMoisture')} (%)</th>}
+                        {enabledSensorKeys.has('air_humidity') && <th>{t('experimentForm.sensors.airHumidity')} (%)</th>}
+                        {enabledSensorKeys.has('light') && <th>{t('experimentDetails.light')} (lx)</th>}
+                        {enabledSensorKeys.has('soil_temperature') && <th>{t('experimentDetails.soilTemp')} (°C)</th>}
+                        {enabledSensorKeys.has('pressure') && <th>{t('experimentForm.sensors.pressure')} (hPa)</th>}
                         <th>{t('experimentDetails.pump')}</th>
                       </tr>
                     </thead>
@@ -1421,12 +1428,12 @@ function Experiment_details() {
                       {selectedMeasurements.map((m, i) => (
                         <tr key={i}>
                           <td>{m.created_at ? new Date(m.created_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" }) : '-'}</td>
-                          <td>{m.air_temperature ?? '-'}</td>
-                          <td>{m.moisture_percent ?? '-'}</td>
-                          <td>{m.air_humidity ?? '-'}</td>
-                          <td>{m.light_lux ?? '-'}</td>
-                          <td>{m.soil_temperature ?? '-'}</td>
-                          <td>{m.pressure_hpa ?? '-'}</td>
+                          {enabledSensorKeys.has('air_temperature') && <td>{m.air_temperature ?? '-'}</td>}
+                          {enabledSensorKeys.has('soil_moisture') && <td>{m.moisture_percent ?? '-'}</td>}
+                          {enabledSensorKeys.has('air_humidity') && <td>{m.air_humidity ?? '-'}</td>}
+                          {enabledSensorKeys.has('light') && <td>{m.light_lux ?? '-'}</td>}
+                          {enabledSensorKeys.has('soil_temperature') && <td>{m.soil_temperature ?? '-'}</td>}
+                          {enabledSensorKeys.has('pressure') && <td>{m.pressure_hpa ?? '-'}</td>}
                           <td>{m.pump_on != null ? (m.pump_on ? 'ON' : 'OFF') : '-'}</td>
                         </tr>
                       ))}
@@ -1853,20 +1860,18 @@ function Experiment_details() {
                             const preparedImages = await Promise.all(
                               draftNote.images.map(img => compressNoteImage(img.file)),
                             );
+                            const formData = new FormData();
+                            formData.append('title', draftNote.title);
+                            formData.append('content', draftNote.content);
+                            preparedImages.forEach(image => formData.append('images', image));
+
                             const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
                               method: 'POST',
-                              headers: getAuthHeaders(),
-                              body: JSON.stringify({
-                                title: draftNote.title,
-                                content: draftNote.content,
-                              }),
+                              headers: getAuthTokenHeader(),
+                              body: formData,
                             });
                             if (res.ok) {
                               savedNote = await res.json();
-                              if (preparedImages.length > 0) {
-                                const updatedNote = await uploadNoteImages(savedNote.id, preparedImages);
-                                if (updatedNote) savedNote = updatedNote;
-                              }
                               if (draftNote.attachments.length > 0) {
                                 const updatedNote = await uploadNoteAttachments(savedNote.id, draftNote.attachments);
                                 if (updatedNote) savedNote = updatedNote;
@@ -1875,6 +1880,7 @@ function Experiment_details() {
                               setNoteFormOpen(false);
                               setDraftNote({ title: '', content: '', images: [], attachments: [] });
                             } else {
+                              if (res.status === 413) throw new NoteImageUploadError();
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
                               toast.error(t('experimentDetails.errors.saveNote', { status: res.status }));

@@ -257,6 +257,7 @@
     "hardwareSetId": "Hardware set ID",
     "readingFrequency": "reading frequency (hours)",
     "frequencyTitle": "Reading frequency (hours)",
+    "selectAvailableSensors": "Select the sensors physically available in this hardware set.",
     "exampleDecimal": "e.g. 0.3",
     "makePublic": "Make my experiment public and let other users see the data.",
     "sensors": {
@@ -281,6 +282,7 @@
       "keywordLength": "Ensure each keyword has no more than 50 characters.",
       "hardwareMissing": "Hardware set ID is missing.",
       "frequency": "Frequencies must be positive numbers of hours, for example 1 or 0.3.",
+      "sensorRequired": "Select at least one available sensor.",
       "startRequired": "Start date is required.",
       "endRequired": "Planned end date is required.",
       "endBeforeStart": "Planned end date cannot be earlier than start date.",
@@ -361,12 +363,23 @@
     "validation": {
       "name": "Experiment name is required.",
       "plant": "Plant species is required.",
+      "descriptionTooLong": "Description cannot exceed 2000 characters.",
+      "nameTooLong": "Experiment name cannot exceed 100 characters.",
+      "plantTooLong": "Plant species cannot exceed 100 characters.",
       "dates": "Both dates are required.",
       "dateOrder": "End date cannot be earlier than start date.",
       "keywords": "Add at least one keyword.",
       "factor": "Add at least one factor.",
       "factorDetails": "Every factor needs a name and at least two named levels.",
       "reference": "Select exactly one reference level for every factor.",
+      "factorNameRequired": "Factor name is required.",
+      "factorNameTooLong": "Factor name cannot exceed 100 characters.",
+      "duplicateFactorName": "Factor names must be unique.",
+      "factorUnitTooLong": "Factor unit cannot exceed 30 characters.",
+      "levelRequired": "Level label is required.",
+      "levelTooLong": "Level label cannot exceed 100 characters.",
+      "duplicateLevelLabel": "Level labels must be unique within a factor.",
+      "levelValueTooLong": "Level value cannot exceed 100 characters.",
       "combination": "Select at least one combination.",
       "repetitions": "Repetitions must be between 1 and 50.",
       "potLimit": "The plan may contain at most 500 pots.",
@@ -567,7 +580,7 @@
       "camera": "Camera view",
       "cameraDescription": "Latest camera frame for every monitored pot.",
       "notes": "Notes",
-      "notesDescription": "Timeline observations, with the first attached photo."
+      "notesDescription": "Timeline observations, with all attached photos."
     },
     "errors": {
       "loadExperiments": "Could not load your experiments.",
