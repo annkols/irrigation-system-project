@@ -29,10 +29,14 @@ class Note(models.Model):
 
     def delete(self, *args, **kwargs):
         images = list(self.images.all())
+        attachments = list(self.attachments.all())
         super().delete(*args, **kwargs)
         for note_image in images:
             if note_image.image:
                 note_image.image.delete(save=False)
+        for attachment in attachments:
+            if attachment.file:
+                attachment.file.delete(save=False)
 
 
 class NoteImage(models.Model):
@@ -59,6 +63,34 @@ class NoteImage(models.Model):
         super().delete(*args, **kwargs)
         if image:
             image.delete(save=False)
+
+
+class NoteAttachment(models.Model):
+    note = models.ForeignKey(
+        Note,
+        on_delete=models.CASCADE,
+        related_name='attachments',
+    )
+    file = models.FileField(upload_to='notes/files/%Y/%m/%d/')
+    original_name = models.CharField(max_length=255)
+    size = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['uploaded_at', 'id']
+
+    def __str__(self):
+        return f"{self.original_name} — {self.note.title}"
+
+    @property
+    def experiment(self):
+        return self.note.experiment
+
+    def delete(self, *args, **kwargs):
+        file = self.file
+        super().delete(*args, **kwargs)
+        if file:
+            file.delete(save=False)
 
 
 class BBCHObservation(models.Model):
