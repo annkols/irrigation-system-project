@@ -15,8 +15,17 @@ const CAMERA_FRAME_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
 const NOTE_IMAGE_MAX_BYTES = 700 * 1024;
 const NOTE_IMAGE_MAX_DIMENSION = 1600;
-const NOTE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const NOTE_ATTACHMENT_MAX_BYTES = 1 * 1024 * 1024;
+const NOTE_ATTACHMENT_MAX_MB = NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024);
 const NOTE_ATTACHMENTS_MAX_COUNT = 10;
+const NOTE_ATTACHMENT_EXTENSIONS = ['pdf', 'docx', 'txt', 'csv', 'xlsx'];
+const NOTE_ATTACHMENT_ACCEPT = NOTE_ATTACHMENT_EXTENSIONS.map(ext => `.${ext}`).join(',');
+const NOTE_ATTACHMENT_TYPES_LABEL = NOTE_ATTACHMENT_EXTENSIONS.map(ext => ext.toUpperCase()).join(', ');
+
+const getFileExtension = name => {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+};
 
 const getLocalDateInputValue = () => {
   const now = new Date();
@@ -318,6 +327,29 @@ function Experiment_details() {
     return updatedNote;
   };
 
+  const attachmentHint = t('experimentDetails.filesHint', {
+    types: NOTE_ATTACHMENT_TYPES_LABEL,
+    max: NOTE_ATTACHMENT_MAX_MB,
+    maxCount: NOTE_ATTACHMENTS_MAX_COUNT,
+  });
+
+  // Zwraca komunikat błędu albo null, jeśli plik można dodać
+  const getAttachmentError = file => {
+    if (!NOTE_ATTACHMENT_EXTENSIONS.includes(getFileExtension(file.name))) {
+      return t('experimentDetails.errors.fileTypeNotAllowed', {
+        name: file.name,
+        types: NOTE_ATTACHMENT_TYPES_LABEL,
+      });
+    }
+    if (file.size > NOTE_ATTACHMENT_MAX_BYTES) {
+      return t('experimentDetails.errors.fileTooLarge', { name: file.name, max: NOTE_ATTACHMENT_MAX_MB });
+    }
+    if (file.size === 0) {
+      return t('experimentDetails.errors.fileEmpty', { name: file.name });
+    }
+    return null;
+  };
+
   // Pliki wysyłane pojedynczo, żeby jeden duży plik nie blokował pozostałych
   const uploadNoteAttachments = async (noteId, files, existingCount = 0) => {
     if (existingCount + files.length > NOTE_ATTACHMENTS_MAX_COUNT) {
@@ -325,28 +357,41 @@ function Experiment_details() {
         t('experimentDetails.errors.tooManyFiles', { max: NOTE_ATTACHMENTS_MAX_COUNT }),
       );
     }
-    const tooLarge = files.find(file => file.size > NOTE_ATTACHMENT_MAX_BYTES);
-    if (tooLarge) {
-      throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
-        name: tooLarge.name,
-        max: NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
-      }));
+    for (const file of files) {
+      const error = getAttachmentError(file);
+      if (error) throw new NoteAttachmentUploadError(error);
     }
 
     let updatedNote = null;
     for (const file of files) {
       const formData = new FormData();
       formData.append('attachments', file);
-      const response = await fetch(`${API_BASE_URL}/notes/${noteId}/`, {
-        method: 'PATCH',
-        headers: getAuthTokenHeader(),
-        body: formData,
-      });
+      let response;
+      try {
+        response = await fetch(`${API_BASE_URL}/notes/${noteId}/`, {
+          method: 'PATCH',
+          headers: getAuthTokenHeader(),
+          body: formData,
+        });
+      } catch {
+        // Serwer może zerwać połączenie przy zbyt dużym pliku
+        throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
+          name: file.name,
+          max: NOTE_ATTACHMENT_MAX_MB,
+        }));
+      }
       if (!response.ok) {
         if (response.status === 413) {
           throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
             name: file.name,
-            max: NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024),
+            max: NOTE_ATTACHMENT_MAX_MB,
+          }));
+        }
+        if (response.status === 400) {
+          throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileRejected', {
+            name: file.name,
+            types: NOTE_ATTACHMENT_TYPES_LABEL,
+            max: NOTE_ATTACHMENT_MAX_MB,
           }));
         }
         throw new NoteAttachmentUploadError(t('experimentDetails.errors.addFile', { status: response.status }));
@@ -1538,6 +1583,7 @@ function Experiment_details() {
                       </ul>
                     )}
 
+                    {noteEditMode && <p className="note-attachment-hint">{attachmentHint}</p>}
                     <div className="note-detail-actions">
                       {noteEditMode ? (
                         <>
@@ -1553,11 +1599,12 @@ function Experiment_details() {
                               onChange={e => { handleAddNoteImages(e.target.files); e.target.value = ''; }}
                             />
                           </label>
-                          <label className="note-image-upload">
+                          <label className="note-image-upload" title={attachmentHint}>
                             <span className="material-symbols-outlined">attach_file</span>
                             {t('experimentDetails.addFiles')}
                             <input
                               type="file"
+                              accept={NOTE_ATTACHMENT_ACCEPT}
                               multiple
                               style={{ display: 'none' }}
                               disabled={noteBusy}
@@ -1786,23 +1833,35 @@ function Experiment_details() {
                         }}
                       />
                     </label>
-                    <label className="note-image-upload">
+                    <label className="note-image-upload" title={attachmentHint}>
                       <span className="material-symbols-outlined">attach_file</span>
                       {t('experimentDetails.addFiles')}
                       <input
                         type="file"
+                        accept={NOTE_ATTACHMENT_ACCEPT}
                         multiple
                         style={{ display: 'none' }}
                         onChange={e => {
                           const files = Array.from(e.target.files || []);
-                          if (files.length) setDraftNote(prev => ({
-                            ...prev,
-                            attachments: [...prev.attachments, ...files],
-                          }));
                           e.target.value = '';
+                          const valid = [];
+                          files.forEach(file => {
+                            const error = getAttachmentError(file);
+                            if (error) toast.error(error);
+                            else valid.push(file);
+                          });
+                          if (draftNote.attachments.length + valid.length > NOTE_ATTACHMENTS_MAX_COUNT) {
+                            toast.error(t('experimentDetails.errors.tooManyFiles', { max: NOTE_ATTACHMENTS_MAX_COUNT }));
+                            return;
+                          }
+                          if (valid.length) setDraftNote(prev => ({
+                            ...prev,
+                            attachments: [...prev.attachments, ...valid],
+                          }));
                         }}
                       />
                     </label>
+                    <p className="note-attachment-hint">{attachmentHint}</p>
                     {draftNote.attachments.length > 0 && (
                       <ul className="note-attachment-list">
                         {draftNote.attachments.map((file, idx) => (

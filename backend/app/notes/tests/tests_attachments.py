@@ -71,12 +71,65 @@ class NoteAttachmentTests(APITestCase):
     def test_rejects_file_over_size_limit(self):
         from notes import views
         self.client.force_authenticate(self.owner)
-        big = self.make_file('big.bin', b'x' * (views.MAX_ATTACHMENT_SIZE + 1))
+        big = self.make_file('big.csv', b'x' * (views.MAX_ATTACHMENT_SIZE + 1))
 
         res = self.client.patch(f'/api/notes/{self.note.id}/', {'attachments': [big]}, format='multipart')
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.note.attachments.count(), 0)
+
+    def test_accepts_all_allowed_types(self):
+        self.client.force_authenticate(self.owner)
+        files = [
+            self.make_file('a.pdf', b'%PDF-1.7 ...'),
+            self.make_file('b.docx', b'PK\x03\x04 docx'),
+            self.make_file('c.xlsx', b'PK\x03\x04 xlsx'),
+            self.make_file('d.txt', 'zażółć'.encode()),
+            self.make_file('E.CSV', b'a;b\n1;2\n'),
+        ]
+
+        res = self.client.patch(f'/api/notes/{self.note.id}/', {'attachments': files}, format='multipart')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.note.attachments.count(), 5)
+
+    def test_rejects_disallowed_types(self):
+        self.client.force_authenticate(self.owner)
+        for name in ['film.mp4', 'zdjecie.jpg', 'strona.html', 'skrypt.exe', 'bez_rozszerzenia', 'stary.doc']:
+            with self.subTest(name=name):
+                res = self.client.patch(
+                    f'/api/notes/{self.note.id}/',
+                    {'attachments': [self.make_file(name, b'data')]},
+                    format='multipart',
+                )
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.note.attachments.count(), 0)
+
+    def test_rejects_renamed_binary_file(self):
+        self.client.force_authenticate(self.owner)
+        video = b'\x00\x00\x00\x18ftypmp42' + b'\x00' * 100
+        for name in ['film.pdf', 'film.docx', 'film.xlsx', 'film.txt', 'film.csv']:
+            with self.subTest(name=name):
+                res = self.client.patch(
+                    f'/api/notes/{self.note.id}/',
+                    {'attachments': [self.make_file(name, video)]},
+                    format='multipart',
+                )
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.note.attachments.count(), 0)
+
+    def test_invalid_file_does_not_create_note_or_save_other_files(self):
+        self.client.force_authenticate(self.owner)
+
+        res = self.client.post(
+            f'/api/experiments/{self.experiment.id}/notes/',
+            {'title': 'Bad', 'attachments': [self.make_file(), self.make_file('film.mp4', b'data')]},
+            format='multipart',
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Note.objects.filter(title='Bad').exists())
+        self.assertEqual(NoteAttachment.objects.count(), 0)
 
     def test_rejects_too_many_files(self):
         from notes import views

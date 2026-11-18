@@ -26,7 +26,9 @@ from .serializers import BBCHObservationSerializer, NoteAttachmentSerializer, No
 
 MAX_IMAGES_PER_NOTE = 10
 MAX_ATTACHMENTS_PER_NOTE = 10
-MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
+MAX_ATTACHMENT_SIZE = 1 * 1024 * 1024
+ALLOWED_ATTACHMENT_EXTENSIONS = ('.pdf', '.docx', '.txt', '.csv', '.xlsx')
+_ZIP_SIGNATURE = b'PK\x03\x04'
 
 class ExperimentNoteListCreateView(generics.ListCreateAPIView):
 
@@ -206,10 +208,37 @@ def _validate_attachments(files, existing=0):
             'attachments': f'A note can have at most {MAX_ATTACHMENTS_PER_NOTE} files.',
         })
     for file in files:
+        if PurePosixPath(file.name).suffix.lower() not in ALLOWED_ATTACHMENT_EXTENSIONS:
+            raise ValidationError({
+                'attachments': (
+                    f'"{file.name}" has an unsupported type. Allowed: '
+                    f'{", ".join(ext[1:].upper() for ext in ALLOWED_ATTACHMENT_EXTENSIONS)}.'
+                ),
+            })
+        if file.size == 0:
+            raise ValidationError({'attachments': f'"{file.name}" is empty.'})
         if file.size > MAX_ATTACHMENT_SIZE:
             raise ValidationError({
                 'attachments': f'"{file.name}" is larger than {MAX_ATTACHMENT_SIZE // (1024 * 1024)} MB.',
             })
+        if not _content_matches_extension(file):
+            raise ValidationError({
+                'attachments': f'"{file.name}" content does not match its file type.',
+            })
+
+
+def _content_matches_extension(file):
+    """Rejects renamed files, e.g. a video saved as .pdf."""
+    suffix = PurePosixPath(file.name).suffix.lower()
+    file.seek(0)
+    head = file.read(8192)
+    file.seek(0)
+    if suffix == '.pdf':
+        return head.startswith(b'%PDF-')
+    if suffix in ('.docx', '.xlsx'):
+        return head.startswith(_ZIP_SIGNATURE)
+    # .txt / .csv: plain text, no binary NUL bytes
+    return b'\x00' not in head
 
 
 def _attach_files(note, files):
