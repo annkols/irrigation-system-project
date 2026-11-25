@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import logo from "./images/logo-color.png";
 import name from "./images/name-color.png";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function Sidebar() {
 
@@ -13,6 +15,19 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(
         () => localStorage.getItem("sidebar-collapsed") === "true"
     );
+    const [isSuperuser, setIsSuperuser] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        fetch(`${API_BASE_URL}/auth/me/`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((response) => response.ok ? response.json() : null)
+            .then((user) => setIsSuperuser(Boolean(user?.is_superuser)))
+            .catch(() => setIsSuperuser(false));
+    }, []);
 
     const toggleCollapsed = () => {
         setCollapsed((current) => {
@@ -43,6 +58,11 @@ export default function Sidebar() {
             title: t("navigation.reports"),
             path: "/reports"
         },
+        ...(isSuperuser ? [{
+            icon: "calendar_month",
+            title: t("navigation.adminSchedule"),
+            path: "/admin/experiments"
+        }] : []),
     ];
 
     return (

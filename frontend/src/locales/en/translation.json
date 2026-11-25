@@ -20,7 +20,8 @@
     "newExperiment": "New experiment",
     "profile": "Profile",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "adminSchedule": "Experiment schedule"
   },
   "topbar": {
     "notifications": "Notifications",
@@ -84,6 +85,38 @@
     "aboutTextLine1": "PlantStalker supports greenhouse experiments by continuously monitoring plant development conditions. It enables the collection and analysis of sensor data,",
     "aboutTextLine2": "as well as remote control of irrigation independently for each pot.",
     "contactTitle": "Contact us"
+  },
+  "adminSchedule": {
+    "title": "Experiment schedule",
+    "description": "Experiment dates and measurement set usage in the greenhouse.",
+    "refresh": "Refresh",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "listTitle": "All scheduled experiments",
+    "experiment": "Experiment",
+    "owner": "Owner",
+    "sensorSet": "Set number",
+    "start": "Start",
+    "plannedEnd": "Planned end",
+    "actualEnd": "Actual end",
+    "status": "Status",
+    "empty": "No experiments have been scheduled yet.",
+    "forbidden": "This panel is available only to system administrators.",
+    "loadError": "The experiment schedule could not be loaded.",
+    "statuses": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "weekdays": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
   },
   "login": {
     "title": "Sign in",

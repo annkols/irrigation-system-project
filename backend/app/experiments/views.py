@@ -33,8 +33,10 @@ from .serializers import (
     ExperimentUpdateSerializer,
     ExperimentCollaboratorSerializer,
     ExperimentCollaboratorPermissionSerializer,
-    PotCustomLabelSerializer
+    PotCustomLabelSerializer,
+    AdminExperimentScheduleSerializer,
 )
+from users.permissions import IsSuperUser
 from .permission_sets import PERMISSION_FIELDS
 from .permissions import (
     CanEditExperiment,
@@ -330,6 +332,18 @@ class ExperimentStatusListView(generics.ListAPIView):
         raise ValidationError({
             "status": "Wybierz z dostępnych statusów: not-started, in-progress, completed."
         })
+
+
+class AdminExperimentScheduleView(generics.ListAPIView):
+    serializer_class = AdminExperimentScheduleSerializer
+    permission_classes = [IsSuperUser]
+
+    def get_queryset(self):
+        return (
+            Experiment.objects
+            .select_related("owner")
+            .order_by("started_at", "sensor_set_id", "id")
+        )
     
 class ExperimentUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Experiment.objects.all()

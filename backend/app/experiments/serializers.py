@@ -308,6 +308,7 @@ class ExperimentSerializer(serializers.ModelSerializer):
 
         return True
 
+
     def validate(self, data):
         instance = getattr(self, 'instance', None)
 
@@ -462,6 +463,34 @@ class ExperimentSerializer(serializers.ModelSerializer):
         return collaborators
 
 # UPDATE EXPERIMENT
+class AdminExperimentScheduleSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Experiment
+        fields = [
+            "id",
+            "name",
+            "owner",
+            "sensor_set_id",
+            "started_at",
+            "planned_end_at",
+            "finished_at",
+            "status",
+        ]
+
+    def get_owner(self, obj):
+        if obj.owner is None:
+            return None
+
+        return {
+            "id": obj.owner_id,
+            "email": obj.owner.email,
+            "first_name": obj.owner.first_name,
+            "last_name": obj.owner.last_name,
+        }
+
+
 class ExperimentUpdateSerializer(ExperimentSerializer):
     NONCHANGEABLE_FIELDS = {
         "sensor_set_id",

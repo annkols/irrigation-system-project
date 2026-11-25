@@ -44,6 +44,9 @@ class CanViewExperiment(BasePermission):
         if not request.user.is_authenticated:
             return False
 
+        if request.user.is_superuser:
+            return True
+
         if experiment.owner_id == request.user.id:
             return True
 

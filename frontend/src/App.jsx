@@ -16,6 +16,7 @@ import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publiczn
 import PersonProfile from './pages/PersonProfile';
 import Reports from './pages/Reports'; //raporty PDF z danych eksperymentu
 import ResetPassword from './pages/ResetPassword';
+import AdminExperimentSchedule from './pages/AdminExperimentSchedule';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/search-experiments" element={<ProtectedRoute><ExperimentSearch /></ProtectedRoute>} />
         <Route path="/person/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>}/>
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>}/>
+        <Route path="/admin/experiments" element={<ProtectedRoute><AdminExperimentSchedule /></ProtectedRoute>}/>
         </Routes>
       <ToastContainer position="top-right" autoClose={3000} />
     </Router>

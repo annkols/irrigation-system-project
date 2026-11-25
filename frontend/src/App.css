@@ -2485,6 +2485,195 @@ textarea:focus {
 }
 
 /*login*/
+.admin-schedule-page {
+  min-width: 0;
+}
+
+.admin-schedule-header {
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.admin-schedule-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  background: var(--color-bg-card);
+  color: var(--color-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-schedule-error,
+.admin-calendar-card,
+.admin-schedule-table-card {
+  margin: 0 30px 28px;
+  border: 1px solid var(--back);
+  border-radius: 16px;
+  background: var(--color-bg-card);
+}
+
+.admin-schedule-error {
+  padding: 24px;
+  color: var(--color-error);
+}
+
+.admin-calendar-card,
+.admin-schedule-table-card {
+  padding: 20px;
+}
+
+.admin-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.admin-calendar-toolbar h2 {
+  min-width: 220px;
+  margin: 0;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.admin-calendar-toolbar button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--back);
+  border-radius: 50%;
+  background: var(--color-bg-card);
+  color: var(--color-text-main);
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.admin-calendar-weekdays,
+.admin-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.admin-calendar-weekdays span {
+  padding: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.admin-calendar-day {
+  min-height: 118px;
+  padding: 8px;
+  overflow: hidden;
+  border-top: 1px solid var(--back);
+  border-left: 1px solid var(--back);
+}
+
+.admin-calendar-day:nth-child(7n) {
+  border-right: 1px solid var(--back);
+}
+
+.admin-calendar-grid .admin-calendar-day:nth-last-child(-n + 7) {
+  border-bottom: 1px solid var(--back);
+}
+
+.admin-calendar-day--outside {
+  opacity: 0.45;
+}
+
+.admin-calendar-day-number {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-calendar-event {
+  width: 100%;
+  overflow: hidden;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-bg-card));
+  color: var(--color-primary);
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-calendar-event--finished {
+  background: color-mix(in srgb, var(--color-text-muted) 16%, var(--color-bg-card));
+  color: var(--color-text-muted);
+}
+
+.admin-schedule-table-card h2 {
+  margin: 0 0 18px;
+}
+
+.admin-schedule-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-schedule-table th,
+.admin-schedule-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--back);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-schedule-table th {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.admin-schedule-table tbody tr:not(:last-child) {
+  cursor: pointer;
+}
+
+.admin-schedule-table tbody tr:hover {
+  background: var(--color-bg-main);
+}
+
+.admin-schedule-empty {
+  color: var(--color-text-muted);
+  text-align: center !important;
+}
+
+@media (max-width: 900px) {
+  .admin-calendar-day {
+    min-height: 90px;
+    padding: 4px;
+  }
+
+  .admin-calendar-event {
+    font-size: 0;
+  }
+
+  .admin-calendar-event strong {
+    font-size: 10px;
+  }
+}
+
 .login-overlay {
   position: fixed;
   inset: 0;

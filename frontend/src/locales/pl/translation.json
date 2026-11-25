@@ -20,7 +20,8 @@
     "newExperiment": "Nowe doświadczenie",
     "profile": "Profil",
     "expandSidebar": "Rozwiń pasek boczny",
-    "collapseSidebar": "Zwiń pasek boczny"
+    "collapseSidebar": "Zwiń pasek boczny",
+    "adminSchedule": "Harmonogram doświadczeń"
   },
   "topbar": {
     "notifications": "Powiadomienia",
@@ -84,6 +85,38 @@
     "aboutTextLine1": "PlantStalker to system wspierający prowadzenie doświadczeń szklarniowych poprzez bieżące monitorowanie warunków rozwoju roślin. Umożliwia gromadzenie i analizę danych z czujników",
     "aboutTextLine2": "oraz zdalne sterowanie podlewaniem niezależnie dla każdej doniczki.",
     "contactTitle": "Skontaktuj się z nami"
+  },
+  "adminSchedule": {
+    "title": "Harmonogram doświadczeń",
+    "description": "Terminy doświadczeń i wykorzystanie zestawów pomiarowych w szklarni.",
+    "refresh": "Odśwież",
+    "previousMonth": "Poprzedni miesiąc",
+    "nextMonth": "Następny miesiąc",
+    "listTitle": "Wszystkie zaplanowane doświadczenia",
+    "experiment": "Doświadczenie",
+    "owner": "Prowadzący",
+    "sensorSet": "Numer zestawu",
+    "start": "Początek",
+    "plannedEnd": "Planowane zakończenie",
+    "actualEnd": "Rzeczywiste zakończenie",
+    "status": "Status",
+    "empty": "Nie ma jeszcze zaplanowanych doświadczeń.",
+    "forbidden": "Ten panel jest dostępny wyłącznie dla administratora systemu.",
+    "loadError": "Nie udało się pobrać harmonogramu doświadczeń.",
+    "statuses": {
+      "not_started": "Nierozpoczęte",
+      "in_progress": "W toku",
+      "completed": "Zakończone"
+    },
+    "weekdays": {
+      "monday": "Pon",
+      "tuesday": "Wt",
+      "wednesday": "Śr",
+      "thursday": "Czw",
+      "friday": "Pt",
+      "saturday": "Sob",
+      "sunday": "Niedz"
+    }
   },
   "login": {
     "title": "Logowanie",
