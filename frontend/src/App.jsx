@@ -15,12 +15,14 @@ import PeopleSearch from './pages/PeopleSearch';
 import ExperimentSearch from './pages/ExperimentSearch'; //wyszukiwanie publicznych eksperymwntow
 import PersonProfile from './pages/PersonProfile';
 import Reports from './pages/Reports'; //raporty PDF z danych eksperymentu
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Start />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/new-experiment" element={<ProtectedRoute><New_experiment /></ProtectedRoute>} />
         <Route path="/experiment/:id" element={<ProtectedRoute><Experiment_details /></ProtectedRoute>} />

@@ -92,6 +92,25 @@
     "invalidCredentials": "Nieprawidłowy adres e-mail lub hasło.",
     "serverUnavailable": "Nie można połączyć się z serwerem."
   },
+  "passwordReset": {
+    "forgotPassword": "Nie pamiętasz hasła?",
+    "requestTitle": "Resetowanie hasła",
+    "requestDescription": "Podaj adres e-mail przypisany do konta. Wyślemy na niego link do ustawienia nowego hasła.",
+    "sendLink": "Wyślij link",
+    "sending": "Wysyłanie...",
+    "requestSuccess": "Na podany adres e-mail wysłano link do zmiany hasła.",
+    "requestError": "Nie udało się wysłać linku do zmiany hasła.",
+    "backToLogin": "Wróć do logowania",
+    "newPasswordTitle": "Ustaw nowe hasło",
+    "newPassword": "Nowe hasło",
+    "confirmPassword": "Powtórz nowe hasło",
+    "passwordMismatch": "Podane hasła nie są takie same.",
+    "savePassword": "Zapisz nowe hasło",
+    "saving": "Zapisywanie...",
+    "resetSuccess": "Hasło zostało zmienione. Możesz się teraz zalogować.",
+    "resetError": "Nie udało się zmienić hasła.",
+    "invalidLink": "Link do zmiany hasła jest nieprawidłowy lub niekompletny."
+  },
   "register": {
     "title": "Utwórz nowe konto",
     "moreInformation": "Dodaj więcej informacji",

@@ -2544,6 +2544,57 @@ textarea:focus {
 .login-box button[type="submit"]:hover {
   background: var(--color-primary-hover);
 }
+
+.login-box button[type="submit"]:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.password-reset-link {
+  align-self: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.password-reset-link:hover,
+.password-reset-back:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.password-reset-description,
+.password-reset-message {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.password-reset-message {
+  color: var(--color-primary);
+}
+
+.password-reset-page {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-main);
+}
+
+.password-reset-box {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.14);
+}
+
+.password-reset-back {
+  align-self: center;
+  color: var(--color-primary);
+  text-decoration: none;
+}
 .login-password-field {
   position: relative;
   width: 100%;

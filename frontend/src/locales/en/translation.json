@@ -92,6 +92,25 @@
     "invalidCredentials": "Invalid e-mail or password.",
     "serverUnavailable": "Unable to connect to the server."
   },
+  "passwordReset": {
+    "forgotPassword": "Forgot your password?",
+    "requestTitle": "Reset password",
+    "requestDescription": "Enter the email address assigned to your account. We will send you a link to set a new password.",
+    "sendLink": "Send link",
+    "sending": "Sending...",
+    "requestSuccess": "A password reset link has been sent to the given email address.",
+    "requestError": "The password reset link could not be sent.",
+    "backToLogin": "Back to sign in",
+    "newPasswordTitle": "Set a new password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordMismatch": "The passwords do not match.",
+    "savePassword": "Save new password",
+    "saving": "Saving...",
+    "resetSuccess": "Your password has been changed. You can now sign in.",
+    "resetError": "The password could not be changed.",
+    "invalidLink": "The password reset link is invalid or incomplete."
+  },
   "register": {
     "title": "Make a new account",
     "moreInformation": "Add more information",
