@@ -121,7 +121,7 @@ class ExperimentDeletionTests(APITestCase):
 
     def test_delete_nonexistent_experiment(self):
 
-        url = reverse("experiment-delete", kwargs={"pk": 99999})
+        url = reverse("experiment-delete", kwargs={"pk": 999999})
 
         response = self.client.delete(url)
 
