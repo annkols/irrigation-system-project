@@ -7,4 +7,6 @@ urlpatterns = [
     path('notes/<int:pk>/', views.NoteDetailView.as_view()),
     path('note-images/<int:pk>/content/', views.NoteImageContentView.as_view()),
     path('note-images/<int:pk>/', views.NoteImageDestroyView.as_view()),
+    path('note-attachments/<int:pk>/content/', views.NoteAttachmentContentView.as_view()),
+    path('note-attachments/<int:pk>/', views.NoteAttachmentDestroyView.as_view()),
 ]

@@ -9,13 +9,14 @@ export default function AuthenticatedUserAvatar({
   imageClassName = "",
   placeholderClassName = "",
 }) {
-  const [pictureUrl, setPictureUrl] = useState(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const requestKey = userId && hasPicture ? String(userId) : "";
+  const [avatar, setAvatar] = useState({ key: "", pictureUrl: null, loadFailed: false });
+  const currentAvatar = avatar.key === requestKey
+    ? avatar
+    : { key: requestKey, pictureUrl: null, loadFailed: false };
 
   useEffect(() => {
-    setPictureUrl(null);
-    setLoadFailed(false);
-    if (!userId || !hasPicture) return undefined;
+    if (!requestKey) return undefined;
 
     let objectUrl;
     let cancelled = false;
@@ -32,10 +33,12 @@ export default function AuthenticatedUserAvatar({
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
-        setPictureUrl(objectUrl);
+        setAvatar({ key: requestKey, pictureUrl: objectUrl, loadFailed: false });
       })
       .catch((error) => {
-        if (error.name !== "AbortError" && !cancelled) setLoadFailed(true);
+        if (error.name !== "AbortError" && !cancelled) {
+          setAvatar({ key: requestKey, pictureUrl: null, loadFailed: true });
+        }
       });
 
     return () => {
@@ -43,10 +46,17 @@ export default function AuthenticatedUserAvatar({
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [userId, hasPicture]);
+  }, [requestKey, userId]);
 
-  if (pictureUrl && !loadFailed) {
-    return <img src={pictureUrl} alt={alt} className={imageClassName} onError={() => setLoadFailed(true)} />;
+  if (currentAvatar.pictureUrl && !currentAvatar.loadFailed) {
+    return (
+      <img
+        src={currentAvatar.pictureUrl}
+        alt={alt}
+        className={imageClassName}
+        onError={() => setAvatar((current) => ({ ...current, loadFailed: true }))}
+      />
+    );
   }
 
   return (

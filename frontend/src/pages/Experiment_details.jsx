@@ -15,6 +15,17 @@ const CAMERA_FRAME_REFRESH_MS = 10000;
 const INITIAL_MEASUREMENT_LIMIT = 5000;
 const NOTE_IMAGE_MAX_BYTES = 700 * 1024;
 const NOTE_IMAGE_MAX_DIMENSION = 1600;
+const NOTE_ATTACHMENT_MAX_BYTES = 1 * 1024 * 1024;
+const NOTE_ATTACHMENT_MAX_MB = NOTE_ATTACHMENT_MAX_BYTES / (1024 * 1024);
+const NOTE_ATTACHMENTS_MAX_COUNT = 10;
+const NOTE_ATTACHMENT_EXTENSIONS = ['pdf', 'docx', 'txt', 'csv', 'xlsx'];
+const NOTE_ATTACHMENT_ACCEPT = NOTE_ATTACHMENT_EXTENSIONS.map(ext => `.${ext}`).join(',');
+const NOTE_ATTACHMENT_TYPES_LABEL = NOTE_ATTACHMENT_EXTENSIONS.map(ext => ext.toUpperCase()).join(', ');
+
+const getFileExtension = name => {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+};
 
 const getLocalDateInputValue = () => {
   const now = new Date();
@@ -23,6 +34,13 @@ const getLocalDateInputValue = () => {
 };
 
 class NoteImageUploadError extends Error {}
+class NoteAttachmentUploadError extends Error {}
+
+const formatFileSize = bytes => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const canvasToJpegBlob = (canvas, quality) => new Promise((resolve, reject) => {
   canvas.toBlob(
@@ -214,7 +232,7 @@ function Experiment_details() {
   const [errorTime, setErrorTime] = useState(null);
   const [notes, setNotes] = useState([]);
   const [noteFormOpen, setNoteFormOpen] = useState(false);
-  const [draftNote, setDraftNote] = useState({ title: '', content: '', images: [] });
+  const [draftNote, setDraftNote] = useState({ title: '', content: '', images: [], attachments: [] });
   const [openNote, setOpenNote] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [noteEditMode, setNoteEditMode] = useState(false);
@@ -238,6 +256,13 @@ function Experiment_details() {
     light_lux: t('experimentForm.sensors.light'),
     pump_on: t('experimentDetails.pumpStatus'),
   };
+
+  const enabledSensorKeys = useMemo(() => {
+    const configured = experiment?.sensor_frequencies;
+    return configured && Object.keys(configured).length
+      ? new Set(Object.keys(configured))
+      : new Set(['air_temperature', 'air_humidity', 'pressure', 'light', 'soil_moisture', 'soil_temperature']);
+  }, [experiment?.sensor_frequencies]);
 
   const handleExportClick = (format) => {
     setExportFormat(format);
@@ -300,6 +325,97 @@ function Experiment_details() {
     }
 
     return updatedNote;
+  };
+
+  const attachmentHint = t('experimentDetails.filesHint', {
+    types: NOTE_ATTACHMENT_TYPES_LABEL,
+    max: NOTE_ATTACHMENT_MAX_MB,
+    maxCount: NOTE_ATTACHMENTS_MAX_COUNT,
+  });
+
+  // Zwraca komunikat błędu albo null, jeśli plik można dodać
+  const getAttachmentError = file => {
+    if (!NOTE_ATTACHMENT_EXTENSIONS.includes(getFileExtension(file.name))) {
+      return t('experimentDetails.errors.fileTypeNotAllowed', {
+        name: file.name,
+        types: NOTE_ATTACHMENT_TYPES_LABEL,
+      });
+    }
+    if (file.size > NOTE_ATTACHMENT_MAX_BYTES) {
+      return t('experimentDetails.errors.fileTooLarge', { name: file.name, max: NOTE_ATTACHMENT_MAX_MB });
+    }
+    if (file.size === 0) {
+      return t('experimentDetails.errors.fileEmpty', { name: file.name });
+    }
+    return null;
+  };
+
+  // Pliki wysyłane pojedynczo, żeby jeden duży plik nie blokował pozostałych
+  const uploadNoteAttachments = async (noteId, files, existingCount = 0) => {
+    if (existingCount + files.length > NOTE_ATTACHMENTS_MAX_COUNT) {
+      throw new NoteAttachmentUploadError(
+        t('experimentDetails.errors.tooManyFiles', { max: NOTE_ATTACHMENTS_MAX_COUNT }),
+      );
+    }
+    for (const file of files) {
+      const error = getAttachmentError(file);
+      if (error) throw new NoteAttachmentUploadError(error);
+    }
+
+    let updatedNote = null;
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('attachments', file);
+      let response;
+      try {
+        response = await fetch(`${API_BASE_URL}/notes/${noteId}/`, {
+          method: 'PATCH',
+          headers: getAuthTokenHeader(),
+          body: formData,
+        });
+      } catch {
+        // Serwer może zerwać połączenie przy zbyt dużym pliku
+        throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
+          name: file.name,
+          max: NOTE_ATTACHMENT_MAX_MB,
+        }));
+      }
+      if (!response.ok) {
+        if (response.status === 413) {
+          throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileTooLarge', {
+            name: file.name,
+            max: NOTE_ATTACHMENT_MAX_MB,
+          }));
+        }
+        if (response.status === 400) {
+          throw new NoteAttachmentUploadError(t('experimentDetails.errors.fileRejected', {
+            name: file.name,
+            types: NOTE_ATTACHMENT_TYPES_LABEL,
+            max: NOTE_ATTACHMENT_MAX_MB,
+          }));
+        }
+        throw new NoteAttachmentUploadError(t('experimentDetails.errors.addFile', { status: response.status }));
+      }
+      updatedNote = await response.json();
+    }
+    return updatedNote;
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    try {
+      const response = await fetch(attachment.file_url, { headers: getAuthTokenHeader() });
+      if (!response.ok) throw new Error(String(response.status));
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch {
+      toast.error(t('experimentDetails.errors.downloadFile'));
+    }
   };
 
   const handleSaveCameraFrame = async () => {
@@ -384,6 +500,42 @@ function Experiment_details() {
       } else {
         toast.error(t('experimentDetails.errors.addImage', { status: error.status ?? '?' }));
       }
+    }
+    setNoteBusy(false);
+  };
+
+  const handleAddNoteAttachments = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!openNote || files.length === 0) return;
+    setNoteBusy(true);
+    try {
+      const updated = await uploadNoteAttachments(openNote.id, files, openNote.attachments?.length ?? 0);
+      if (updated) {
+        setNotes(prev => prev.map(n => (n.id === updated.id ? updated : n)));
+        setOpenNote(updated);
+      }
+    } catch (error) {
+      await refreshNote(openNote.id);
+      toast.error(error instanceof NoteAttachmentUploadError ? error.message : t('experimentForm.errors.connection'));
+    }
+    setNoteBusy(false);
+  };
+
+  const handleDeleteNoteAttachment = async (attachmentId) => {
+    if (!openNote) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/note-attachments/${attachmentId}/`, {
+        method: 'DELETE',
+        headers: getAuthTokenHeader(),
+      });
+      if (res.ok || res.status === 404) {
+        await refreshNote(openNote.id);
+      } else {
+        toast.error(t('experimentDetails.errors.deleteFile', { status: res.status }));
+      }
+    } catch {
+      toast.error(t('experimentForm.errors.connection'));
     }
     setNoteBusy(false);
   };
@@ -1082,14 +1234,14 @@ function Experiment_details() {
                 </div>
                 <div className="exp-sensors-grid">
                   {[
-                    { icon: 'device_thermostat', label: t('experimentDetails.tempInside'), value: latestShared?.air_temperature, unit: '°C' },
-                    { icon: 'water_drop', label: t('experimentForm.sensors.soilMoisture'), value: latest?.moisture_percent, unit: '%' },
-                    { icon: 'cloud', label: t('experimentForm.sensors.airHumidity'), value: latestShared?.air_humidity, unit: '%' },
-                    { icon: 'light_mode', label: t('experimentForm.sensors.light'), value: latestShared?.light_lux, unit: 'lx' },
-                    { icon: 'thermostat', label: t('experimentForm.sensors.soilTemperature'), value: latest?.soil_temperature, unit: '°C' },
-                    { icon: 'speed', label: t('experimentForm.sensors.pressure'), value: latestShared?.pressure_hpa, unit: 'hPa' },
-                  ].map(({ icon, label, value, unit }) => (
-                    <div key={label} className="exp-sensor-card">
+                    { key: 'air_temperature', icon: 'device_thermostat', label: t('experimentDetails.tempInside'), value: latestShared?.air_temperature, unit: '°C' },
+                    { key: 'soil_moisture', icon: 'water_drop', label: t('experimentForm.sensors.soilMoisture'), value: latest?.moisture_percent, unit: '%' },
+                    { key: 'air_humidity', icon: 'cloud', label: t('experimentForm.sensors.airHumidity'), value: latestShared?.air_humidity, unit: '%' },
+                    { key: 'light', icon: 'light_mode', label: t('experimentForm.sensors.light'), value: latestShared?.light_lux, unit: 'lx' },
+                    { key: 'soil_temperature', icon: 'thermostat', label: t('experimentForm.sensors.soilTemperature'), value: latest?.soil_temperature, unit: '°C' },
+                    { key: 'pressure', icon: 'speed', label: t('experimentForm.sensors.pressure'), value: latestShared?.pressure_hpa, unit: 'hPa' },
+                  ].filter(({ key }) => enabledSensorKeys.has(key)).map(({ key, icon, label, value, unit }) => (
+                    <div key={key} className="exp-sensor-card">
                       <span className="material-symbols-outlined exp-sensor-icon">{icon}</span>
                       <span className="exp-sensor-label">{label}</span>
                       <span className="exp-sensor-value">
@@ -1308,12 +1460,12 @@ function Experiment_details() {
                     <thead>
                       <tr>
                         <th>{t('experimentDetails.dateTime')}</th>
-                        <th>{t('experimentDetails.airTemp')} (°C)</th>
-                        <th>{t('experimentForm.sensors.soilMoisture')} (%)</th>
-                        <th>{t('experimentForm.sensors.airHumidity')} (%)</th>
-                        <th>{t('experimentDetails.light')} (lx)</th>
-                        <th>{t('experimentDetails.soilTemp')} (°C)</th>
-                        <th>{t('experimentForm.sensors.pressure')} (hPa)</th>
+                        {enabledSensorKeys.has('air_temperature') && <th>{t('experimentDetails.airTemp')} (°C)</th>}
+                        {enabledSensorKeys.has('soil_moisture') && <th>{t('experimentForm.sensors.soilMoisture')} (%)</th>}
+                        {enabledSensorKeys.has('air_humidity') && <th>{t('experimentForm.sensors.airHumidity')} (%)</th>}
+                        {enabledSensorKeys.has('light') && <th>{t('experimentDetails.light')} (lx)</th>}
+                        {enabledSensorKeys.has('soil_temperature') && <th>{t('experimentDetails.soilTemp')} (°C)</th>}
+                        {enabledSensorKeys.has('pressure') && <th>{t('experimentForm.sensors.pressure')} (hPa)</th>}
                         <th>{t('experimentDetails.pump')}</th>
                       </tr>
                     </thead>
@@ -1321,12 +1473,12 @@ function Experiment_details() {
                       {selectedMeasurements.map((m, i) => (
                         <tr key={i}>
                           <td>{m.created_at ? new Date(m.created_at).toLocaleString(i18n.resolvedLanguage, { hourCycle: "h23" }) : '-'}</td>
-                          <td>{m.air_temperature ?? '-'}</td>
-                          <td>{m.moisture_percent ?? '-'}</td>
-                          <td>{m.air_humidity ?? '-'}</td>
-                          <td>{m.light_lux ?? '-'}</td>
-                          <td>{m.soil_temperature ?? '-'}</td>
-                          <td>{m.pressure_hpa ?? '-'}</td>
+                          {enabledSensorKeys.has('air_temperature') && <td>{m.air_temperature ?? '-'}</td>}
+                          {enabledSensorKeys.has('soil_moisture') && <td>{m.moisture_percent ?? '-'}</td>}
+                          {enabledSensorKeys.has('air_humidity') && <td>{m.air_humidity ?? '-'}</td>}
+                          {enabledSensorKeys.has('light') && <td>{m.light_lux ?? '-'}</td>}
+                          {enabledSensorKeys.has('soil_temperature') && <td>{m.soil_temperature ?? '-'}</td>}
+                          {enabledSensorKeys.has('pressure') && <td>{m.pressure_hpa ?? '-'}</td>}
                           <td>{m.pump_on != null ? (m.pump_on ? 'ON' : 'OFF') : '-'}</td>
                         </tr>
                       ))}
@@ -1404,6 +1556,34 @@ function Experiment_details() {
                       </div>
                     )}
 
+                    {(openNote.attachments?.length > 0) && (
+                      <ul className="note-attachment-list">
+                        {openNote.attachments.map(attachment => (
+                          <li key={attachment.id} className="note-attachment-item">
+                            <button
+                              className="note-attachment-download"
+                              title={t('experimentDetails.downloadFile')}
+                              onClick={() => handleDownloadAttachment(attachment)}
+                            >
+                              <span className="material-symbols-outlined">description</span>
+                              <span className="note-attachment-name">{attachment.name}</span>
+                              <span className="note-attachment-size">{formatFileSize(attachment.size)}</span>
+                              <span className="material-symbols-outlined">download</span>
+                            </button>
+                            <button
+                              className="note-attachment-remove"
+                              disabled={noteBusy}
+                              title={t('experimentDetails.removeFile')}
+                              onClick={() => handleDeleteNoteAttachment(attachment.id)}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {noteEditMode && <p className="note-attachment-hint">{attachmentHint}</p>}
                     <div className="note-detail-actions">
                       {noteEditMode ? (
                         <>
@@ -1417,6 +1597,18 @@ function Experiment_details() {
                               style={{ display: 'none' }}
                               disabled={noteBusy}
                               onChange={e => { handleAddNoteImages(e.target.files); e.target.value = ''; }}
+                            />
+                          </label>
+                          <label className="note-image-upload" title={attachmentHint}>
+                            <span className="material-symbols-outlined">attach_file</span>
+                            {t('experimentDetails.addFiles')}
+                            <input
+                              type="file"
+                              accept={NOTE_ATTACHMENT_ACCEPT}
+                              multiple
+                              style={{ display: 'none' }}
+                              disabled={noteBusy}
+                              onChange={e => { handleAddNoteAttachments(e.target.files); e.target.value = ''; }}
                             />
                           </label>
                           <div className="note-detail-actions-right">
@@ -1494,6 +1686,12 @@ function Experiment_details() {
                             </span>
                             <h3 className="note-title">{note.title}</h3>
                             {note.content && <p className="note-content">{note.content}</p>}
+                            {note.attachments?.length > 0 && (
+                              <span className="note-attachments-count">
+                                <span className="material-symbols-outlined">attach_file</span>
+                                {t('experimentDetails.filesCount', { count: note.attachments.length })}
+                              </span>
+                            )}
                           </div>
                           {note.images?.length > 0 && (
                             <div className="note-thumb-wrap">
@@ -1635,6 +1833,58 @@ function Experiment_details() {
                         }}
                       />
                     </label>
+                    <label className="note-image-upload" title={attachmentHint}>
+                      <span className="material-symbols-outlined">attach_file</span>
+                      {t('experimentDetails.addFiles')}
+                      <input
+                        type="file"
+                        accept={NOTE_ATTACHMENT_ACCEPT}
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const files = Array.from(e.target.files || []);
+                          e.target.value = '';
+                          const valid = [];
+                          files.forEach(file => {
+                            const error = getAttachmentError(file);
+                            if (error) toast.error(error);
+                            else valid.push(file);
+                          });
+                          if (draftNote.attachments.length + valid.length > NOTE_ATTACHMENTS_MAX_COUNT) {
+                            toast.error(t('experimentDetails.errors.tooManyFiles', { max: NOTE_ATTACHMENTS_MAX_COUNT }));
+                            return;
+                          }
+                          if (valid.length) setDraftNote(prev => ({
+                            ...prev,
+                            attachments: [...prev.attachments, ...valid],
+                          }));
+                        }}
+                      />
+                    </label>
+                    <p className="note-attachment-hint">{attachmentHint}</p>
+                    {draftNote.attachments.length > 0 && (
+                      <ul className="note-attachment-list">
+                        {draftNote.attachments.map((file, idx) => (
+                          <li key={idx} className="note-attachment-item">
+                            <span className="note-attachment-download">
+                              <span className="material-symbols-outlined">description</span>
+                              <span className="note-attachment-name">{file.name}</span>
+                              <span className="note-attachment-size">{formatFileSize(file.size)}</span>
+                            </span>
+                            <button
+                              className="note-attachment-remove"
+                              title={t('experimentDetails.removeFile')}
+                              onClick={() => setDraftNote(prev => ({
+                                ...prev,
+                                attachments: prev.attachments.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {draftNote.images.length > 0 && (
                       <div className="note-image-gallery">
                         {draftNote.images.map((img, idx) => (
@@ -1657,7 +1907,7 @@ function Experiment_details() {
                     <div className="note-modal-actions">
                       <button className="note-cancel-btn" onClick={() => {
                         setNoteFormOpen(false);
-                        setDraftNote({ title: '', content: '', images: [] });
+                        setDraftNote({ title: '', content: '', images: [], attachments: [] });
                       }}>{t('experimentForm.cancel')}</button>
                       <button
                         className="note-save-btn"
@@ -1669,24 +1919,27 @@ function Experiment_details() {
                             const preparedImages = await Promise.all(
                               draftNote.images.map(img => compressNoteImage(img.file)),
                             );
+                            const formData = new FormData();
+                            formData.append('title', draftNote.title);
+                            formData.append('content', draftNote.content);
+                            preparedImages.forEach(image => formData.append('images', image));
+
                             const res = await fetch(`${API_BASE_URL}/experiments/${id}/notes/`, {
                               method: 'POST',
-                              headers: getAuthHeaders(),
-                              body: JSON.stringify({
-                                title: draftNote.title,
-                                content: draftNote.content,
-                              }),
+                              headers: getAuthTokenHeader(),
+                              body: formData,
                             });
                             if (res.ok) {
                               savedNote = await res.json();
-                              if (preparedImages.length > 0) {
-                                const updatedNote = await uploadNoteImages(savedNote.id, preparedImages);
+                              if (draftNote.attachments.length > 0) {
+                                const updatedNote = await uploadNoteAttachments(savedNote.id, draftNote.attachments);
                                 if (updatedNote) savedNote = updatedNote;
                               }
                               setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
-                              setDraftNote({ title: '', content: '', images: [] });
+                              setDraftNote({ title: '', content: '', images: [], attachments: [] });
                             } else {
+                              if (res.status === 413) throw new NoteImageUploadError();
                               const errBody = await res.json().catch(() => ({}));
                               console.error('Note save error:', res.status, errBody);
                               toast.error(t('experimentDetails.errors.saveNote', { status: res.status }));
@@ -1695,10 +1948,13 @@ function Experiment_details() {
                             if (savedNote) {
                               setNotes(prev => [savedNote, ...prev]);
                               setNoteFormOpen(false);
-                              setDraftNote({ title: '', content: '', images: [] });
+                              setDraftNote({ title: '', content: '', images: [], attachments: [] });
                             }
+                            if (savedNote) refreshNote(savedNote.id);
                             if (error instanceof NoteImageUploadError) {
                               toast.error(t('experimentDetails.errors.imagesTooLarge'));
+                            } else if (error instanceof NoteAttachmentUploadError) {
+                              toast.error(error.message);
                             } else {
                               toast.error(t('experimentForm.errors.connection'));
                             }

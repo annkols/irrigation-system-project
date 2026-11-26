@@ -20,7 +20,8 @@
     "newExperiment": "New experiment",
     "profile": "Profile",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "adminSchedule": "Experiment schedule"
   },
   "topbar": {
     "notifications": "Notifications",
@@ -85,12 +86,63 @@
     "aboutTextLine2": "as well as remote control of irrigation independently for each pot.",
     "contactTitle": "Contact us"
   },
+  "adminSchedule": {
+    "title": "Experiment schedule",
+    "description": "Experiment dates and measurement set usage in the greenhouse.",
+    "refresh": "Refresh",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "listTitle": "All scheduled experiments",
+    "experiment": "Experiment",
+    "owner": "Owner",
+    "sensorSet": "Set number",
+    "start": "Start",
+    "plannedEnd": "Planned end",
+    "actualEnd": "Actual end",
+    "status": "Status",
+    "empty": "No experiments have been scheduled yet.",
+    "forbidden": "This panel is available only to system administrators.",
+    "loadError": "The experiment schedule could not be loaded.",
+    "statuses": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "weekdays": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
+  },
   "login": {
     "title": "Sign in",
     "email": "Email",
     "password": "Password",
     "invalidCredentials": "Invalid e-mail or password.",
     "serverUnavailable": "Unable to connect to the server."
+  },
+  "passwordReset": {
+    "forgotPassword": "Forgot your password?",
+    "requestTitle": "Reset password",
+    "requestDescription": "Enter the email address assigned to your account. We will send you a link to set a new password.",
+    "sendLink": "Send link",
+    "sending": "Sending...",
+    "requestSuccess": "A password reset link has been sent to the given email address.",
+    "requestError": "The password reset link could not be sent.",
+    "backToLogin": "Back to sign in",
+    "newPasswordTitle": "Set a new password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordMismatch": "The passwords do not match.",
+    "savePassword": "Save new password",
+    "saving": "Saving...",
+    "resetSuccess": "Your password has been changed. You can now sign in.",
+    "resetError": "The password could not be changed.",
+    "invalidLink": "The password reset link is invalid or incomplete."
   },
   "register": {
     "title": "Make a new account",
@@ -257,6 +309,7 @@
     "hardwareSetId": "Hardware set ID",
     "readingFrequency": "reading frequency (hours)",
     "frequencyTitle": "Reading frequency (hours)",
+    "selectAvailableSensors": "Select the sensors physically available in this hardware set.",
     "exampleDecimal": "e.g. 0.3",
     "makePublic": "Make my experiment public and let other users see the data.",
     "sensors": {
@@ -281,6 +334,7 @@
       "keywordLength": "Ensure each keyword has no more than 50 characters.",
       "hardwareMissing": "Hardware set ID is missing.",
       "frequency": "Frequencies must be positive numbers of hours, for example 1 or 0.3.",
+      "sensorRequired": "Select at least one available sensor.",
       "startRequired": "Start date is required.",
       "endRequired": "Planned end date is required.",
       "endBeforeStart": "Planned end date cannot be earlier than start date.",
@@ -361,12 +415,23 @@
     "validation": {
       "name": "Experiment name is required.",
       "plant": "Plant species is required.",
+      "descriptionTooLong": "Description cannot exceed 2000 characters.",
+      "nameTooLong": "Experiment name cannot exceed 100 characters.",
+      "plantTooLong": "Plant species cannot exceed 100 characters.",
       "dates": "Both dates are required.",
       "dateOrder": "End date cannot be earlier than start date.",
       "keywords": "Add at least one keyword.",
       "factor": "Add at least one factor.",
       "factorDetails": "Every factor needs a name and at least two named levels.",
       "reference": "Select exactly one reference level for every factor.",
+      "factorNameRequired": "Factor name is required.",
+      "factorNameTooLong": "Factor name cannot exceed 100 characters.",
+      "duplicateFactorName": "Factor names must be unique.",
+      "factorUnitTooLong": "Factor unit cannot exceed 30 characters.",
+      "levelRequired": "Level label is required.",
+      "levelTooLong": "Level label cannot exceed 100 characters.",
+      "duplicateLevelLabel": "Level labels must be unique within a factor.",
+      "levelValueTooLong": "Level value cannot exceed 100 characters.",
       "combination": "Select at least one combination.",
       "repetitions": "Repetitions must be between 1 and 50.",
       "potLimit": "The plan may contain at most 500 pots.",
@@ -447,6 +512,12 @@
     "notePlaceholder": "Describe your observation...",
     "noteAttachment": "Note attachment",
     "enlarge": "Click to enlarge",
+    "addFiles": "Add files",
+    "removeFile": "Remove file",
+    "downloadFile": "Download file",
+    "filesCount_one": "{{count}} file",
+    "filesCount_other": "{{count}} files",
+    "filesHint": "Allowed files: {{types}}, up to {{max}} MB each, at most {{maxCount}} per note.",
     "removeImage": "Remove image",
     "addImages": "Add images",
     "editNote": "Edit note",
@@ -480,6 +551,14 @@
       "updateNote": "Failed to update note ({{status}}).",
       "addImage": "Failed to add image ({{status}}).",
       "imagesTooLarge": "The images are too large.",
+      "addFile": "Failed to add file ({{status}}).",
+      "fileTooLarge": "File \"{{name}}\" is larger than {{max}} MB.",
+      "fileTypeNotAllowed": "Cannot add \"{{name}}\". Only these file types are allowed: {{types}}.",
+      "fileEmpty": "File \"{{name}}\" is empty.",
+      "fileRejected": "The server rejected \"{{name}}\". Only {{types}} files up to {{max}} MB are allowed.",
+      "tooManyFiles": "A note can have at most {{max}} files.",
+      "deleteFile": "Failed to delete file ({{status}}).",
+      "downloadFile": "Failed to download file.",
       "deleteImage": "Failed to delete image ({{status}}).",
       "deleteNote": "Failed to delete note ({{status}}).",
       "saveNote": "Failed to save note ({{status}}).",
@@ -524,6 +603,12 @@
     "generatePdf": "Generate PDF",
     "selectSection": "Select at least one section.",
     "generated": "Report generated.",
+    "photosZip": {
+      "info": "Along with the PDF report, a separate ZIP file with all experiment photos (camera frames and note photos) from the selected data range will be downloaded.",
+      "downloaded": "Photo archive downloaded.",
+      "empty": "No photos from this experiment in the selected range — no ZIP file was created.",
+      "error": "Could not download photos."
+    },
     "range": {
       "label": "Data range",
       "all": "All data",
@@ -551,7 +636,7 @@
       "camera": "Camera view",
       "cameraDescription": "Latest camera frame for every monitored pot.",
       "notes": "Notes",
-      "notesDescription": "Timeline observations, with the first attached photo."
+      "notesDescription": "Timeline observations, with all attached photos."
     },
     "errors": {
       "loadExperiments": "Could not load your experiments.",

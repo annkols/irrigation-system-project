@@ -1,9 +1,14 @@
+import re
+import tempfile
+import zipfile
+from pathlib import PurePosixPath
 from uuid import uuid4
 
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -11,6 +16,7 @@ from rest_framework.views import APIView
 
 from experiments.models import Experiment, ExperimentCameraAssignment
 from experiments.permissions import CanManageFrames, CanViewExperiment
+from notes.models import NoteImage
 from .models import CameraDevice, CameraFrame
 from .serializers import CameraFrameSerializer
 
@@ -213,6 +219,94 @@ class ExperimentFrameListView(generics.ListAPIView):
             experiment_id=self.kwargs["experiment_id"],
             is_saved=True,
         )
+
+
+def _safe_name(value, fallback):
+    return re.sub(r"[^\w-]+", "_", value or "").strip("_")[:50] or fallback
+
+
+def _parse_range_param(request, name):
+    value = request.query_params.get(name)
+    if not value:
+        return None
+    parsed = parse_datetime(value)
+    if parsed is None:
+        raise ValueError(name)
+    return parsed
+
+
+class ExperimentPhotoArchiveView(APIView):
+    permission_classes = [IsAuthenticated, CanViewExperiment]
+
+    def get(self, request, experiment_id):
+        experiment = get_object_or_404(Experiment, pk=experiment_id)
+        self.check_object_permissions(request, experiment)
+
+        try:
+            date_from = _parse_range_param(request, "date_from")
+            date_to = _parse_range_param(request, "date_to")
+        except ValueError as error:
+            return Response(
+                {"detail": f"{error} must be an ISO 8601 date-time."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        frames = CameraFrame.objects.filter(experiment=experiment).select_related("pot")
+        note_images = NoteImage.objects.filter(note__experiment=experiment).select_related("note")
+        if date_from:
+            frames = frames.filter(captured_at__gte=date_from)
+            note_images = note_images.filter(note__created_at__gte=date_from)
+        if date_to:
+            frames = frames.filter(captured_at__lte=date_to)
+            note_images = note_images.filter(note__created_at__lte=date_to)
+
+        archive = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
+        added = 0
+        
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_STORED) as zf:
+            for frame in frames.order_by("captured_at", "id"):
+                pot_folder = f"pot_{frame.pot.position}" if frame.pot_id else "pot_unassigned"
+                captured = timezone.localtime(frame.captured_at)
+                name = f"camera/{pot_folder}/{captured:%Y-%m-%d_%H-%M-%S}_{frame.pk}.jpg"
+                try:
+                    with frame.image.open("rb") as image_file:
+                        zf.writestr(name, image_file.read())
+                    added += 1
+                except (FileNotFoundError, OSError):
+                    continue
+
+            for note_image in note_images.order_by("note__created_at", "uploaded_at", "id"):
+                note = note_image.note
+                created = timezone.localtime(note.created_at)
+                folder = f"notes/{created:%Y-%m-%d_%H-%M}_{_safe_name(note.title, f'note_{note.pk}')}"
+                suffix = PurePosixPath(note_image.image.name).suffix or ".jpg"
+                try:
+                    with note_image.image.open("rb") as image_file:
+                        zf.writestr(f"{folder}/{note_image.pk}{suffix}", image_file.read())
+                    added += 1
+                except (FileNotFoundError, OSError):
+                    continue
+
+        if not added:
+            archive.close()
+            return Response(
+                {"detail": "No photos found for this experiment in the selected range."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        archive.seek(0)
+        filename = (
+            f"photos_{_safe_name(experiment.name, f'experiment_{experiment.pk}').lower()}"
+            f"_{timezone.localdate():%Y-%m-%d}.zip"
+        )
+        response = FileResponse(
+            archive,
+            content_type="application/zip",
+            as_attachment=True,
+            filename=filename,
+        )
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class SaveLatestExperimentFrameView(APIView):

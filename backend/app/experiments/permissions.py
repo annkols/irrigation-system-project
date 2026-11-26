@@ -44,6 +44,9 @@ class CanViewExperiment(BasePermission):
         if not request.user.is_authenticated:
             return False
 
+        if request.user.is_superuser:
+            return True
+
         if experiment.owner_id == request.user.id:
             return True
 
@@ -103,7 +106,7 @@ class CanAddNotes(BasePermission):
         ).exists()
 
 
-def can_modify_note(user, obj, permission):
+def can_modify_note(user, obj):
     if not user.is_authenticated:
         return False
 
@@ -119,7 +122,6 @@ def can_modify_note(user, obj, permission):
     return ExperimentCollaborator.objects.filter(
         experiment=experiment,
         user=user,
-        **{permission: True}
     ).exists()
 
 class CanEditNotes(BasePermission):
@@ -127,7 +129,6 @@ class CanEditNotes(BasePermission):
         return can_modify_note(
             request.user,
             obj,
-            "can_edit_notes"
         )
 
 class CanDeleteNotes(BasePermission):
@@ -135,7 +136,6 @@ class CanDeleteNotes(BasePermission):
         return can_modify_note(
             request.user,
             obj,
-            "can_delete_notes"
         )
 
 class CanManageFrames(BasePermission):

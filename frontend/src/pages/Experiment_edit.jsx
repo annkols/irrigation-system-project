@@ -60,6 +60,7 @@ function Experiment_edit() {
   const [collaboratorError, setCollaboratorError] = useState("");
   const [selectedSetup, setSelectedSetup] = useState(null);
   const [errors, setErrors] = useState({});
+  const [enabledSensors, setEnabledSensors] = useState(() => SENSORS.map((sensor) => sensor.key));
   const [frequencies, setFrequencies] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,6 +70,7 @@ function Experiment_edit() {
   );
   const [factors, setFactors] = useState([]);
   const [repetitions, setRepetitions] = useState(1);
+  const [serverPots, setServerPots] = useState([]);
   const [hardware, setHardware] = useState({});
   const [customLabels, setCustomLabels] = useState({});
   const [selectedPot, setSelectedPot] = useState(null);
@@ -117,6 +119,10 @@ function Experiment_edit() {
         setSelectedSetup(baseData.sensor_set_id);
 
         const fallbackFrequency = baseData.measurement_frequency_seconds || 3600;
+        const configuredSensors = baseData.sensor_frequencies && Object.keys(baseData.sensor_frequencies).length
+          ? Object.keys(baseData.sensor_frequencies).filter((key) => SENSORS.some((sensor) => sensor.key === key))
+          : SENSORS.map((sensor) => sensor.key);
+        setEnabledSensors(configuredSensors);
         setFrequencies(Object.fromEntries(SENSORS.map((sensor) => [
           sensor.key,
           secondsToHours(baseData.sensor_frequencies?.[sensor.key] || fallbackFrequency),
@@ -130,7 +136,14 @@ function Experiment_edit() {
           })));
         }
 
+        if (designData.pots && designData.pots.length > 0) {
+          const maxRepetition = Math.max(...designData.pots.map(p => p.replicate_number || 1));
+          setRepetitions(maxRepetition);
+        }
+
         if (designData.pots) {
+          setServerPots(designData.pots);
+
           const initialLabels = {};
           const initialHardware = {};
 
@@ -150,12 +163,6 @@ function Experiment_edit() {
 
           setCustomLabels(initialLabels);
           setHardware(initialHardware);
-          
-          if (designData.treatments?.length > 0) {
-            if (designData.repetitions) {
-              setRepetitions(designData.repetitions);
-            }
-          }
         }
 
         setIsLoading(false);
@@ -168,33 +175,14 @@ function Experiment_edit() {
   }, [id, navigate, t]);
 
   const pots = useMemo(() => {
-    if (!factors || factors.length === 0 || factors.some(f => !f.levels || f.levels.length === 0)) {
-      return [];
-    }
+    if (!serverPots || serverPots.length === 0) return [];
 
-    const cartesian = (arr) => arr.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
-    const factorLevelsList = factors.map(f => f.levels.map(l => ({ factor: f.name, level: l.label })));
-    const combinations = cartesian(factorLevelsList);
-
-    let generatedPots = [];
-    let potCounter = 1;
-
-    combinations.forEach((combo) => {
-      for (let rep = 1; rep <= repetitions; rep++) {
-        const label = `P${potCounter}`;
-        generatedPots.push({
-          label,
-          replicate_number: rep,
-          treatment_levels: combo,
-          user_defined_label: customLabels[label] || "",
-          is_monitored: Boolean(hardware[label]?.is_monitored),
-        });
-        potCounter++;
-      }
-    });
-
-    return generatedPots;
-  }, [factors, repetitions, customLabels, hardware]);
+    return serverPots.map((pot) => ({
+      ...pot,
+      user_defined_label: customLabels[pot.label] !== undefined ? customLabels[pot.label] : (pot.user_defined_label || ""),
+      is_monitored: hardware[pot.label]?.is_monitored !== undefined ? hardware[pot.label].is_monitored : pot.is_monitored,
+    }));
+  }, [serverPots, customLabels, hardware]);
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -362,7 +350,8 @@ function Experiment_edit() {
     if (!selectedSetup) {
       localErrors.sensor_set_id = [t("experimentForm.errors.hardwareMissing")];
     } else {
-      const invalidSensors = SENSORS.some(sensor => {
+      const invalidSensors = !enabledSensors.length || SENSORS.some(sensor => {
+        if (!enabledSensors.includes(sensor.key)) return false;
         const val = frequencies[sensor.key];
         const numVal = parseHours(val);
         const isEmpty = !val || val.trim() === "";
@@ -371,7 +360,7 @@ function Experiment_edit() {
         return isEmpty || isNotNumber || isOutOfRange;
       });
       if (invalidSensors) {
-        localErrors.sensor_set_id = [t("experimentForm.errors.frequency")];
+        localErrors.sensor_set_id = [t(!enabledSensors.length ? "experimentForm.errors.sensorRequired" : "experimentForm.errors.frequency")];
       }
     }
 
@@ -391,7 +380,7 @@ function Experiment_edit() {
     }
 
     const sensorFrequencies = Object.fromEntries(
-      SENSORS.map(sensor => [sensor.key, hoursToSeconds(frequencies[sensor.key])])
+      enabledSensors.map(sensorKey => [sensorKey, hoursToSeconds(frequencies[sensorKey])])
     );
 
     const updatedExperiment = {
@@ -414,13 +403,30 @@ function Experiment_edit() {
     const designPayload = {
       factors,
       repetitions,
-      pot_assignments: pots.map((pot) => ({
-        label: pot.label,
-        user_defined_label: pot.user_defined_label || "",
-        ...hardware[pot.label],
-        is_monitored: Boolean(hardware[pot.label]?.is_monitored)
-      })),
+      pot_assignments: serverPots.map((serverPot) => {
+        const potHardware = hardware[serverPot.label] || {};
+        const customLabel = customLabels[serverPot.label] !== undefined 
+          ? customLabels[serverPot.label] 
+          : serverPot.user_defined_label;
+
+        const getOriginalHardware = (type) => {
+          const assignment = serverPot.hardware_assignments?.find(
+            (h) => h.component_type === type
+          );
+          return assignment ? assignment.component_identifier : "";
+        };
+
+        return {
+          label: serverPot.label,
+          user_defined_label: customLabel || "",
+          is_monitored: Boolean(potHardware.is_monitored ?? serverPot.is_monitored),
+          soil_moisture: getOriginalHardware('soil_moisture'),
+          soil_temperature: getOriginalHardware('soil_temperature'),
+          pump: getOriginalHardware('pump'),
+        };
+      }),
     };
+
 
     setIsSaving(true);
     try {
@@ -589,46 +595,6 @@ function Experiment_edit() {
               </div>
 
               <div className="exp-overview-card">
-                <div className="exp-overview-field">
-                  <span className="exp-info-label">{t("experimentForm.keywords")}</span>
-                  <div className="exp-edit-keyword-row">
-                    <input
-                      className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
-                      type="text"
-                      placeholder={t("editExperiment.keywordPlaceholder")}
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddKeyword();
-                        }
-                      }}
-                    />
-                    <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
-                      {t("experimentForm.add")}
-                    </button>
-                  </div>
-                  {keywords.length > 0 && (
-                    <div className="exp-details-keywords">
-                      {keywords.map((kw, index) => (
-                        <span key={index} className="exp-keyword">
-                          {kw}
-                          <button
-                            type="button"
-                            className="btn-remove-tag"
-                            onClick={() => handleRemoveKeyword(index)}
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
-                </div>
-
-                <div className="exp-overview-card">
                   <div className="exp-overview-field exp-overview-field--last">
                     <span className="exp-info-label">
                       {t("experimentDetails.collaborators")}
@@ -754,16 +720,58 @@ function Experiment_edit() {
                     </div>
                   </div>
                 </div>
+
+              <div className="exp-overview-card">
+                <div className="exp-overview-field">
+                  <span className="exp-info-label">{t("experimentForm.keywords")}</span>
+                  <div className="exp-edit-keyword-row">
+                    <input
+                      className={`exp-edit-input ${errors.keywords ? "exp-edit-input--error" : ""}`}
+                      type="text"
+                      placeholder={t("editExperiment.keywordPlaceholder")}
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddKeyword();
+                        }
+                      }}
+                    />
+                    <button type="button" className="exp-btn exp-btn--primary" onClick={handleAddKeyword}>
+                      {t("experimentForm.add")}
+                    </button>
+                  </div>
+                  {keywords.length > 0 && (
+                    <div className="exp-details-keywords">
+                      {keywords.map((kw, index) => (
+                        <span key={index} className="exp-keyword">
+                          {kw}
+                          <button
+                            type="button"
+                            className="btn-remove-tag"
+                            onClick={() => handleRemoveKeyword(index)}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {errors.keywords && <span className="error-text">{errors.keywords[0]}</span>}
+                </div>
+
+                
                 <div className="exp-overview-field exp-overview-field--last">
                   <div className="exp-edit-row">
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="start_date">{t("experimentForm.startDate")}</label>
-                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} />
+                      <LocalizedDateInput value={startDate} onChange={setStartDate} ariaLabel={t("experimentForm.startDate")} error={errors.started_at} />
                       {errors.started_at && <span className="error-text">{errors.started_at[0]}</span>}
                     </div>
                     <div className="exp-edit-col">
                       <label className="exp-info-label" htmlFor="end_date">{t("experimentForm.plannedEndDate")}</label>
-                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} />
+                      <LocalizedDateInput value={endDate} onChange={setEndDate} ariaLabel={t("experimentForm.plannedEndDate")} error={errors.planned_end_at} />
                       {errors.planned_end_at && <span className="error-text">{errors.planned_end_at[0]}</span>}
                     </div>
                   </div>
@@ -777,7 +785,7 @@ function Experiment_edit() {
                     <div className="pot-grid">
                       {pots.map((pot) => (
                         <div
-                          key={pot.label}
+                          key={pot.id}
                           className={`pot-card clickable ${pot.is_monitored ? "monitored" : ""}`}
                           onClick={() => {
                             setSelectedPot(pot);
@@ -788,14 +796,28 @@ function Experiment_edit() {
                             <strong>{pot.label}</strong>
                             <span className="material-symbols-outlined pot-edit-icon">edit</span>
                           </div>
+                          
                           {pot.user_defined_label && (
-                            <span className="pot-custom-label">{pot.user_defined_label}</span>
+                            <span className="pot-custom-label">
+                              {pot.user_defined_label}
+                            </span>
                           )}
+                          
                           <small>{t('newExperiment.replicate', { number: pot.replicate_number })}</small>
-                          {pot.treatment_levels.map((item) => (
-                            <span key={item.factor}>{item.factor}: {item.level}</span>
-                          ))}
+                          
+                          {pot.treatment_levels ? (
+                            pot.treatment_levels.map((item) => (
+                              <span key={item.factor}>{item.factor}: {item.level}</span>
+                            ))
+                          ) : (
+                            <span>{pot.treatment_name}</span>
+                          )}
+                          
                           <small>{pot.is_monitored ? t('newExperiment.monitored') : t('experimentDetails.manual')}</small>
+                          
+                          {pot.hardware_assignments?.map((item) => (
+                            <small key={item.id || item.component_identifier}>{item.component_type}: {item.component_identifier}</small>
+                          ))}
                         </div>
                       ))}
                     </div>
@@ -808,16 +830,28 @@ function Experiment_edit() {
                   <span className="exp-info-label">
                     {t("experimentForm.hardwareSetId")}: <strong>{selectedSetup}</strong> · {t("experimentForm.readingFrequency")}
                   </span>
+                  <p className="hardware-help">{t("experimentForm.selectAvailableSensors")}</p>
                   <div className="frequency-grid">
                     {SENSORS.map((sensor) => (
                       <label key={sensor.key}>
-                        <span>{t(`experimentForm.sensors.${sensor.labelKey}`)} ({t(`experimentForm.sensors.${sensor.scopeKey}`)})</span>
+                        <span className="frequency-sensor-label">
+                          <input
+                            type="checkbox"
+                            className="sensor-toggle-checkbox"
+                            checked={enabledSensors.includes(sensor.key)}
+                            onChange={(event) => setEnabledSensors((current) => event.target.checked
+                              ? [...current, sensor.key]
+                              : current.filter((sensorKey) => sensorKey !== sensor.key))}
+                          />
+                          {t(`experimentForm.sensors.${sensor.labelKey}`)} ({t(`experimentForm.sensors.${sensor.scopeKey}`)})
+                        </span>
                         <input
                           type="text"
                           inputMode="decimal"
                           placeholder={t("experimentForm.exampleDecimal")}
                           className={errors.sensor_set_id && (!frequencies[sensor.key] || parseHours(frequencies[sensor.key]) <= 0) ? "exp-edit-input--error" : ""}
                           value={frequencies[sensor.key] || ""}
+                          disabled={!enabledSensors.includes(sensor.key)}
                           onKeyDown={(e) => {
                             if (["e", "E"].includes(e.key)) e.preventDefault();
                           }}

@@ -25,7 +25,7 @@ const serializeValue = (date, includeTime) => {
   return includeTime ? `${datePart}T${pad(date.getHours())}:${pad(date.getMinutes())}` : datePart;
 };
 
-export default function LocalizedDateInput({ value, onChange, includeTime = false, ariaLabel }) {
+export default function LocalizedDateInput({ value, onChange, includeTime = false, ariaLabel, error }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "pl" ? "pl" : "en-GB";
 
@@ -45,7 +45,7 @@ export default function LocalizedDateInput({ value, onChange, includeTime = fals
       aria-label={ariaLabel}
       calendarStartDay={1}
       wrapperClassName="localized-date-input-wrapper"
-      className="localized-date-input"
+      className={`localized-date-input ${error ? "exp-edit-input--error" : ""}`}
       popperPlacement="bottom-start"
     />
   );

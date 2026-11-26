@@ -128,21 +128,6 @@ export default function ExperimentSearch() {
                             <p>{t("experimentSearch.notFound")}</p>
                         )}
                     </section>
-
-                    <div className="people-navigation">
-                        <button className="navigation-button">
-                            &lsaquo;
-                        </button>
-
-                        <span>
-                            {t("experimentSearch.pageOf")}
-                        </span>
-
-                        <button className="navigation-button">
-                            &rsaquo;
-                        </button>
-                    </div>
-
                 </main>
             </div>
         </div>
